@@ -296,6 +296,13 @@ test('today: next action, quests, streak, claims', async () => {
   assert.equal(c.status, 200);
   assert.equal((await call(`/quests/${done[0].id}/claim`, { method: 'POST', token: s.token })).status, 409);
   t = (await call('/today', { token: s.token })).data;
+  // A week only counts once you reach the weekly minimum.
+  assert.equal(t.streak.goal, 50);
+  assert.equal(t.streak.weeks, t.streak.pointsThisWeek >= 50 ? 1 : 0);
+  while (t.streak.pointsThisWeek < 50) {
+    await call('/activity', { method: 'POST', body: { kind: 'canvass', quantity: 20 }, token: s.token });
+    t = (await call('/today', { token: s.token })).data;
+  }
   assert.equal(t.streak.weeks, 1);
   assert.ok(t.streak.activeThisWeek);
   assert.ok(t.week.points >= done[0].xp);
@@ -378,4 +385,31 @@ test('precinct chair is a self-reported claim that can be undone', async () => {
   l = (await call('/ladder/claim', { method: 'POST', token: t, body: { id: 'precinct_chair', remove: true } })).data;
   assert.ok(!l.rungs[7].steps.find((s) => s.id === 'chair').done);
   assert.equal((await call('/ladder/claim', { method: 'POST', token: t, body: { id: 'mayor' } })).status, 400);
+});
+
+test('skill tree: trainings unlock in order and pay once', async () => {
+  const s = (await call('/signup', { method: 'POST', body: { email: 'learner@x.org', name: 'Lee Learner', password: 'longenough' } })).data;
+  const t = s.token;
+  // Locked until the voting plan is done.
+  assert.equal((await call('/ladder/learn', { method: 'POST', body: { id: 'learn_local' }, token: t })).status, 409);
+  assert.equal((await call('/ladder/learn', { method: 'POST', body: { id: 'nope' }, token: t })).status, 400);
+  let d = (await call('/ladder', { token: t })).data;
+  const step = (id) => d.rungs.flatMap((r) => r.steps).find((x) => x.id === id);
+  assert.ok(step('learn_local').locked);
+  assert.deepEqual(step('learn_local').lockedBy, ['Make a voting plan']);
+  assert.ok(step('learn_local').lesson.source.url.startsWith('https://'));
+  assert.ok(!step('address').locked);
+  // Skip ahead in the data (address, registered, plan) and the training opens.
+  await call('/me', { method: 'PATCH', body: { jurisdictionId: 'tx-ellis-wax' }, token: t });
+  await call('/registration', { method: 'PUT', body: { status: 'confirmed' }, token: t });
+  await call('/participation', { method: 'POST', body: { kind: 'planned', electionId: 'tx-2026-general' }, token: t });
+  const before = (await call('/recognition', { token: t })).data.points;
+  const r = await call('/ladder/learn', { method: 'POST', body: { id: 'learn_local' }, token: t });
+  assert.equal(r.status, 200);
+  d = r.data;
+  assert.ok(step('learn_local').done);
+  assert.ok(!step('learn_party').locked);
+  assert.ok(step('meetings').locked);
+  await call('/ladder/learn', { method: 'POST', body: { id: 'learn_local' }, token: t });
+  assert.equal((await call('/recognition', { token: t })).data.points, before + 15);
 });

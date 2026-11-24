@@ -30,14 +30,16 @@ export function luckyBonus(db, userId, activityId) {
 }
 
 // ---------- weekly points & streak ----------
-export function pointsSince(db, uid, since) {
+export function pointsSince(db, uid, since, until = null) {
   const ts = utcAt(since);
-  const act = db.prepare('SELECT COALESCE(SUM(points),0) p FROM activity WHERE user_id=? AND at>=?').get(uid, ts).p;
-  const part = db.prepare(`SELECT kind FROM participation WHERE user_id=? AND at>=? AND kind!='reminded'`).all(uid, ts)
+  const te = until ? utcAt(until) : '9999-12-31';
+  const W = 'user_id=? AND at>=? AND at<?';
+  const act = db.prepare(`SELECT COALESCE(SUM(points),0) p FROM activity WHERE ${W}`).get(uid, ts, te).p;
+  const part = db.prepare(`SELECT kind FROM participation WHERE ${W} AND kind!='reminded'`).all(uid, ts, te)
     .reduce((s, r) => s + (PARTICIPATION[r.kind] || 0), 0);
-  const nudges = Math.min(10, db.prepare('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND at>=?').get(uid, ts).n) * PARTICIPATION.reminded;
-  const bonus = db.prepare('SELECT COALESCE(SUM(points),0) p FROM bonuses WHERE user_id=? AND at>=?').get(uid, ts).p;
-  const ends = db.prepare('SELECT COUNT(*) n FROM endorsements WHERE user_id=? AND at>=?').get(uid, ts).n * 20;
+  const nudges = Math.min(10, db.prepare('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND at>=? AND at<?').get(uid, ts, te).n) * PARTICIPATION.reminded;
+  const bonus = db.prepare(`SELECT COALESCE(SUM(points),0) p FROM bonuses WHERE ${W}`).get(uid, ts, te).p;
+  const ends = db.prepare(`SELECT COUNT(*) n FROM endorsements WHERE ${W}`).get(uid, ts, te).n * 20;
   return act + part + nudges + bonus + ends;
 }
 
@@ -50,22 +52,30 @@ function activeDays(db, uid, since) {
   return new Set(rows.map((r) => r.d));
 }
 
-/** Consecutive weeks (Mon–Sun) with at least one civic action. */
+/** Points you need in a week (Mon–Sun) to keep your streak alive. */
+export const WEEKLY_MIN = 50;
+
+/** Consecutive weeks (Mon–Sun) in which you earned at least WEEKLY_MIN points. */
 export function streak(db, uid) {
   const now = todayStr();
-  const days = activeDays(db, uid, addDays(now, -7 * 60));
-  const weeks = new Set([...days].map((d) => weekStart(d)));
+  const days = activeDays(db, uid, addDays(now, -6));
   const thisWeek = weekStart(now);
-  let w = weeks.has(thisWeek) ? thisWeek : addDays(thisWeek, -7);
+  const weekPts = (w) => pointsSince(db, uid, w, addDays(w, 7));
+  const pointsThisWeek = weekPts(thisWeek);
+  const met = pointsThisWeek >= WEEKLY_MIN;
+  // This week counts once it's met; until then the streak runs through last week.
+  let w = met ? thisWeek : addDays(thisWeek, -7);
   let n = 0;
-  while (weeks.has(w)) {
+  while (n < 520 && weekPts(w) >= WEEKLY_MIN) {
     n++;
     w = addDays(w, -7);
   }
   return {
     weeks: n,
-    activeThisWeek: weeks.has(thisWeek),
-    atRisk: n > 0 && !weeks.has(thisWeek),
+    goal: WEEKLY_MIN,
+    pointsThisWeek,
+    activeThisWeek: met,
+    atRisk: n > 0 && !met,
     daysLeftInWeek: 7 - daysBetween(thisWeek, now),
     // last 7 days, oldest first, for the little week strip
     lastSeven: [...Array(7)].map((_, i) => days.has(addDays(now, i - 6))),

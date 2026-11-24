@@ -1,5 +1,5 @@
 // Act: local volunteer events, check-ins, and self-logged civic work.
-import { $, $$, ACTIVITY_ICON, ago, api, confetti, esc, fmtWhen, guard, haptic, icon, refreshStats, sheet, state, toast, xpFly } from '../core.js';
+import { $, $$, ACTIVITY_ICON, ago, api, confetti, esc, fmtWhen, guard, haptic, icon, more, refreshStats, sheet, state, toast, xpFly } from '../core.js';
 
 const kindOf = (k) => state.meta?.activityKinds?.find((x) => x.kind === k) || { kind: k, label: k, self: 0, verified: 0 };
 const localDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -155,14 +155,18 @@ function openLog(rerender) {
   });
 }
 
-export async function render(el, arg) {
-  api('/events', { method: 'POST', body: { kind: 'events_viewed' } }).then(refreshStats).catch(() => {});
+/**
+ * Events near you, the log button and your record. Lives inside the Today tab (`embedded`), so
+ * "what I'm doing" is one place. `viewed` marks the events quest done (only when you opened it).
+ */
+export async function render(el, arg, { embedded = false, viewed = true } = {}) {
+  if (viewed) api('/events', { method: 'POST', body: { kind: 'events_viewed' } }).then(refreshStats).catch(() => {});
   const [actions, activity, mine] = await Promise.all([
     api('/actions'),
     api('/activity').catch(() => []),
     api('/leaders/mine').catch(() => []),
   ]);
-  const rerender = () => render(el);
+  const rerender = () => render(el, null, { embedded, viewed: false });
 
   const groups = {};
   for (const a of actions) (groups[bucket(a)] ||= []).push(a);
@@ -210,10 +214,21 @@ export async function render(el, arg) {
     </aside>
   </div>`;
 
+  if (embedded) {
+    const upcoming = order.filter((g) => g !== 'Recent' && groups[g]);
+    el.innerHTML = `<section id="events">
+        <div class="section-head"><h2 class="h3">Events near you</h2>${actions.length ? `<span class="muted small">${actions.filter((a) => bucket(a) !== 'Recent').length}</span>` : ''}</div>
+        ${upcoming.length ? `<div class="panel flush"><ul class="list">${upcoming.flatMap((g) => groups[g]).map(row).join('')}</ul></div>`
+          : `<div class="panel small muted">No events coming up. <a href="#/crew">Join a local group</a> and its block walks and meetups show up here.</div>`}
+        <button class="btn line block" id="log" style="margin-top:12px">${icon('plus')}Log something you did</button>
+        ${rec ? more('Your record', `<div class="panel flush"><ul class="list compact">${rec}</ul></div>`) : ''}
+        ${mine.length ? `<p class="small"><a href="#/lead/${mine[0].id}">Host an event</a> <span class="muted">for ${esc(mine[0].name)}</span></p>` : ''}
+      </section>`;
+  }
   $('#log', el).onclick = () => openLog(rerender);
   $$('[data-a]', el).forEach((b) => (b.onclick = () => openEvent(actions.find((a) => a.id === Number(b.dataset.a)), rerender)));
   // Deep links open a sheet once; drop the arg so a reload doesn't reopen it.
-  if (arg) history.replaceState(null, '', '#/act');
+  if (arg) history.replaceState(null, '', embedded ? '#/today' : '#/act');
   if (arg === 'log') openLog(rerender);
   else if (arg && /^\d+$/.test(arg)) {
     const a = actions.find((x) => x.id === Number(arg));

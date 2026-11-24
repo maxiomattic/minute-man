@@ -127,6 +127,7 @@ export async function render(el, eid) {
     el.innerHTML = `<div class="vb page two">
       <div class="main">
         <div>
+          <a class="back noprint" href="#/today">${icon('chevron')}Today</a>
           ${others.length ? `<nav class="seg noprint" aria-label="Elections" style="margin-bottom:14px">${[e, ...others].map((x) => `<a href="#/ballot/${esc(x.id)}" class="${x.id === eid ? 'on' : ''}">${esc(x.name)}</a>`).join('')}</nav>` : ''}
           <h1>${esc(e.name)}</h1>
           <p class="muted">${esc(daysLine(e))}</p>

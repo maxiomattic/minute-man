@@ -1,7 +1,7 @@
 import { engagementRoutes, luckyBonus, pointsSince, weekStart } from './engine/engage.js';
 import { aggregate, listStrategies } from './engine/recommend.js';
 import { ACTIVITY, PARTICIPATION, activityPoints, scorecard } from './engine/recognition.js';
-import { LADDER, ladderFor, recruitsOf, inviteCode, rankNamesFor } from './engine/ladder.js';
+import { LADDER, LESSONS, LESSON_POINTS, ladderFor, recruitsOf, inviteCode, rankNamesFor } from './engine/ladder.js';
 import { eligibility, jurisdictionChain, rulesFor } from './rules.js';
 
 class HttpError extends Error {
@@ -571,6 +571,17 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     if (body.id !== 'precinct_chair') throw bad('unknown claim');
     if (body.remove) db.prepare(`DELETE FROM bonuses WHERE user_id=? AND source='claim:precinct_chair'`).run(user.id);
     else db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?, 'claim:precinct_chair', 100, datetime('now'))`).run(user.id);
+    return ladderFor(db, db.prepare('SELECT * FROM users WHERE id=?').get(user.id), rankNamesFor(db, user));
+  });
+
+  // Finish a training. Only once each, and only after it's unlocked.
+  route('POST', '/api/ladder/learn', ({ user, body }) => {
+    const id = String(body.id || '');
+    if (!LESSONS[id]) throw bad('unknown training');
+    const lad = ladderFor(db, user, rankNamesFor(db, user));
+    const step = lad.rungs.flatMap((r) => r.steps).find((x) => x.id === id);
+    if (step.locked) throw new HttpError(409, `Finish ${step.lockedBy[0]} first`);
+    db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,?, datetime('now'))`).run(user.id, `learn:${id}`, LESSON_POINTS);
     return ladderFor(db, db.prepare('SELECT * FROM users WHERE id=?').get(user.id), rankNamesFor(db, user));
   });
 

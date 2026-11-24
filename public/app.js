@@ -3,19 +3,19 @@
 import { installClock } from './clock.js';
 import { $, $$, api, esc, guard, icon, initials, isNative, refreshStats, state, store, toast } from './core.js';
 
+// Two tabs: what you're doing (Today) and what other people are doing (Crew).
+// The ballot, events and your path all open from Today.
 const TABS = [
   ['today', 'today', 'Today'],
-  ['ballot', 'ballot', 'Ballot'],
-  ['act', 'act', 'Act'],
   ['crew', 'crew', 'Crew'],
 ];
 // route name -> [module, tab]
 const ROUTES = {
   today: ['today', 'today'],
-  ballot: ['ballot', 'ballot'],
-  vote: ['ballot', 'ballot'],      // module exports renderVote
-  endorsements: ['ballot', 'ballot'], // renderEndorsements
-  act: ['act', 'act'],
+  ballot: ['ballot', 'today'],
+  vote: ['ballot', 'today'],       // module exports renderVote
+  endorsements: ['ballot', 'today'], // renderEndorsements
+  act: ['today', 'today'],         // renderAct: Today, scrolled to events
   crew: ['crew', 'crew'],
   me: ['me', null],
   leaders: ['me', null],           // renderLeaders
@@ -23,7 +23,7 @@ const ROUTES = {
   lead: ['me', null],              // renderLead
   path: ['path', 'today'],
 };
-const RENDER = { endorsements: 'renderEndorsements', vote: 'renderVote', leaders: 'renderLeaders', register: 'renderRegister', lead: 'renderLead' };
+const RENDER = { act: 'renderAct', endorsements: 'renderEndorsements', vote: 'renderVote', leaders: 'renderLeaders', register: 'renderRegister', lead: 'renderLead' };
 
 const root = document.getElementById('app');
 

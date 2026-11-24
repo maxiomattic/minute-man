@@ -20,6 +20,9 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] Screens lead with the action; detail sits in tap-to-open sections. Registration ends with "Next: make your voting plan" and "Back to Today"
 - [x] Android back button: closes sheets, then goes to the previous screen, then Today; only backgrounds the app from Today
 - [x] Races with no endorsement and exactly one Republican fill in that candidate, labelled "Only Republican" (never shown as an endorsement)
+- [x] Two tabs: Today (your stuff: next step, path, quests, events, logging, streak) and Crew (other people). Ballot opens from Today
+- [x] Streak: a week counts only with 50+ points
+- [x] Skill tree on Your path: 22 actions, each unlocks after the ones it needs; 5 short trainings (local government, county party, block walking, poll watching, precinct chair) linked to Texas GOP / Secretary of State sources, +15 each on the honor system
 - [x] Invite links: recruits join your crew; you earn a bonus each time a recruit reaches a new rank
 - [x] 24 tests pass; screens checked at Pixel 7 and 1280x800
 - [x] Android app installed and verified on the Pixel 6 (rebuild: `scripts/android.sh <phone-ip:port>`)
@@ -31,5 +34,6 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [ ] Push notifications (native local notifications are installed but not wired up)
 - [ ] Per-jurisdiction time zones (one zone for the whole deployment today)
 - [ ] Turnout check against public voter-history files
+- [ ] Trainings are honor-system; swap in county party videos if one gives us a link
 - [ ] Precinct-chair claim is self-reported; could verify against county party rosters
 - [ ] Election lawyer review before public launch (see README "Legal design")

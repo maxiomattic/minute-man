@@ -51,10 +51,69 @@ function facts(db, user) {
     recruitsRegistered: sum(db, 'SELECT COUNT(*) n FROM users WHERE referred_by=? AND rung>=2', uid),
     recruitsActive: sum(db, 'SELECT COUNT(*) n FROM users WHERE referred_by=? AND rung>=4', uid),
     precinctChair: !!db.prepare(`SELECT 1 FROM bonuses WHERE user_id=? AND source='claim:precinct_chair'`).get(uid),
+    learned: new Set(db.prepare(`SELECT source FROM bonuses WHERE user_id=? AND source LIKE 'learn:%'`).all(uid).map((r) => r.source.slice(6))),
   };
 }
 
 const fmtDay = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+/** Points for finishing a training. Honor system, once each. */
+export const LESSON_POINTS = 15;
+
+// Short trainings that unlock the in-person steps. Facts are drawn from the linked sources.
+export const LESSONS = {
+  learn_local: {
+    title: 'How local government works in Texas',
+    points: [
+      'Each county is run by a commissioners court: a county judge and four commissioners, all elected. It sets the county budget and tax rate.',
+      'Cities are run by a mayor and city council. They set the city budget, zoning and local ordinances.',
+      'School boards set school district budgets and tax rates.',
+      'These meetings are public, and most set aside time for public comment.',
+    ],
+    source: { label: 'Texas Government: Local Government (LibreTexts)', url: 'https://socialsci.libretexts.org/Bookshelves/Political_Science_and_Civics/Texas_Government_(Lumen)/10%3A_Local_Government/10.01%3A_Introduction_to_Local_Government' },
+  },
+  learn_party: {
+    title: 'How your county Republican Party works',
+    points: [
+      'Every voting precinct can elect a Republican precinct chair in the March primary. They serve two years.',
+      'Precinct chairs and the county chair make up the county executive committee.',
+      'Precinct chairs represent the party in their precinct, register and turn out voters, work elections and run the precinct convention.',
+      'County parties hold regular meetings. Call your county chair to find the next one.',
+    ],
+    source: { label: 'Republican Party of Texas: Precinct Chairs (PDF)', url: 'https://texasgop.org/wp-content/uploads/2025/10/Precinct-Chair-One-Pager-2026-Primary-2.pdf' },
+  },
+  learn_canvass: {
+    title: 'How a block walk works',
+    points: [
+      'The campaign gives you a list of addresses, usually in a phone app, and a short script.',
+      'Knock, say who you\'re with, ask your question and record the answer before moving on.',
+      'Nobody home? Leave the literature and mark it.',
+      'Your first time, ask to walk with someone experienced.',
+    ],
+  },
+  learn_election: {
+    title: 'Poll watcher training',
+    points: [
+      'In Texas, a candidate or party appoints poll watchers. Ask your county chair.',
+      'Every watcher must take the Secretary of State\'s free online training and bring the printed certificate, along with the certificate of appointment.',
+      'The certificate covers a set period (Jan 1 to Aug 31, or Sep 1 to Dec 31), so you may need to retake it for a new election.',
+    ],
+    source: { label: 'Texas Election Training Portal (Secretary of State)', url: 'https://pollworkertraining.sos.texas.gov' },
+  },
+  learn_chair: {
+    title: 'What a precinct chair does',
+    points: [
+      'You must live in the precinct, be a qualified voter, be affiliated with the Republican Party, and not hold or be running for public office.',
+      'To run, file a notarized application with your county chair by the December filing deadline. If nobody else files, you\'re declared elected.',
+      'Empty seats can be filled by the county executive committee between primaries.',
+    ],
+    source: { label: 'Texas Secretary of State: Precinct Chair', url: 'https://www.sos.texas.gov/elections/candidates/guide/2026/precinct-chair.shtml' },
+  },
+};
+const lesson = (id, label, needs) => ({
+  id, label, cta: 'Start the training', how: LESSONS[id].title + '. Takes about 5 minutes.', lesson: true, needs, xp: `+${LESSON_POINTS}`,
+  check: (f) => +f.learned.has(id),
+});
 
 // Each step: label, how (one or two sentences of coaching), href or action, and a check that
 // returns a number (progress) against `goal` (default 1).
@@ -63,15 +122,15 @@ export const LADDER = [
   {
     name: 'Registered Voter', blurb: 'Get ready to vote.',
     steps: [
-      { id: 'address', cta: 'Add your address', label: 'Add your home address', how: 'It finds your exact ballot and districts. We keep the city, not the street.', href: '#/me/profile', check: (f) => +f.address },
-      { id: 'registered', cta: 'Check registration', label: 'Confirm you\'re registered', how: 'The state lookup takes about 2 minutes. If you aren\'t registered, we walk you through it.', href: '#/register', check: (f) => +f.registered },
-      { id: 'plan', cta: 'Make a plan', label: 'Make a voting plan', how: 'Pick when and where you\'ll vote. People with a plan are far more likely to follow through.', href: (f) => (f.election ? `#/vote/${f.election.id}` : '#/ballot'), check: (f) => +f.planned },
+      { id: 'address', needs: [], cta: 'Add your address', label: 'Add your home address', how: 'It finds your exact ballot and districts. We keep the city, not the street.', href: '#/me/profile', check: (f) => +f.address },
+      { id: 'registered', needs: ['address'], xp: '+50', cta: 'Check registration', label: 'Confirm you\'re registered', how: 'The state lookup takes about 2 minutes. If you aren\'t registered, we walk you through it.', href: '#/register', check: (f) => +f.registered },
+      { id: 'plan', needs: ['registered'], xp: '+10', cta: 'Make a plan', label: 'Make a voting plan', how: 'Pick when and where you\'ll vote. People with a plan are far more likely to follow through.', href: (f) => (f.election ? `#/vote/${f.election.id}` : '#/ballot'), check: (f) => +f.planned },
     ],
   },
   {
     name: 'Active Voter', blurb: 'Cast your ballot.',
     steps: [
-      { id: 'vote', cta: 'Vote', label: 'Vote, early if you can', how: 'Early voting means no election-day lines, and it frees you up to drive friends on election day. Voting early earns 25 extra XP.',
+      { id: 'vote', needs: ['plan'], xp: '+100', cta: 'Vote', label: 'Vote, early if you can', how: 'Early voting means no election-day lines, and it frees you up to drive friends on election day. Voting early earns 25 extra XP.',
         href: (f) => (f.election ? `#/vote/${f.election.id}` : '#/ballot'), check: (f) => +f.voted,
         opens: (f) => f.election?.early_voting_start },
     ],
@@ -79,40 +138,45 @@ export const LADDER = [
   {
     name: 'Messenger', blurb: 'Spread the word.',
     steps: [
-      { id: 'posts', cta: 'Log a post', label: 'Share 5 posts', how: 'Repost your candidates and local news. Log each one so it counts.', href: '#/act/log', goal: 5, check: (f) => f.posts },
-      { id: 'remind', cta: 'Remind friends', label: 'Remind 3 friends to vote', how: 'A personal reminder works better than any ad.', href: '#/crew/friends', goal: 3, check: (f) => f.reminded },
-      { id: 'recruit1', cta: 'Share your invite', label: 'Bring 1 person to CVAS', how: 'Send your invite link. You earn a bonus every time they climb a rank.', href: '#/path/invite', check: (f) => f.recruits },
+      { id: 'posts', needs: ['registered'], xp: '+3 per post', cta: 'Log a post', label: 'Share 5 posts', how: 'Repost your candidates and local news. Log each one so it counts.', href: '#/act/log', goal: 5, check: (f) => f.posts },
+      { id: 'remind', needs: ['plan'], xp: '+5 per friend', cta: 'Remind friends', label: 'Remind 3 friends to vote', how: 'A personal reminder works better than any ad.', href: '#/crew/friends', goal: 3, check: (f) => f.reminded },
+      { id: 'recruit1', needs: ['posts'], xp: '+25 each', cta: 'Share your invite', label: 'Bring 1 person to CVAS', how: 'Send your invite link. You earn a bonus every time they climb a rank.', href: '#/path/invite', check: (f) => f.recruits },
     ],
   },
   {
     name: 'Regular', blurb: 'Show up in person.',
     steps: [
-      { id: 'meetings', cta: 'Find a meeting', label: 'Go to 2 local meetings', how: 'A city council meeting or your county party\'s monthly meeting. Check in with the event code for full points.', href: '#/act', goal: 2, check: (f) => f.meetings },
-      { id: 'group', cta: 'Find a group', label: 'Join a local group', how: 'Ask the organizer at a meeting for their CVAS invite code.', href: '#/crew/groups', check: (f) => +f.inGroup },
+      lesson('learn_local', 'Learn how local government works', ['plan']),
+      lesson('learn_party', 'Learn how your county party works', ['learn_local']),
+      { id: 'meetings', needs: ['learn_party'], xp: '+30 each', cta: 'Find a meeting', label: 'Go to 2 local meetings', how: 'Your county GOP meeting and a city council or commissioners court meeting. Check in with the event code for full points.', href: '#/act', goal: 2, check: (f) => f.meetings },
+      { id: 'group', needs: ['learn_party'], cta: 'Find a group', label: 'Join a local group', how: 'Ask the organizer at a meeting for their CVAS invite code.', href: '#/crew/groups', check: (f) => +f.inGroup },
     ],
   },
   {
     name: 'Volunteer', blurb: 'Work for a campaign.',
     steps: [
-      { id: 'doors', cta: 'Find a block walk', label: 'Knock 100 doors', how: 'Block walks are the most effective thing a volunteer can do. Most campaigns will pair you with someone your first time.', href: '#/act', goal: 100, check: (f) => f.doors },
-      { id: 'shift', cta: 'Find a shift', label: 'Work a campaign or GOTV shift', how: 'Phone banks, sign waving, office help, or rides to the polls.', href: '#/act', check: (f) => f.shifts },
-      { id: 'recruit3', cta: 'See your recruits', label: '3 recruits reach Registered Voter', how: 'Help the people you brought in check their registration and make a plan.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsRegistered },
+      lesson('learn_canvass', 'Learn how a block walk works', ['group']),
+      { id: 'doors', needs: ['learn_canvass'], xp: '+1 per door', cta: 'Find a block walk', label: 'Knock 100 doors', how: 'Block walks are the most effective thing a volunteer can do. Most campaigns will pair you with someone your first time.', href: '#/act', goal: 100, check: (f) => f.doors },
+      { id: 'shift', needs: ['group'], xp: '+40', cta: 'Find a shift', label: 'Work a campaign or GOTV shift', how: 'Phone banks, sign waving, office help, or rides to the polls.', href: '#/act', check: (f) => f.shifts },
+      { id: 'recruit3', needs: ['recruit1'], xp: '+50 each', cta: 'See your recruits', label: '3 recruits reach Registered Voter', how: 'Help the people you brought in check their registration and make a plan.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsRegistered },
     ],
   },
   {
     name: 'Block Captain', blurb: 'Organize your neighborhood.',
     steps: [
-      { id: 'doors500', cta: 'Find a block walk', label: 'Knock 500 doors', how: 'Own your block: know who lives there and who still needs to vote.', href: '#/act', goal: 500, check: (f) => f.doors },
-      { id: 'lead', cta: 'Start a group', label: 'Start a group with 5 members', how: 'Create a group for your block or church and share its invite code.', href: '#/crew/groups', goal: 5, check: (f) => f.ledGroup },
-      { id: 'work', cta: 'Log a shift', label: 'Work an election', how: 'Serve as a poll watcher or election worker. Your county party chair appoints poll watchers and recommends election judges.', href: '#/act/log', check: (f) => f.electionWork },
+      { id: 'doors500', needs: ['doors'], xp: '+1 per door', cta: 'Find a block walk', label: 'Knock 500 doors', how: 'Own your block: know who lives there and who still needs to vote.', href: '#/act', goal: 500, check: (f) => f.doors },
+      { id: 'lead', needs: ['group'], cta: 'Start a group', label: 'Start a group with 5 members', how: 'Create a group for your block or church and share its invite code.', href: '#/crew/groups', goal: 5, check: (f) => f.ledGroup },
+      lesson('learn_election', 'Take poll watcher training', ['shift']),
+      { id: 'work', needs: ['learn_election'], xp: '+60', cta: 'Log a shift', label: 'Work an election', how: 'Serve as a poll watcher or election worker. Your county party chair appoints poll watchers and recommends election judges.', href: '#/act/log', check: (f) => f.electionWork },
     ],
   },
   {
     name: 'Precinct Chair', blurb: 'Represent your precinct in the party.',
     steps: [
-      { id: 'chair', label: 'Become precinct chair', how: 'Precinct chairs sit on the county party\'s executive committee. You run in the March primary (no filing fee), or the county party can appoint you to an empty seat. Many precincts have none. Call your county chair.',
+      lesson('learn_chair', 'Learn what a precinct chair does', ['lead']),
+      { id: 'chair', needs: ['learn_chair'], xp: '+100', label: 'Become precinct chair', how: 'Precinct chairs sit on the county party\'s executive committee. You run in the March primary (no filing fee), or the county party can appoint you to an empty seat. Many precincts have none. Call your county chair.',
         action: 'claim:precinct_chair', actionLabel: 'I filed or was appointed', link: 'https://www.sos.texas.gov/elections/candidates/guide/2026/precinct-chair.shtml', check: (f) => +f.precinctChair },
-      { id: 'team', cta: 'See your recruits', label: '3 recruits reach Messenger', how: 'A precinct chair builds a team. Coach your recruits up the ladder.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsActive },
+      { id: 'team', needs: ['recruit3'], cta: 'See your recruits', label: '3 recruits reach Messenger', how: 'A precinct chair builds a team. Coach your recruits up the ladder.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsActive },
     ],
   },
 ];
@@ -130,12 +194,20 @@ export function ladderFor(db, user, names) {
         id: s.id, label: s.label, cta: s.cta || null, how: s.how, goal, have, done: have >= goal,
         href: typeof s.href === 'function' ? s.href(f) : s.href || null,
         action: s.action || null, actionLabel: s.actionLabel || null, link: s.link || null,
+        needs: s.needs || [], xp: s.xp || null, lesson: s.lesson ? LESSONS[s.id] : null,
         opensOn: have < goal && opens && day < opens ? opens : null,
         opensLabel: have < goal && opens && day < opens ? `Opens ${fmtDay(opens)}` : null,
       };
     });
     return { level: i + 1, name: (names && names[i]) || r.name, blurb: r.blurb, bonus: RUNG_BONUS[i], steps, complete: steps.every((s) => s.done) };
   });
+  // A step is locked until every step it needs is done.
+  const byId = new Map(rungs.flatMap((r) => r.steps.map((s) => [s.id, s])));
+  for (const s of byId.values()) {
+    const missing = s.needs.map((n) => byId.get(n)).filter((n) => !n.done);
+    s.locked = !s.done && missing.length > 0;
+    s.lockedBy = s.locked ? missing.map((n) => n.label) : [];
+  }
   // Your rank is the last rung reached without skipping one.
   let level = 1;
   while (level < rungs.length && rungs[level].complete) level++;
@@ -148,9 +220,9 @@ export function ladderFor(db, user, names) {
   // waiting (early voting hasn't opened), suggest something from the rung after while they wait.
   let coach = null;
   if (next) {
-    const ready = next.steps.find((s) => !s.done && !s.opensOn);
-    const waiting = next.steps.find((s) => !s.done && s.opensOn);
-    const after = rungs[level + 1]?.steps.find((s) => !s.done && !s.opensOn);
+    const ready = next.steps.find((s) => !s.done && !s.opensOn && !s.locked);
+    const waiting = next.steps.find((s) => !s.done && (s.opensOn || s.locked));
+    const after = rungs[level + 1]?.steps.find((s) => !s.done && !s.opensOn && !s.locked);
     coach = ready ? { step: ready, rung: next.name }
       : { step: waiting, rung: next.name, meanwhile: after ? { step: after, rung: rungs[level + 1].name } : null };
   }

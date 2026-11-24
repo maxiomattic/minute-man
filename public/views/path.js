@@ -1,5 +1,5 @@
 // Your path: the ranked ladder of political engagement, a coach for the next step, and invites.
-import { $, $$, api, confetti, esc, guard, icon, isNative, more, plural, refreshStats, toast } from '../core.js';
+import { $, $$, api, confetti, esc, guard, icon, isNative, more, plural, refreshStats, sheet, store, toast, xpFly } from '../core.js';
 
 const PUBLIC_URL = 'https://cvas.careride.workers.dev';
 export const inviteUrl = (code) => `${isNative ? PUBLIC_URL : location.origin}/#/join/${code}`;
@@ -8,10 +8,63 @@ export const inviteUrl = (code) => `${isNative ? PUBLIC_URL : location.origin}/#
 const RECRUIT_BONUS = [25, 50, 75, 50, 50, 75, 100, 150];
 
 function stepCta(s, cls = 'btn go') {
+  if (s.lesson) return `<button class="${cls}" data-node="${esc(s.id)}">${esc(s.cta)}</button>`;
   if (s.opensLabel) return `<span class="pill-wait">${esc(s.opensLabel)}</span>`;
   if (s.action) return `<button class="${cls}" data-claim="${esc(s.action)}">${esc(s.actionLabel)}</button>`;
   if (s.href) return `<a class="${cls}" href="${esc(s.href)}">${esc(s.cta || 'Open')}</a>`;
   return '';
+}
+
+/** Skill tree: every action is a node; a node unlocks when the nodes it needs are done. */
+function treeHtml(L) {
+  const all = L.rungs.flatMap((r) => r.steps.map((s) => ({ ...s, rung: r.name })));
+  const byId = new Map(all.map((s) => [s.id, s]));
+  const depth = new Map();
+  const d = (s) => depth.get(s.id) ?? (depth.set(s.id, s.needs.length ? 1 + Math.max(...s.needs.map((n) => d(byId.get(n)))) : 0), depth.get(s.id));
+  const tiers = [];
+  for (const s of all) (tiers[d(s)] ||= []).push(s);
+  const node = (s) => {
+    const st = s.done ? 'done' : s.locked ? 'locked' : 'open';
+    const mark = s.done ? icon('check') : s.locked ? icon('lock') : s.lesson ? icon('star') : '';
+    const sub = s.done ? 'Done' : s.locked ? `After: ${s.lockedBy[0]}` : s.opensLabel ? s.opensLabel : s.goal > 1 ? `${s.have} of ${s.goal}` : s.xp ? `${s.xp} XP` : 'Ready';
+    return `<button class="node ${st}" data-node="${esc(s.id)}" aria-label="${esc(s.label)}: ${esc(sub)}">
+        <span class="node-mark" aria-hidden="true">${mark}</span>
+        <span class="node-text"><span class="node-label">${esc(s.label)}</span><span class="node-sub">${esc(sub)}</span></span></button>`;
+  };
+  const open = all.filter((s) => !s.done && !s.locked).length;
+  // Show through the first tier that's entirely locked; fold the rest away.
+  let cut = tiers.findIndex((t) => t.every((s) => s.locked));
+  cut = cut < 0 ? tiers.length : cut + 1;
+  const tierHtml = (t) => `<li class="tier"><div class="tier-nodes">${t.map(node).join('')}</div></li>`;
+  const rest = tiers.slice(cut).flat().length;
+  return `<p class="small muted" style="margin:0 0 12px">${all.filter((s) => s.done).length} of ${all.length} done. ${plural(open, 'action')} open now. Each one you finish unlocks more.</p>
+    <ol class="tree">${tiers.slice(0, cut).map(tierHtml).join('')}</ol>
+    ${rest ? more(`Show ${plural(rest, 'more action')}`, `<ol class="tree" style="margin-top:12px">${tiers.slice(cut).map(tierHtml).join('')}</ol>`) : ''}`;
+}
+
+/** Sheet for one node: how to do it, the training itself, or what unlocks it. */
+function openNode(s, rerender, claim) {
+  const L = s.lesson;
+  const body = s.locked
+    ? `<p>${esc(s.how)}</p><p class="small muted">${icon('lock', 'inline-ic')} Unlocks after: <b>${esc(s.lockedBy.join(', '))}</b></p>`
+    : L ? `<ul class="lesson">${L.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>
+        ${L.source ? `<p class="small"><a href="${esc(L.source.url)}" target="_blank" rel="noopener">${esc(L.source.label)}</a></p>` : ''}
+        ${s.done ? '<p class="tag good">Finished</p>' : `<button class="btn go block" id="learned">I finished it <span class="xp">${esc(s.xp)}</span></button>`}`
+    : `<p>${esc(s.how)}</p>${s.goal > 1 ? `<p class="small muted num">${s.have} of ${s.goal}</p>` : ''}${s.done ? '<p class="tag good">Done</p>' : stepCta(s, 'btn go block')}`;
+  const { el, close } = sheet(`<div class="vb"><div class="row between"><h2 style="margin:0">${esc(L && !s.locked ? L.title : s.label)}</h2><button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
+    <p class="tiny muted" style="margin:4px 0 12px">Part of ${esc(s.rung)}${s.xp ? `. ${esc(s.xp)} XP` : ''}</p>${body}</div>`);
+  $('[data-close]', el).onclick = close;
+  $$('a[href^="#"]', el).forEach((a) => a.addEventListener('click', close));
+  $('#learned', el)?.addEventListener('click', guard(async (e) => {
+    e.target.disabled = true;
+    await api('/ladder/learn', { method: 'POST', body: { id: s.id } });
+    xpFly(15, e.target);
+    toast('Training done. Something new unlocked.');
+    close();
+    await refreshStats();
+    await rerender();
+  }));
+  $('[data-claim]', el)?.addEventListener('click', () => { close(); claim(); });
 }
 
 const count = (s) => (s.goal > 1 ? `<span class="num small muted">${Math.min(s.have, s.goal)} / ${s.goal}</span>` : '');
@@ -71,14 +124,17 @@ export async function render(el, arg) {
           <span class="tiny muted num">+${x.earned} XP</span></li>`).join('')}</ul></div>` : ''}
     </section>`;
 
+  const view = store.get('pathView', 'tree');
   el.innerHTML = `<div class="page two path">
       <div class="main">
         <a class="back" href="#/today">${icon('chevron')}Today</a>
         <h1>Your path</h1>
         <p class="muted">Level ${L.level} of ${L.rungs.length}: <strong>${esc(L.name)}</strong>. Finish every step to move up.</p>
         ${coach}
-        <section><div class="section-head"><h2>The ladder</h2></div>
-          <ol class="ladder panel">${L.rungs.slice(1).map(rung).join('')}</ol></section>
+        <section>
+          <nav class="seg" aria-label="Path view" style="margin-bottom:14px"><button data-view="tree" class="${view === 'tree' ? 'on' : ''}">Skill tree</button><button data-view="ranks" class="${view === 'ranks' ? 'on' : ''}">Ranks</button></nav>
+          ${view === 'tree' ? `<div class="panel">${treeHtml(L)}</div>` : `<ol class="ladder panel">${L.rungs.slice(1).map(rung).join('')}</ol>`}
+        </section>
       </div>
       <div class="side">${invite}</div>
     </div>`;
@@ -93,13 +149,17 @@ export async function render(el, arg) {
     toast('Invite link copied');
   });
 
-  $$('[data-claim]', el).forEach((b) => (b.onclick = guard(async () => {
+  const steps = new Map(L.rungs.flatMap((r) => r.steps.map((s) => [s.id, { ...s, rung: r.name }])));
+  $$('[data-view]', el).forEach((b) => (b.onclick = () => { store.set('pathView', b.dataset.view); render(el, arg); }));
+  const claim = guard(async () => {
     if (!confirm('Mark yourself as a precinct chair candidate or appointee? You can undo this.')) return;
-    await api('/ladder/claim', { method: 'POST', body: { id: b.dataset.claim.replace(/^claim:/, '') } });
+    await api('/ladder/claim', { method: 'POST', body: { id: 'precinct_chair' } });
     confetti(24);
     await refreshStats();
     await render(el, arg);
-  })));
+  });
+  $$('[data-node]', el).forEach((b) => (b.onclick = () => openNode(steps.get(b.dataset.node), () => render(el, arg), claim)));
+  $$('[data-claim]', el).forEach((b) => (b.onclick = claim));
 
   if (arg === 'invite') $('#invite', el)?.scrollIntoView({ block: 'start' });
 }

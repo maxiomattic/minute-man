@@ -1,6 +1,6 @@
 // Offline support: API GETs are network-first with cached fallback,
 // so the sample ballot, steps and polling places still open in a dead zone on election day.
-const SHELL = 'cvas-shell-v9';
+const SHELL = 'cvas-shell-v11';
 const API = 'cvas-api-v1';
 const FILES = ['/', '/index.html', '/app.js', '/core.js', '/clock.js', '/styles.css', '/manifest.webmanifest', '/icon.svg', '/fonts/big-shoulders-display-latin-wght-normal.woff2', '/fonts/public-sans-latin-wght-normal.woff2', '/views/today.js', '/views/ballot.js', '/views/act.js', '/views/crew.js', '/views/me.js', '/views/path.js'];
 

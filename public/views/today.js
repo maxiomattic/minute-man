@@ -1,7 +1,8 @@
-// Today: one loud next action, then quiet supporting panels (quests, streak, standing, crew).
+// Today: everything you're doing. One loud next action, your path, quests, events near you,
+// and your streak. What other people are doing lives in the Crew tab.
 // Every number shown comes from the API. Nothing here reveals how anyone voted.
 import { $, $$, api, checkLevelUp, confetti, esc, guard, icon, plural, refreshStats, state, toast, xpFly, fmtDate, fmtWhen } from '../core.js';
-import { bindCheers, feedItemHtml } from './crew.js';
+import { render as renderEvents } from './act.js';
 import { pathCard } from './path.js';
 
 const QUEST_HREF = {
@@ -13,8 +14,6 @@ const BADGE_ICON = {
   reminder: 'megaphone', council: 'hall', party: 'hand', doors100: 'door', doors1000: 'door', calls100: 'phone',
   shifts5: 'hand', endorser: 'megaphone', win: 'trophy',
 };
-const DAY_INITIAL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-const DAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function kickerFor(n, t) {
   let urgent = '';
@@ -32,8 +31,11 @@ const heroTitle = (n) => n.title.replace(/^Register in the next 1 day$/, 'Regist
 
 const actionAttrs = (a, i) => (a.action ? `data-act="${i}"` : `href="${esc(a.href || '#/today')}"`);
 
-export async function render(el) {
-  const [t, feed] = await Promise.all([api('/today'), api('/feed').catch(() => [])]);
+/** #/act and #/act/<id|log> land here too: Today, scrolled to events or with that sheet open. */
+export const renderAct = (el, arg) => render(el, arg, true);
+
+export async function render(el, arg, fromAct = false) {
+  const t = await api('/today');
   state.today = t;
   window.dispatchEvent(new CustomEvent('cvas:stats'));
 
@@ -90,34 +92,16 @@ export async function render(el) {
     </section>`;
 
   // ----- side column -----
-  const today = new Date();
-  const strip = s.lastSeven.map((on, i) => {
-    const d = new Date(today); d.setDate(today.getDate() - 6 + i);
-    return `<div><span aria-hidden="true">${DAY_INITIAL[d.getDay()]}</span><i class="${on ? 'on' : ''} ${i === 6 ? 'today' : ''}" title="${DAY_NAME[d.getDay()]}${on ? ': active' : ''}"></i></div>`;
-  }).join('');
+  const left = Math.max(0, s.goal - s.pointsThisWeek);
   const streakLine = s.activeThisWeek ? 'This week counts. See you next week.'
-    : s.atRisk ? 'Do one thing by Sunday to keep your streak.' : 'Do one civic thing this week to start a streak.';
+    : s.atRisk ? `Earn ${left} more by Sunday to keep your streak.` : `Earn ${left} more this week to start a streak.`;
+  const pct = Math.min(100, (s.pointsThisWeek / s.goal) * 100);
   const streak = `<section class="panel streak ${s.activeThisWeek ? '' : 'cold'}">
       <div class="row streak-top">${icon('flame', 'streak-flame')}<span class="num streak-n">${s.weeks}</span>
-        <span class="grow"><strong>week streak</strong><br><span class="small muted">${s.weeks ? 'Weeks in a row with a civic action' : 'One action a week builds it'}</span></span></div>
-      <div class="week" aria-label="Last seven days">${strip}</div>
+        <span class="grow"><strong>week streak</strong><br><span class="small muted">${s.goal} points a week keeps it going</span></span></div>
+      <div class="meter" role="progressbar" aria-label="Points this week" aria-valuemin="0" aria-valuemax="${s.goal}" aria-valuenow="${Math.min(s.pointsThisWeek, s.goal)}"><div style="width:${Math.max(3, pct)}%"></div></div>
+      <p class="small num muted" style="margin:6px 0 0">${Math.min(s.pointsThisWeek, s.goal)} of ${s.goal} this week</p>
       <p class="small streak-line ${s.atRisk ? 'risk' : ''}">${streakLine}</p>
-    </section>`;
-
-  const w = t.week;
-  const standing = w.of > 1 ? `<a class="panel standing" href="#/crew/board">
-      <span class="num standing-n">#${w.place}</span>
-      <span class="grow"><strong>of ${w.of} in your crew this week</strong><br><span class="small muted">${plural(w.points, 'point')} so far</span></span>
-      ${icon('chevron', 'chev')}</a>`
-    : `<a class="panel standing" href="#/crew/friends">${icon('trophy', 'standing-ic')}
-      <span class="grow"><strong>${plural(w.points, 'point')} this week</strong><br><span class="small muted">Add friends to see how you stack up</span></span>${icon('chevron', 'chev')}</a>`;
-
-  const proof = t.proof ? `<p class="proof small">${icon('check')}<span>${t.proof.voted === 1 ? '1 person' : `${t.proof.voted} people`} in your crew already voted</span></p>` : '';
-
-  const feedPrev = `<section>
-      <div class="section-head"><h2 class="h3">Your crew</h2>${feed.length ? '<a href="#/crew/feed">See all</a>' : ''}</div>
-      ${feed.length ? `<div class="panel flush feed-mini">${feed.slice(0, 3).map(feedItemHtml).join('')}</div>`
-        : `<div class="panel small muted">Nothing from your crew yet. <a href="#/crew/friends">Add a friend</a> to cheer each other on.</div>`}
     </section>`;
 
   const badges = `<section>
@@ -128,8 +112,8 @@ export async function render(el) {
     </section>`;
 
   el.innerHTML = `<div class="page two today">
-      <div class="main">${electionLine}${hero}${pathCard(t.rank)}${upNext}${quests}</div>
-      <div class="side">${streak}${standing}${proof}${feedPrev}${badges}</div>
+      <div class="main">${electionLine}${hero}${pathCard(t.rank)}${upNext}${quests}<div id="events-slot" class="vb"></div></div>
+      <div class="side">${streak}${badges}</div>
     </div>`;
 
   // ----- wiring -----
@@ -145,6 +129,9 @@ export async function render(el) {
     await render(el);
   })));
 
+  await renderEvents($('#events-slot', el), arg, { embedded: true, viewed: fromAct });
+  if (fromAct && !arg) $('#events', el)?.scrollIntoView({ block: 'start' });
+
   $$('[data-claim]', el).forEach((b) => (b.onclick = guard(async () => {
     b.disabled = true;
     let r;
@@ -156,6 +143,5 @@ export async function render(el) {
     await render(el);
   })));
 
-  bindCheers(el, () => render(el).catch(() => {}));
   await checkLevelUp(t.rank);
 }
