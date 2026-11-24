@@ -86,10 +86,28 @@ export function eligibility({ user, registration, election, rules, today }) {
     }
   }
 
+  const unaffiliated = (p) => !p || /^(independent|unaffiliated|none|no party|undeclared)$/i.test(String(p).trim());
+  if (election?.kind === 'primary' && rules.closedPrimaries && !registration?.desired_party && unaffiliated(registration?.party)) {
+    // Closed primary and no party on file: they can't vote in it unless they join one.
+    const days = rules.partyChangeDeadlineDays ?? 0;
+    const due = new Date(new Date(election.date) - days * 86400000).toISOString().slice(0, 10);
+    eligible = eligible === true ? false : eligible;
+    issues.push(`${election.name} is a closed primary. Only voters registered with a party can vote in it.`);
+    if (today <= due)
+      actions.push({
+        kind: 'party_change',
+        text: `To vote in this primary, register with a party by ${due}.`,
+        url: rules.onlineRegistrationUrl,
+        due,
+        daysLeft: daysBetween(today, due),
+      });
+  }
+
   if (
     election?.kind === 'primary' &&
     rules.closedPrimaries &&
     registration?.desired_party &&
+    !unaffiliated(registration.desired_party) &&
     registration.desired_party !== registration.party
   ) {
     const days = rules.partyChangeDeadlineDays ?? 0;

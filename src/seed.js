@@ -1,8 +1,9 @@
 // Demo data. All places, people and organizations are fictional.
 import { ingest, hashPw } from './app.js';
+import { localDay, utcAt } from './time.js';
 
-const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
-const at = (offset, hour) => `${day(offset)} ${String(hour).padStart(2, '0')}:00:00`;
+const day = (offset) => localDay(new Date(Date.now() + offset * 86400000));
+const at = (offset, hour) => utcAt(day(offset), hour);
 
 export function demoData() {
   return {
@@ -146,8 +147,8 @@ export async function seed(db, { force = false } = {}) {
 
   // History for friends so leaderboards have something on them.
   const log = (u, kind, qty, verified, pts, actionId = null) =>
-    db.prepare('INSERT INTO activity (user_id, action_id, kind, quantity, verified, points, day) VALUES (?,?,?,?,?,?, date(\'now\',\'-3 day\'))')
-      .run(u, actionId, kind, qty, verified, pts);
+    db.prepare('INSERT INTO activity (user_id, action_id, kind, quantity, verified, points, day) VALUES (?,?,?,?,?,?, ?)')
+      .run(u, actionId, kind, qty, verified, pts, day(-3));
   log(friends[0], 'canvass', 85, 1, 105);
   log(friends[0], 'phonebank', 60, 0, 60);
   log(friends[0], 'party_meeting', 1, 1, 30);

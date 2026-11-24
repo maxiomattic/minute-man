@@ -10,7 +10,8 @@ class HttpError extends Error {
   }
 }
 const bad = (msg) => new HttpError(400, msg);
-const today = () => new Date().toISOString().slice(0, 10);
+import { localDay, setZone } from './time.js';
+const today = () => localDay();
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const rand = (n) => crypto.getRandomValues(new Uint8Array(n));
 const code = (n = 6) => [...rand(n)].map((b) => ALPHA[b % ALPHA.length]).join('');
@@ -383,7 +384,7 @@ export function createApp(db, { adminToken, seed } = {}) {
     const e = db.prepare('SELECT * FROM elections WHERE id=?').get(body.electionId);
     if (!e) throw new HttpError(404, 'no such election');
     // Voting opens at early voting, or ~45 days out (mail ballots) if no early-voting date is known.
-    const opens = e.early_voting_start || new Date(new Date(e.date) - 45 * 86400000).toISOString().slice(0, 10);
+    const opens = e.early_voting_start || new Date(new Date(e.date + 'T12:00:00Z') - 45 * 86400000).toISOString().slice(0, 10);
     if (body.kind === 'voted' && today() < opens) throw bad(`voting opens ${opens}`);
     if (body.kind === 'voted' && today() > e.date) {
       const late = (new Date(today()) - new Date(e.date)) / 86400000;
@@ -444,11 +445,11 @@ export function createApp(db, { adminToken, seed } = {}) {
     if (db.prepare('SELECT 1 FROM activity WHERE user_id=? AND action_id=?').get(user.id, a.id))
       throw new HttpError(409, 'already logged');
     const qty = Math.max(1, Math.min(1000, Number(body.quantity) || 1));
-    const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=date('now')`).get(user.id, a.kind).q;
+    const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=?`).get(user.id, a.kind, today()).q;
     const perUnit = ACTIVITY[a.kind].perUnit || 0;
     const pts = activityPoints(a.kind, qty, verified, already * perUnit);
-    const ins = db.prepare('INSERT INTO activity (user_id, action_id, kind, quantity, verified, points) VALUES (?,?,?,?,?,?)')
-      .run(user.id, a.id, a.kind, qty, verified ? 1 : 0, pts);
+    const ins = db.prepare('INSERT INTO activity (user_id, action_id, kind, quantity, verified, points, day) VALUES (?,?,?,?,?,?,?)')
+      .run(user.id, a.id, a.kind, qty, verified ? 1 : 0, pts, today());
     const lucky = verified ? luckyBonus(db, user.id, ins.lastInsertRowid) : 0;
     return { ok: true, points: pts, verified, lucky };
   });
@@ -457,11 +458,11 @@ export function createApp(db, { adminToken, seed } = {}) {
   route('POST', '/api/activity', ({ user, body }) => {
     if (!ACTIVITY[body.kind]) throw bad('unknown kind');
     const qty = Math.max(1, Math.min(1000, Number(body.quantity) || 1));
-    const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=date('now')`).get(user.id, body.kind).q;
+    const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=?`).get(user.id, body.kind, today()).q;
     const perUnit = ACTIVITY[body.kind].perUnit || 0;
     const pts = activityPoints(body.kind, qty, false, already * perUnit);
-    db.prepare('INSERT INTO activity (user_id, kind, quantity, note, points) VALUES (?,?,?,?,?)')
-      .run(user.id, body.kind, qty, body.note ? String(body.note).slice(0, 280) : null, pts);
+    db.prepare('INSERT INTO activity (user_id, kind, quantity, note, points, day) VALUES (?,?,?,?,?,?)')
+      .run(user.id, body.kind, qty, body.note ? String(body.note).slice(0, 280) : null, pts, today());
     return { ok: true, points: pts };
   });
 

@@ -1,0 +1,29 @@
+// Calendar days follow the voters' local time zone, not UTC, so "today", deadlines,
+// daily quests and weekly streaks roll over at local midnight.
+// One zone for the whole deployment (all demo jurisdictions are in it); override with setZone().
+let ZONE = 'America/Denver';
+export const setZone = (z) => { if (z) ZONE = z; };
+export const zone = () => ZONE;
+
+const parts = (d) => Object.fromEntries(
+  new Intl.DateTimeFormat('en-US', { timeZone: ZONE, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    .formatToParts(d).map((p) => [p.type, p.value]));
+
+/** YYYY-MM-DD in the local zone. */
+export const localDay = (d = new Date()) => { const p = parts(d); return `${p.year}-${p.month}-${p.day}`; };
+
+/** Minutes the local zone is ahead of UTC at instant d (negative in the Americas). */
+export const offsetMin = (d = new Date()) => {
+  const p = parts(d);
+  return Math.round((Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - Math.floor(d.getTime() / 1000) * 1000) / 60000);
+};
+
+/** Local wall-clock time on `day` at `hour` -> UTC 'YYYY-MM-DD HH:MM:SS' (how timestamps are stored). */
+export const utcAt = (day, hour = 0, minute = 0) => {
+  const guess = new Date(`${day}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`);
+  const t = new Date(guess.getTime() - offsetMin(guess) * 60000);
+  return t.toISOString().slice(0, 19).replace('T', ' ');
+};
+
+/** SQLite modifier that shifts a stored UTC timestamp to local time, e.g. date(at, sqlShift()). */
+export const sqlShift = () => `${offsetMin()} minutes`;

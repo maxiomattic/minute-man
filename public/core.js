@@ -41,7 +41,7 @@ export async function api(path, opts = {}) {
 export const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast(e.message); } };
 
 // ---------- formatting ----------
-export const todayIso = () => new Date().toISOString().slice(0, 10);
+export const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 export const fmtDate = (d) => new Date(d + (d.length === 10 ? 'T12:00:00' : '')).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 export const fmtWhen = (d) => new Date(d.replace(' ', 'T') + 'Z').toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 export const daysTo = (d) => Math.round((new Date(d + 'T12:00:00') - new Date(todayIso() + 'T12:00:00')) / 86400000);
@@ -157,13 +157,14 @@ export function celebrate({ big, title, body, cta = 'Keep going' }) {
 export function sheet(html, { onClose } = {}) {
   const bd = document.createElement('div');
   bd.className = 'sheet-backdrop';
-  bd.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div>`;
+  bd.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" tabindex="-1" style="outline:none"><div class="grab"></div>${html}</div>`;
   const close = () => { bd.remove(); removeEventListener('keydown', onKey); onClose?.(); };
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   bd.addEventListener('click', (e) => { if (e.target === bd) close(); });
   addEventListener('keydown', onKey);
   document.body.append(bd);
-  $('input, select, button', bd)?.focus();
+  // Focus the dialog itself (not its close button) so keyboard users start inside it without a stray focus ring.
+  $('.sheet', bd).focus({ preventScroll: true });
   return { el: $('.sheet', bd), close };
 }
 

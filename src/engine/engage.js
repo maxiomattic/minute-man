@@ -2,10 +2,11 @@
 // Ground rules (see README "Legal design"): everything here is honorific; nothing touches vote
 // choice; feed shows only positive actions by people who opted in; no fabricated urgency.
 import { ACTIVITY, PARTICIPATION, scorecard, rankFor } from './recognition.js';
+import { localDay, utcAt, sqlShift } from '../time.js';
 
 const DAY = 86400000;
 const iso = (d) => d.toISOString().slice(0, 10);
-const todayStr = () => iso(new Date());
+const todayStr = () => localDay();
 const addDays = (s, n) => iso(new Date(new Date(s + 'T00:00:00Z').getTime() + n * DAY));
 const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / DAY);
 /** Monday of the week containing date string s. */
@@ -29,7 +30,7 @@ export function luckyBonus(db, userId, activityId) {
 
 // ---------- weekly points & streak ----------
 export function pointsSince(db, uid, since) {
-  const ts = since + ' 00:00:00';
+  const ts = utcAt(since);
   const act = db.prepare('SELECT COALESCE(SUM(points),0) p FROM activity WHERE user_id=? AND at>=?').get(uid, ts).p;
   const part = db.prepare(`SELECT kind FROM participation WHERE user_id=? AND at>=? AND kind!='reminded'`).all(uid, ts)
     .reduce((s, r) => s + (PARTICIPATION[r.kind] || 0), 0);
@@ -40,10 +41,11 @@ export function pointsSince(db, uid, since) {
 }
 
 function activeDays(db, uid, since) {
-  const ts = since + ' 00:00:00';
+  const ts = utcAt(since);
+  const shift = sqlShift();
   // Separate queries: Cloudflare's SQLite caps the number of terms in a compound SELECT.
   const sources = [['activity', 'user_id'], ['participation', 'user_id'], ['nudges', 'from_id'], ['bonuses', 'user_id'], ['endorsements', 'user_id'], ['cheers', 'user_id']];
-  const rows = sources.flatMap(([t, col]) => db.prepare(`SELECT DISTINCT date(at) d FROM ${t} WHERE ${col}=? AND at>=?`).all(uid, ts));
+  const rows = sources.flatMap(([t, col]) => db.prepare(`SELECT DISTINCT date(at, ?) d FROM ${t} WHERE ${col}=? AND at>=?`).all(shift, uid, ts));
   return new Set(rows.map((r) => r.d));
 }
 
@@ -72,8 +74,8 @@ export function streak(db, uid) {
 // ---------- quests ----------
 const QUESTS = {
   ballot: { title: 'Look over your sample ballot', xp: 15, when: (c) => c.election, check: (c) => c.ev(`ballot_viewed:${c.election.id}`) },
-  remind: { title: 'Remind a friend to vote', xp: 20, when: (c) => c.election && c.friends > 0, check: (c) => c.count('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND date(at)=?') > 0 },
-  cheer: { title: 'Cheer someone in your crew', xp: 10, when: (c) => c.crew > 0, check: (c) => c.count('SELECT COUNT(*) n FROM cheers WHERE user_id=? AND date(at)=?') > 0 },
+  remind: { title: 'Remind a friend to vote', xp: 20, when: (c) => c.election && c.friends > 0, check: (c) => c.count('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND date(at, ?)=?') > 0 },
+  cheer: { title: 'Cheer someone in your crew', xp: 10, when: (c) => c.crew > 0, check: (c) => c.count('SELECT COUNT(*) n FROM cheers WHERE user_id=? AND date(at, ?)=?') > 0 },
   post: { title: 'Share a post about a local issue', xp: 15, check: (c) => c.count(`SELECT COUNT(*) n FROM activity WHERE user_id=? AND kind='social' AND day=?`) > 0 },
   events: { title: "See what's happening this week", xp: 10, check: (c) => c.ev('events_viewed') },
   doors: { title: 'Knock on 10 doors', xp: 30, check: (c) => c.count(`SELECT COALESCE(SUM(quantity),0) n FROM activity WHERE user_id=? AND kind='canvass' AND day=?`) >= 10 },
@@ -90,7 +92,7 @@ function questContext(db, user, election) {
     friends: db.prepare(`SELECT COUNT(*) n FROM friendships WHERE status='accepted' AND (a=?1 OR b=?1)`).get(user.id).n,
     crew: crewIds(db, user.id).length,
     bindings: db.prepare('SELECT COUNT(*) n FROM bindings WHERE user_id=? AND active=1').get(user.id).n,
-    count: (q) => db.prepare(q).get(user.id, day).n,
+    count: (q) => (q.includes('date(at, ?)') ? db.prepare(q).get(user.id, sqlShift(), day) : db.prepare(q).get(user.id, day)).n,
     ev: (kind) => !!db.prepare('SELECT 1 FROM events WHERE user_id=? AND kind=? AND day=?').get(user.id, kind, day),
   };
 }
@@ -262,7 +264,7 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
   route('POST', '/api/events', ({ user, body }) => {
     const k = String(body.kind || '');
     if (!/^(ballot_viewed:[\w-]+|events_viewed)$/.test(k)) throw bad('unknown event');
-    db.prepare('INSERT OR IGNORE INTO events (user_id, kind) VALUES (?,?)').run(user.id, k);
+    db.prepare('INSERT OR IGNORE INTO events (user_id, kind, day) VALUES (?,?,?)').run(user.id, k, todayStr());
     return { ok: true };
   });
 
