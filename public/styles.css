@@ -308,3 +308,9 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
   .topbar, .tabbar, .sidebar, .noprint { display: none !important; }
   body { background: #fff; }
 }
+
+/* ===== views: today + crew (agent A edits only inside this block) ===== */
+/* ===== end today + crew ===== */
+
+/* ===== views: ballot + act + me (agent B edits only inside this block) ===== */
+/* ===== end ballot + act + me ===== */
