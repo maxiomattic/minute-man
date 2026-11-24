@@ -472,8 +472,9 @@ label.check input { width: 22px; height: 22px; flex: none; accent-color: var(--b
 .vb .slate .race { font-size: 13.5px; color: var(--muted); }
 .vb .slate .name, .vb .exam .name { font-size: 18px; font-weight: 800; color: var(--ink); overflow-wrap: anywhere; }
 .vb .slate .none { font-size: 15px; font-style: italic; }
-.vb .src { flex: none; font-size: 12px; font-weight: 700; letter-spacing: .02em; padding: 2px 8px; border-radius: 999px; background: var(--sunk); color: var(--brand-text); white-space: nowrap; }
-.vb .src.party { color: var(--muted); border: 1px dashed var(--line); background: none; }
+.vb .picks-head { margin: 8px 0 2px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-text); }
+.vb .exam .eyebrow { display: block; margin-bottom: 2px; }
+.vb .exam .credit { margin: 6px 0 10px; }
 .vb .exam .pickline { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px; }
 .vb .exam .why { margin-bottom: 8px; }
 .vb .exam blockquote { margin: 6px 0 0; padding: 0 0 0 10px; border-left: 3px solid var(--line); font-size: 14.5px; }

@@ -86,7 +86,7 @@ function renderWelcome() {
   root.innerHTML = `<main class="content">
     <div class="wordmark">${icon('tricorn', 'mark')}Minute Man</div>
     <h1>Ready at a minute's notice.</h1>
-    <p class="muted lede">Your sample ballot, filled in from America First Insight's endorsements, with President Trump's where they haven't picked. Then the doors, calls and meetings that win your town, with your neighbors cheering you on.</p>
+    <p class="muted lede">Your sample ballot, filled in with Minute Man's picks for every race. Then the doors, calls and meetings that win your town, with your neighbors cheering you on.</p>
     <p class="invited" id="invited" hidden></p>
     <div class="seg" role="tablist" style="margin-bottom:12px"><button class="on" data-m="signup" role="tab">Create account</button><button data-m="login" role="tab">Sign in</button></div>
     <form id="auth">

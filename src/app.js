@@ -1,6 +1,6 @@
 import { engagementRoutes, luckyBonus } from './engine/engage.js';
 import { areasFor, leaderboard, standing, together } from './engine/community.js';
-import { aggregate } from './engine/recommend.js';
+import { aggregate, fallbackPick, partyWhy } from './engine/recommend.js';
 import { ACTIVITY, PARTICIPATION, REMIND_DAILY_LIMIT, activityPoints, scorecard } from './engine/recognition.js';
 import { LADDER, LESSONS, LESSON_POINTS, ladderFor, recruitsOf, inviteCode } from './engine/ladder.js';
 import { PUBLIC_URL, buildPosts, buildReminders } from './engine/posts.js';
@@ -245,11 +245,15 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
         if (r) recs.push({ leaderId: b.id, leaderName: b.name, priority: b.priority, choiceIds: JSON.parse(r.choice_ids), note: r.note });
       }
       let agg = aggregate('priority', recs, { id: c.id, voteFor: c.vote_for });
-      // No source endorsed: if exactly one Republican is running, fill that candidate in. This is labelled as
-      // a party default on the ballot, never as anyone's endorsement.
-      if (!agg.choiceIds.length && c.vote_for === 1) {
-        const reps = choices.filter((ch) => /^republican$/i.test(ch.party || ''));
-        if (reps.length === 1) agg = { choiceIds: [reps[0].id], sourceLeaderId: null, conflicts: [], basis: 'party' };
+      // No source endorsed: Minute Man fills in a pick by a fixed rule (see fallbackPick), so every
+      // candidate race has one. Measures are left alone: a yes/no pick there would be a position, not a fill-in.
+      if (!agg.choiceIds.length) {
+        const fill = c.kind === 'measure' ? null : fallbackPick(choices, c.vote_for);
+        if (fill) agg = { ...fill, sourceLeaderId: null, conflicts: [] };
+      } else {
+        // A source's pick. Without a write-up, the reason says only what's true from the ballot itself.
+        const written = recs.some((r) => r.note && agg.choiceIds.every((id) => r.choiceIds.includes(id)));
+        agg = { ...agg, basis: 'source', ...(written ? {} : { why: partyWhy(choices, agg.choiceIds) }) };
       }
       return {
         id: c.id, title: c.title, kind: c.kind, voteFor: c.vote_for, description: c.description,
@@ -507,13 +511,12 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
     const election = upcomingElections(user)[0] || null;
     const stateId = (user.jurisdiction_id || '').split('-')[0];
     const stateName = stateId ? db.prepare('SELECT name FROM jurisdictions WHERE id=?').get(stateId)?.name || null : null;
-    const names = Object.fromEntries(sourceLeaders().map((b) => [b.id, b.name]));
-    const endorsed = election ? ballotFor(user, election)
-      .filter((c) => c.recommendation.sourceLeaderId && c.recommendation.choiceIds.length === 1 && c.voteFor === 1)
-      .map((c) => ({ contestId: c.id, title: c.title, source: names[c.recommendation.sourceLeaderId],
+    const picks = election ? ballotFor(user, election)
+      .filter((c) => c.recommendation.choiceIds.length === 1 && c.voteFor === 1)
+      .map((c) => ({ contestId: c.id, title: c.title,
         candidate: c.choices.find((ch) => ch.id === c.recommendation.choiceIds[0])?.label }))
-      .filter((r) => r.source && r.candidate) : [];
-    return buildPosts({ election, stateName, endorsed, today: today() });
+      .filter((r) => r.candidate) : [];
+    return buildPosts({ election, stateName, picks, today: today() });
   };
   const sharedToday = (uid) => db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind='social' AND day=?`).get(uid, today()).q;
 

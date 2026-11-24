@@ -4,7 +4,7 @@ import { openNodeDb } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { seed } from '../src/seed.js';
 import { configureClock } from '../src/time.js';
-import { aggregate } from '../src/engine/recommend.js';
+import { aggregate, fallbackPick } from '../src/engine/recommend.js';
 import { activityPoints } from '../src/engine/recognition.js';
 import { eligibility, ageOn } from '../src/rules.js';
 
@@ -125,14 +125,24 @@ test('sample ballot: AFI first, Trump as fallback, no invented picks', async () 
   assert.equal(rec('tx26-us-sen').sourceLeaderId, afi);
   assert.equal(rec('tx26-gov').sourceLeaderId, trump); // Abbott, via fallback
   assert.equal(rec('tx26-state-house-10').sourceLeaderId, afi);
-  // Neither source endorsed and one Republican is running: filled in, marked as a party default, credited to nobody.
+  // Neither source endorsed and one Republican is running: Minute Man picks the Republican, credited to nobody.
   const sen2 = b.contests.find((c) => c.id === 'tx26-state-sen-2');
   const reps = sen2.choices.filter((c) => c.party === 'Republican');
-  if (reps.length === 1) {
-    assert.deepEqual(rec('tx26-state-sen-2').choiceIds, [reps[0].id]);
-    assert.equal(rec('tx26-state-sen-2').basis, 'party');
-    assert.equal(rec('tx26-state-sen-2').sourceLeaderId, null);
-  } else assert.deepEqual(rec('tx26-state-sen-2').choiceIds, []);
+  assert.equal(reps.length, 1);
+  assert.deepEqual(rec('tx26-state-sen-2').choiceIds, [reps[0].id]);
+  assert.equal(rec('tx26-state-sen-2').basis, 'party');
+  assert.equal(rec('tx26-state-sen-2').sourceLeaderId, null);
+  assert.equal(rec('tx26-state-sen-2').why, 'The Republican candidate in this race.');
+  // A source's pick with no write-up gets Minute Man's plain line; one with a write-up needs none.
+  assert.equal(rec('tx26-gov').why, 'The Republican candidate in this race.');
+  // Every race on the seeded Texas ballot has a pick, and every reason is Minute Man's, not a source's.
+  for (const c of b.contests) {
+    assert.ok(c.recommendation.choiceIds.length >= 1, `${c.id} has a pick`);
+    assert.ok(c.recommendation.choiceIds.every((id) => c.choices.some((ch) => ch.id === id)));
+    const written = c.sources.some((x) => x.note && c.recommendation.choiceIds.every((id) => x.choiceIds.includes(id)));
+    assert.ok(written || c.recommendation.why, `${c.id} has a reason`);
+    assert.doesNotMatch(c.recommendation.why || '', /endorse|AFI|America First|Trump/i);
+  }
   // Explanations come only from what each source published: its pick, its write-up if any, and where.
   assert.deepEqual(sen2.sources, []);
   const sen = b.contests.find((c) => c.id === 'tx26-us-sen').sources;
@@ -144,6 +154,43 @@ test('sample ballot: AFI first, Trump as fallback, no invented picks', async () 
   assert.deepEqual(gov.map((x) => x.short), ['Trump']);
   assert.equal(gov[0].note, null);
   assert.match(gov[0].url, /ballotpedia\.org/);
+});
+
+test('fill-in rules: every candidate race gets a pick, with a plain reason', () => {
+  const ids = (r) => r?.choiceIds;
+  // One Republican running.
+  let r = fallbackPick([{ id: 'd', party: 'Democratic' }, { id: 'r', party: 'Republican' }]);
+  assert.deepEqual([ids(r), r.basis, r.why], [['r'], 'party', 'The Republican candidate in this race.']);
+  // Uncontested.
+  r = fallbackPick([{ id: 'd', party: 'Democratic' }]);
+  assert.deepEqual([ids(r), r.basis, r.why], [['d'], 'uncontested', 'The only candidate in this race.']);
+  // Several Republicans: the incumbent first, otherwise ballot order.
+  r = fallbackPick([{ id: 'r1', party: 'Republican' }, { id: 'r2', party: 'Republican', incumbent: true }, { id: 'd', party: 'Democratic' }]);
+  assert.deepEqual([ids(r), r.why], [['r2'], 'The incumbent Republican.']);
+  r = fallbackPick([{ id: 'd', party: 'Democratic' }, { id: 'r1', party: 'Republican' }, { id: 'r2', party: 'Republican' }]);
+  assert.deepEqual([ids(r), r.why], [['r1'], "Several Republicans are running. Minute Man's pick is the first-listed Republican."]);
+  // No Republican: Libertarian, then Constitution, then independents, then others; a Democrat last.
+  r = fallbackPick([{ id: 'd', party: 'Democratic' }, { id: 'g', party: 'Green' }, { id: 'l', party: 'Libertarian' }]);
+  assert.deepEqual([ids(r), r.why], [['l'], "No Republican is running. Minute Man's pick is the Libertarian candidate."]);
+  r = fallbackPick([{ id: 'd', party: 'Democratic' }, { id: 'i', party: 'Independent' }, { id: 'c', party: 'Constitution' }]);
+  assert.deepEqual(ids(r), ['c']);
+  r = fallbackPick([{ id: 'd', party: 'Democratic' }, { id: 'g', party: 'Green' }, { id: 'i', party: 'Independent' }]);
+  assert.deepEqual([ids(r), r.why], [['i'], "No Republican is running. Minute Man's pick is the independent candidate."]);
+  r = fallbackPick([{ id: 'd', party: 'Democratic' }, { id: 'g', party: 'Green' }]);
+  assert.deepEqual(ids(r), ['g']);
+  r = fallbackPick([{ id: 'd1', party: 'Democratic' }, { id: 'd2', party: 'Democratic' }]);
+  assert.deepEqual([ids(r), r.why], [['d1'], "Only Democrats are running. Minute Man's pick is the first listed."]);
+  // Nonpartisan: the incumbent if known, otherwise the first listed.
+  r = fallbackPick([{ id: 'a' }, { id: 'b', incumbent: true }]);
+  assert.deepEqual([ids(r), r.basis, r.why], [['b'], 'nonpartisan', "A nonpartisan race. Minute Man's pick is the incumbent."]);
+  r = fallbackPick([{ id: 'a' }, { id: 'b' }]);
+  assert.deepEqual([ids(r), r.why], [['a'], "A nonpartisan race. Minute Man's pick is the first-listed candidate."]);
+  // Vote for 2: fills both seats.
+  r = fallbackPick([{ id: 'a' }, { id: 'b' }, { id: 'c' }], 2);
+  assert.deepEqual(ids(r), ['a', 'b']);
+  assert.equal(fallbackPick([]), null);
+  // No reason ever claims anything beyond party, incumbency or ballot order.
+  for (const x of [r]) assert.doesNotMatch(x.why, /endorse|record|conservative|support/i);
 });
 
 test('endorsements browser: attributed picks by state', async () => {
@@ -185,11 +232,23 @@ test('activism: check-in codes verify, double check-in rejected, self-logging ca
   const posts = (await call('/posts', { token: t })).data;
   assert.match(posts.url, /^https:\/\/cvas\.careride\.workers\.dev\/#\/join\/[A-Z0-9]{6}$/);
   const ballot = posts.posts.find((p) => p.id === 'ballot');
-  assert.match(ballot.text, /Senate: Ken Paxton \(AFI\)/);
+  assert.match(ballot.text, /^My Minute Man picks for the Texas ballot \(Nov 3\):\nSenate: Ken Paxton\n/);
   assert.ok(posts.posts.some((p) => /register to vote in Texas is Mon, Oct 5/.test(p.text)));
   assert.ok(posts.posts.every((p) => p.text.length <= 260));
-  // Races filled in only because one Republican is running are never posted as endorsements.
-  assert.ok(posts.posts.every((p) => !/Buckingham|Sheets|Bob Hall/.test(p.text)));
+  // Picks are Minute Man's: no post names a source or says anyone endorsed anyone.
+  assert.ok(posts.posts.every((p) => !/endorse|\bAFI\b|America First|Trump/i.test(p.text)), 'no source attributions');
+  // Every pick a post names is the pick on this voter's ballot; nothing invented.
+  const tb = (await call('/elections/tx-2026-general/ballot', { token: t })).data;
+  const racePosts = posts.posts.filter((p) => p.id.startsWith('race:'));
+  assert.ok(racePosts.length);
+  for (const p of racePosts) {
+    const c = tb.contests.find((x) => x.id === p.id.slice(5));
+    assert.ok(c, p.id);
+    const who = c.choices.find((ch) => ch.id === c.recommendation.choiceIds[0]).label;
+    assert.ok(p.text.startsWith(`Minute Man's pick for `) && p.text.includes(`: ${who}. Election Day is Tue, Nov 3.`), p.text);
+  }
+  // The only-Republican fill-in is a Minute Man pick like the rest, so it's posted too.
+  assert.ok(racePosts.some((p) => p.id === 'race:tx26-state-sen-2'));
   assert.equal((await call('/posts/share', { method: 'POST', body: { postId: 'nope' }, token: t })).status, 400);
   const pts = [];
   for (let i = 0; i < 6; i++) pts.push((await call('/posts/share', { method: 'POST', body: { postId: posts.posts[i % posts.posts.length].id }, token: t })).data.points);

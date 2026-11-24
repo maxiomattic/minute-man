@@ -56,21 +56,13 @@ export async function loadBallot(eid) {
   }
 }
 
-const SHORT = { 'America First Insight': 'AFI', 'Donald J. Trump': 'Trump' };
-const leaderName = (id) => state.leaders.find((l) => l.id === id)?.name || '';
 const labelOf = (c, id) => c.choices.find((x) => x.id === id)?.label || '';
 const partyOf = (c, id) => c.choices.find((x) => x.id === id)?.party || '';
 
-/** The recommended picks for a race and a short label for where they came from. */
+/** Minute Man's picks for a race. Every pick is Minute Man's, whichever rule filled it in. */
 function recOf(c) {
-  const rec = c.recommendation;
   const valid = new Set(c.choices.map((x) => x.id));
-  const ids = rec.choiceIds.filter((id) => valid.has(id));
-  if (!ids.length) return { ids, label: null };
-  if (rec.basis === 'party') return { ids, label: 'Only Republican', party: true };
-  const src = (c.sources || []).find((s) => s.leaderId === rec.sourceLeaderId);
-  const name = src?.name || leaderName(rec.sourceLeaderId);
-  return { ids, label: src?.short || SHORT[name] || name || 'Endorsed', src };
+  return { ids: c.recommendation.choiceIds.filter((id) => valid.has(id)) };
 }
 
 function daysLine(e) {
@@ -87,50 +79,43 @@ function cheatSheet(b) {
   }).join('')}</ol>`;
 }
 
-/** View mode: one row per race, the pick and its source. Made to read in the booth. */
+/** View mode: one row per race and Minute Man's pick. Made to read in the booth. */
 function slateHtml(b) {
   if (!b.contests.length) return '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>';
   return `<ol class="slate">${b.contests.map((c) => {
-    const { ids, label, party } = recOf(c);
+    const { ids } = recOf(c);
     return `<li>
       <span class="race">${esc(c.title)}${c.voteFor > 1 ? ` <span class="tiny muted">(vote for up to ${c.voteFor})</span>` : ''}</span>
       ${ids.length
-        ? `<span class="row between" style="gap:10px;align-items:baseline"><b class="name">${esc(ids.map((id) => labelOf(c, id)).join(', '))}</b><span class="src${party ? ' party' : ''}">${esc(label)}</span></span>`
-        : '<span class="muted none">No recommendation</span>'}
+        ? `<b class="name">${esc(ids.map((id) => labelOf(c, id)).join(', '))}</b>`
+        : '<span class="muted none">No pick</span>'}
     </li>`;
   }).join('')}</ol>`;
 }
 
 /** Examine mode: each race with the reasons behind its pick, and a way to mark it reviewed. */
 function examineHtml(c, seen) {
-  const { ids, label, party, src } = recOf(c);
+  const { ids } = recOf(c);
   const names = ids.map((id) => labelOf(c, id)).join(' and ');
   const why = [];
-  if (party) {
-    why.push(`<p>Neither America First Insight nor President Trump endorsed in this race. ${esc(names)} is the only Republican running, so Minute Man filled that name in. It isn't an endorsement.</p>`);
-  } else if (!ids.length) {
-    why.push('<p>Neither America First Insight nor President Trump endorsed in this race, and there isn\'t a single Republican to fill in. It\'s your call.</p>');
+  // The reasoning: a published write-up where one backs this pick (credited to its author), otherwise
+  // Minute Man's own short line about why this candidate was picked.
+  const written = ids.length ? (c.sources || []).find((s) => s.note && ids.every((id) => s.choiceIds.includes(id))) : null;
+  if (written) {
+    why.push(`<blockquote>${esc(written.note)}</blockquote>
+      <p class="credit tiny muted">Write-up: ${esc(written.name)}${written.url ? ` <a href="${esc(written.url)}" target="_blank" rel="noopener">Source</a>` : ''}</p>`);
+  } else if (ids.length) {
+    why.push(`<p>${esc(c.recommendation.why || (ids.length > 1 ? "Minute Man's picks for this race." : "Minute Man's pick for this race."))}</p>`);
   } else {
-    const all = c.sources || [];
-    const agree = all.filter((s) => s.choiceIds.length && s.choiceIds.every((id) => ids.includes(id)));
-    const ordered = src ? [src, ...agree.filter((s) => s !== src && s.leaderId !== src.leaderId)] : agree;
-    for (const s of ordered) {
-      const lead = s === src || s.leaderId === src?.leaderId ? `Endorsed by ${esc(s.name)}.` : `Also endorsed by ${esc(s.name)}.`;
-      const note = s.note ? `<blockquote>${esc(s.note)}</blockquote>` : s.short === 'AFI' ? '<p class="small muted">America First Insight didn\'t publish a write-up for this pick.</p>' : '';
-      const link = s.url ? ` <a href="${esc(s.url)}" target="_blank" rel="noopener">${s.short === 'Trump' ? 'Source: Ballotpedia' : 'Source'}</a>` : '';
-      why.push(`<div class="why"><p><b>${lead}</b>${link}</p>${note}</div>`);
-    }
-    if (!ordered.length) why.push('<p class="small muted">No write-up for this pick.</p>');
-    for (const s of all.filter((x) => x.choiceIds.length && !x.choiceIds.every((id) => ids.includes(id))))
-      why.push(`<p class="small muted">${esc(s.name)} endorses ${esc(s.choiceIds.map((id) => labelOf(c, id)).join(' and '))} instead.</p>`);
+    why.push('<p>Minute Man doesn\'t make picks on ballot measures. It\'s your call.</p>');
   }
   const others = c.choices.filter((ch) => !ids.includes(ch.id));
   return `<section class="contest exam" data-c="${esc(c.id)}">
     <header><h3>${esc(c.title)}</h3><span class="rule">${c.voteFor > 1 ? `Vote for up to ${c.voteFor}` : 'Vote for 1'}</span></header>
     ${c.description ? `<p class="desc">${esc(c.description)}</p>` : ''}
     <div class="pickline">${ids.length
-      ? `<div><b class="name">${esc(names)}</b>${ids.length === 1 && partyOf(c, ids[0]) ? ` <span class="muted small">${esc(partyOf(c, ids[0]))}</span>` : ''}</div><span class="src${party ? ' party' : ''}">${esc(label)}</span>`
-      : '<div class="muted">No recommendation</div>'}</div>
+      ? `<div><span class="eyebrow tiny muted">Minute Man's pick${ids.length > 1 ? 's' : ''}</span><b class="name">${esc(names)}</b>${ids.length === 1 && partyOf(c, ids[0]) ? ` <span class="muted small">${esc(partyOf(c, ids[0]))}</span>` : ''}</div>`
+      : '<div class="muted">No pick</div>'}</div>
     <div class="note">${why.join('')}
       ${others.length ? `<p class="small muted">Also on the ballot: ${others.map((ch) => `${esc(ch.label)}${ch.party ? ` (${esc(ch.party)})` : ''}`).join(', ')}.</p>` : ''}</div>
     <footer class="review noprint">${seen
@@ -161,9 +146,6 @@ export async function render(el, eid, sub) {
   if (sub === 'examine' || sub === 'ballot') { store.set(kMode, sub); history.replaceState(null, '', `#/ballot/${encodeURIComponent(eid)}`); }
   let mode = store.get(kMode, 'ballot') === 'examine' ? 'examine' : 'ballot';
   const { b, offline } = await loadBallot(eid);
-  const names = (state.leaders || []).map((x) => x.name);
-  const srcLine = names.length > 1 ? `${names[0]}'s endorsements first, then ${names.slice(1).join(', then ')} where ${names[0].split(' ').map((w) => w[0]).join('')} hasn't picked`
-    : names.length ? `${names[0]}'s endorsements` : 'your sources';
   // Races you've reviewed (the daily quest counts these). The server hears which race, never the pick.
   const seen = new Set(b.reviewed || []);
   const e = b.election;
@@ -220,10 +202,10 @@ export async function render(el, eid, sub) {
         ${exam ? reviewBar() : ''}
         ${exam
           ? `<div class="sheets">${b.contests.map((c) => examineHtml(c, seen.has(c.id))).join('') || '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>'}</div>`
-          : `<div class="panel slate-panel">${slateHtml(b)}
+          : `<div class="panel slate-panel"><h2 class="picks-head">Minute Man's picks</h2>${slateHtml(b)}
               <p class="small noprint" style="margin:12px 0 0"><button class="link-btn" id="seeWhy">See why each pick was made</button></p></div>`}
         <div class="ballot-info">
-          ${more('Where these picks come from', `<p class="small">Filled in from ${esc(srcLine)}. Where neither endorsed and only one Republican is running, that candidate is filled in and marked Only Republican. That isn't an endorsement.</p>`)}
+          ${more('How Minute Man picks', '<p class="small">Minute Man\'s picks draw on America First Insight\'s and President Trump\'s public endorsements. Every other race still gets a pick, by a fixed rule: the Republican running, or the only candidate, or with no Republican the closest right-of-center party, or in a nonpartisan race the incumbent or the first listed. Minute Man isn\'t run by or affiliated with them, or with any party, campaign or candidate.</p>')}
           ${state.me?.jurisdictionId && !state.me.jurisdictionId.includes('-') ? more('Some races are missing', `<p class="small">This shows statewide races only. Races for your congressional and legislative districts aren't loaded for your area yet. <a href="#/endorsements">See every endorsement in your state</a>.</p>`) : ''}
         </div>
         <p class="legal">You vote however you choose, and your ballot is secret. Minute Man never knows how you vote.</p>

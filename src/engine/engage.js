@@ -192,7 +192,7 @@ function nextActions(db, user, ctx) {
       add({ kind: 'plan', title: 'Make your voting plan', body: `Pick when and where you'll vote in ${e.name}. It takes 30 seconds.`, cta: 'Make a plan', href: `#/vote/${e.id}`, xp: 10 });
     const br = ctx.review;
     if (!parts.includes('voted') && br.total > 0 && br.have < br.total)
-      add({ kind: 'ballot', title: 'Review your ballot', progress: `${br.have} of ${br.total} races reviewed`, body: `${br.total} races, already filled in from your endorsements. Read why each pick was made and tap Got it.`, cta: br.have ? 'Keep reviewing' : 'See why', href: `#/ballot/${e.id}/examine`, xp: 15 });
+      add({ kind: 'ballot', title: 'Review your ballot', progress: `${br.have} of ${br.total} races reviewed`, body: `${br.total} races, already filled in with Minute Man's picks. Read why each pick was made and tap Got it.`, cta: br.have ? 'Keep reviewing' : 'See why', href: `#/ballot/${e.id}/examine`, xp: 15 });
     // Last two weeks: remind someone who isn't on Minute Man (app users get the app's own reminders).
     if (d <= 14 && !db.prepare(`SELECT 1 FROM activity WHERE user_id=? AND kind='reminded' AND day=?`).get(user.id, day))
       add({ kind: 'remind', title: 'Remind someone to vote', body: `${e.name} is ${d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`}. Text a quick reminder to someone who isn't on Minute Man.`, cta: 'Write a reminder', href: '#/act/remind', xp: 5 });

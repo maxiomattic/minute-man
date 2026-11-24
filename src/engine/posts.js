@@ -1,17 +1,12 @@
 // Ready-made posts a voter can share from their own accounts. The app never posts anything itself:
 // the voter picks a post, their phone's share sheet sends it, and that share is what counts.
 //
-// Every claim comes from data the app already has: published endorsements (attributed to the source
-// that made them), the election calendar and public events. The "only Republican" fill-in on the
-// sample ballot is never presented as an endorsement, so those races are left out.
+// Every claim comes from data the app already has: Minute Man's picks on the voter's sample ballot,
+// the election calendar and public events. Picks are always Minute Man's; posts never say that a
+// source (AFI, President Trump) endorsed anyone.
 
 export const PUBLIC_URL = 'https://cvas.careride.workers.dev';
 const MAX = 260; // leaves room for the link inside a 280-character post
-
-const SOURCE_SHORT = { 'Donald J. Trump': 'President Trump' };
-const short = (name) => SOURCE_SHORT[name] || name;
-const TAG = { 'America First Insight': 'AFI', 'Donald J. Trump': 'Trump' };
-const tag = (name) => TAG[name] || name;
 
 /** "Mon, Oct 5" for a YYYY-MM-DD date, independent of the server's zone. */
 export const fmtDay = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' });
@@ -28,11 +23,11 @@ const abbr = (t) => office(t).replace(/^U\.S\. Senate$/, 'Senate').replace(/, Di
  * @param {object} o
  * @param {object|null} o.election   next election row (name, date, registration_deadline, early_voting_start, mail_ballot_deadline)
  * @param {string|null} o.stateName  "Texas"
- * @param {Array<{title:string, candidate:string, source:string}>} o.endorsed  races on the voter's ballot a source endorsed in
+ * @param {Array<{contestId:string, title:string, candidate:string}>} o.picks  Minute Man's single picks on the voter's ballot
  * @param {string} o.today           YYYY-MM-DD
  * @returns {Array<{id:string, kind:string, text:string}>}
  */
-export function buildPosts({ election, stateName, endorsed = [], today }) {
+export function buildPosts({ election, stateName, picks = [], today }) {
   const posts = [];
   const add = (id, kind, text) => { if (text.length <= MAX) posts.push({ id, kind, text }); };
   const where = stateName ? `${stateName} ` : '';
@@ -41,11 +36,10 @@ export function buildPosts({ election, stateName, endorsed = [], today }) {
     const day = fmtDay(election.date);
     const until = daysBetween(today, election.date);
 
-    // 1. The voter's sample ballot: endorsed races only, each with its source.
-    if (endorsed.length) {
-      const sources = [...new Set(endorsed.map((r) => r.source))];
-      const head = `Endorsed on my ${where}ballot (${day.replace(/^\w+, /, '')}), from ${sources.map((s) => (short(s).includes(tag(s)) ? short(s) : `${short(s)} (${tag(s)})`)).join(' and ')}:`;
-      const lines = endorsed.map((r) => `${abbr(r.title)}: ${r.candidate} (${tag(r.source)})`);
+    // 1. The voter's sample ballot: Minute Man's picks.
+    if (picks.length) {
+      const head = `My Minute Man picks for the ${where}ballot (${day.replace(/^\w+, /, '')}):`;
+      const lines = picks.map((r) => `${abbr(r.title)}: ${r.candidate}`);
       let n = lines.length;
       const text = (k) => `${head}\n${lines.slice(0, k).join('\n')}${k < lines.length ? '\n...and more' : ''}\nGet yours:`;
       while (n > 1 && text(n).length > MAX) n--;
@@ -65,13 +59,13 @@ export function buildPosts({ election, stateName, endorsed = [], today }) {
     if (until >= 0)
       add('countdown', 'election', `${until === 0 ? 'Election Day is today' : `${until} ${until === 1 ? 'day' : 'days'} until Election Day`} (${day}). Know who's on your ballot before you go:`);
 
-    // 3. One race at a time, each attributed to the source that endorsed.
-    for (const r of endorsed)
-      add(`race:${r.contestId}`, 'endorsement', `${short(r.source)} endorses ${r.candidate} for ${office(r.title)}. Election Day is ${day}. See your whole ballot:`);
+    // 3. One race at a time.
+    for (const r of picks)
+      add(`race:${r.contestId}`, 'pick', `Minute Man's pick for ${office(r.title)}: ${r.candidate}. Election Day is ${day}. See your whole ballot:`);
   }
 
   // Always something to share, even before the voter has an address.
-  add('join', 'invite', "I'm using Minute Man to keep up with deadlines and get a sample ballot from America First endorsements. Join me:");
+  add('join', 'invite', "I'm using Minute Man to keep up with deadlines and get a filled-in sample ballot. Join me:");
   return posts;
 }
 
