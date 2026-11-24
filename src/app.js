@@ -507,6 +507,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
   // ---------- ready-made posts ----------
   // The voter shares a post from their own account through the phone's share sheet. Nothing is posted
   // automatically. A finished share (or a copy) is what records the post: honor system, capped daily.
+  let feedPosts; // set by postRoutes below
   const postsFor = (user) => {
     const election = upcomingElections(user)[0] || null;
     const stateId = (user.jurisdiction_id || '').split('-')[0];
@@ -527,16 +528,28 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
       sharedToday: shared, pointsLeftToday: Math.max(0, k.dailyCap - shared * k.perUnit) };
   });
 
-  route('POST', '/api/posts/share', ({ user, body }) => {
+  // Your own take (words and/or a photo) can go with it; the feed shows it above the post's words.
+  route('POST', '/api/posts/share', async ({ user, body }) => {
     const post = postsFor(user).find((p) => p.id === String(body.postId || ''));
     if (!post) throw bad('Pick a post to share');
     const pts = activityPoints('social', 1, false, sharedToday(user.id) * ACTIVITY.social.perUnit);
     // Sharing for a "share your ballot" event counts as doing it, once.
     const ev = body.actionId ? db.prepare(`SELECT id FROM actions WHERE id=? AND kind='social'`).get(Number(body.actionId)) : null;
     const actionId = ev && !db.prepare('SELECT 1 FROM activity WHERE user_id=? AND action_id=?').get(user.id, ev.id) ? ev.id : null;
-    db.prepare(`INSERT INTO activity (user_id, action_id, kind, quantity, note, points, day, at) VALUES (?,?,'social',1,?,?,?, datetime('now'))`)
-      .run(user.id, actionId, post.text.split('\n')[0].slice(0, 280), pts, today());
-    return { ok: true, points: pts, sharedToday: sharedToday(user.id) };
+    const activityId = Number(db.prepare(`INSERT INTO activity (user_id, action_id, kind, quantity, note, quote, points, day, at) VALUES (?,?,'social',1,?,?,?,?, datetime('now'))`)
+      .run(user.id, actionId, post.text.split('\n')[0].slice(0, 280), post.text, pts, today()).lastInsertRowid);
+    // The share already went out, so a take that can't be saved (daily limit, bad photo) doesn't undo it.
+    let take = null;
+    let takeError = null;
+    try { take = await feedPosts.attach(user.id, activityId, { body: body.body, image: body.image }); } catch (e) { takeError = e.message; }
+    return { ok: true, points: pts, sharedToday: sharedToday(user.id), activityId, key: `a:${activityId}`, post: take, takeError };
+  });
+
+  // A ready-made post on the Minute Man feed only, with your take. No points (nothing went out).
+  route('POST', '/api/posts/feed', ({ user, body }) => {
+    const post = postsFor(user).find((p) => p.id === String(body.postId || ''));
+    if (!post) throw bad('Pick a post to share');
+    return feedPosts.create(user.id, { body: body.body, image: body.image, quote: post.text });
   });
 
   // ---------- reminders to vote ----------
@@ -734,7 +747,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
   }, { auth: 'admin' });
 
   engagementRoutes(route, { db, HttpError, bad, upcomingElections, today, ballotFor, visibleActions });
-  postRoutes(route, { db, HttpError, bad, media, today });
+  feedPosts = postRoutes(route, { db, HttpError, bad, media, today });
 
   if (seed) {
     route('POST', '/api/admin/reseed', async () => {

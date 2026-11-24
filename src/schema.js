@@ -281,4 +281,30 @@ export const MIGRATIONS = [
     at TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (user_id, action_id)
   )`,
+  // Your own take on a ready-made post: the post's words are kept with the share (activity) or with a
+  // feed-only post, so the feed can show them under what you added.
+  'ALTER TABLE activity ADD COLUMN quote TEXT',
+  'ALTER TABLE posts ADD COLUMN quote TEXT',
+  // Replies on feed items (src/engine/replies.js). item is the feed key; owner_id is who the item belongs to.
+  `CREATE TABLE IF NOT EXISTS replies (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item TEXT NOT NULL,
+    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    body TEXT,
+    image TEXT,
+    image_w INTEGER,
+    image_h INTEGER,
+    day TEXT NOT NULL,
+    at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  'CREATE INDEX IF NOT EXISTS replies_item ON replies(item, at)',
+  'CREATE INDEX IF NOT EXISTS replies_image ON replies(image) WHERE image IS NOT NULL',
+  `CREATE TABLE IF NOT EXISTS reply_counts (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    day TEXT NOT NULL,
+    n INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, day)
+  )`,
+  'ALTER TABLE post_reports ADD COLUMN reply_id INTEGER REFERENCES replies(id) ON DELETE SET NULL',
 ];

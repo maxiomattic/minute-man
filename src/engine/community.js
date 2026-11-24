@@ -11,6 +11,7 @@ import { LADDER } from './ladder.js';
 import { jurisdictionChain } from '../rules.js';
 import { localDay, utcAt } from '../time.js';
 import { crewIds, pointsSince, streak, weekStart, WEEKLY_MIN } from './engage.js';
+import { addThreads } from './replies.js';
 
 const DAY = 86400000;
 const PAGE = 15;
@@ -63,7 +64,7 @@ export function areasFor(db, user) {
 // ---------- feed ----------
 /**
  * Everything people are getting done, ranked by impact x closeness x freshness.
- *   impact     log of the points it earned, more if checked in at an event, more with cheers
+ *   impact     log of the points it earned, more if checked in at an event, more with cheers and people replying
  *   closeness  your precinct 3x, your districts 2.2x, county 1.6x, state 1.25x; friends and groups 1.5x
  *   freshness  halves every 3 days
  * Pages are offsets into the ranked list (cursor = next offset).
@@ -103,7 +104,7 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
   });
 
   for (const r of db.prepare(
-    `SELECT a.id, a.user_id, a.kind, a.quantity, a.verified, a.points, a.at, x.title,
+    `SELECT a.id, a.user_id, a.kind, a.quantity, a.verified, a.points, a.at, a.quote, x.title,
        p.id pid, p.body, p.image, p.image_w, p.image_h FROM activity a
      LEFT JOIN actions x ON x.id=a.action_id LEFT JOIN posts p ON p.activity_id=a.id WHERE a.at > ? ORDER BY a.at DESC LIMIT 2000`,
   ).all(since)) {
@@ -113,7 +114,9 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     const verb = { canvass: 'knocked', phonebank: 'made', social: 'shared' }[r.kind];
     push(p, {
       key: `a:${r.id}`, at: r.at, icon: r.kind, points: r.points, verified: !!r.verified, activityId: r.id, ...words(r),
-      text: r.kind === 'reminded' ? `reminded ${r.quantity === 1 ? 'someone' : `${r.quantity} people`} to vote`
+      // A ready-made post they shared: its words show under their take.
+      ...(r.quote ? { quote: r.quote } : {}),
+      text: r.quote ? 'shared a post' : r.kind === 'reminded' ? `reminded ${r.quantity === 1 ? 'someone' : `${r.quantity} people`} to vote`
         : verb ? `${verb} ${qty}${r.title ? ` at ${r.title}` : ''}` : r.title ? `went to ${r.title}` : `worked a ${k?.label.toLowerCase() || r.kind}`,
     });
   }
@@ -139,21 +142,23 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
 
   // Posts people wrote. Everyone sees them.
   for (const r of db.prepare(
-    `SELECT id pid, user_id, body, image, image_w, image_h, at FROM posts WHERE activity_id IS NULL AND at > ? ORDER BY at DESC LIMIT 1000`,
+    `SELECT id pid, user_id, body, image, image_w, image_h, quote, at FROM posts WHERE activity_id IS NULL AND at > ? ORDER BY at DESC LIMIT 1000`,
   ).all(since)) {
     const p = who(r.user_id);
-    push(p, { key: `u:${r.pid}`, at: r.at, icon: 'post', points: 0, text: '', post: true, ...words(r) });
+    push(p, { key: `u:${r.pid}`, at: r.at, icon: 'post', points: 0, text: '', post: true, ...words(r), ...(r.quote ? { quote: r.quote } : {}) });
   }
 
   const cheers = db.prepare('SELECT COUNT(*) n FROM cheers WHERE item=?');
+  const talk = db.prepare('SELECT COUNT(DISTINCT user_id) n FROM replies WHERE item=?');
   const now = Date.now();
   for (const it of items) {
     it.cheers = cheers.get(it.key).n;
+    const talkers = talk.get(it.key).n;
     // A post earns no points; it counts like a small unverified action (impact 3, about 6 points' worth),
     // so it never outranks verified work of the same age and distance (at least 7). A photo adds a
     // little: more on real work (an activity) than on a free-form post.
     const photo = it.image ? (it.post ? 1.1 : 1.15) : 1;
-    const impact = (it.post ? 3 : Math.log2(2 + it.points)) * (it.verified ? 1.4 : 1) * (it.milestone ? 1.3 : 1) * photo * (1 + 0.15 * Math.min(it.cheers, 10));
+    const impact = (it.post ? 3 : Math.log2(2 + it.points)) * (it.verified ? 1.4 : 1) * (it.milestone ? 1.3 : 1) * photo * (1 + 0.15 * Math.min(it.cheers, 10)) * (1 + 0.1 * Math.min(talkers, 10));
     const near = people.get(it.userId).near.w * (it.crew ? 1.5 : 1);
     // One clock reading for the whole list, and no clamp at age 0: items from the same second score
     // the same, and every item decays by the same factor between requests, so pages never shift.
@@ -177,6 +182,7 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     delete it.score;
     delete it.crew;
   }
+  addThreads(db, user, page, crew);
   return { items: page, next: cursor + limit < items.length ? cursor + limit : null };
 }
 

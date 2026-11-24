@@ -788,3 +788,124 @@ test('feed posts: text and photo, visibility, limits, report, delete, account de
   assert.equal((await handle(new Request('http://t' + img2))).status, 404);
   assert.ok(!(await feedAllOf(friend)).some((i) => i.userId === me.id));
 });
+
+test('sharing a ready-made post: your own take and photo show with it on the feed', async () => {
+  const mk = async (email, name) => (await call('/signup', { method: 'POST', body: { email, name, password: 'longenough' } })).data.token;
+  const sharer = await mk('taker@x.org', 'Tina Taker');
+  const viewer = await mk('tviewer@x.org', 'Vic Viewer');
+  const { posts } = (await call('/posts', { token: sharer })).data;
+  const p = posts[0];
+
+  // Share with words and a photo: points as before, the take rides on the share.
+  const r = await call('/posts/share', { method: 'POST', body: { postId: p.id, body: 'Took me two minutes.', image: { data: fakeJpeg(), w: 800, h: 600 } }, token: sharer });
+  assert.equal(r.status, 200);
+  assert.ok(r.data.points > 0);
+  assert.equal(r.data.post.body, 'Took me two minutes.');
+  assert.match(r.data.post.image, /^\/api\/media\//);
+  let it = (await feedAllOf(viewer)).find((i) => i.key === r.data.key);
+  assert.equal(it.text, 'shared a post');
+  assert.equal(it.quote, p.text);
+  assert.equal(it.body, 'Took me two minutes.');
+  assert.ok(it.image);
+  assert.equal(it.name, 'Tina T.');
+
+  // Share with no take: the post's words still show.
+  const plain = await call('/posts/share', { method: 'POST', body: { postId: p.id }, token: sharer });
+  it = (await feedAllOf(viewer)).find((i) => i.key === plain.data.key);
+  assert.equal(it.quote, p.text);
+  assert.equal(it.postId, undefined);
+  assert.equal(plain.data.post, null);
+
+  // A take that's too long doesn't undo a share that already went out.
+  const long = await call('/posts/share', { method: 'POST', body: { postId: p.id, body: 'x'.repeat(501) }, token: sharer });
+  assert.equal(long.status, 200);
+  assert.ok(long.data.takeError);
+
+  // Post on the feed only: no points, shows as their post with the quote.
+  const before = (await call('/recognition', { token: sharer })).data.points;
+  const f = await call('/posts/feed', { method: 'POST', body: { postId: p.id, body: 'Read this.' }, token: sharer });
+  assert.equal(f.status, 200);
+  assert.equal((await call('/recognition', { token: sharer })).data.points, before);
+  it = (await feedAllOf(viewer)).find((i) => i.key === f.data.key);
+  assert.equal(it.quote, p.text);
+  assert.equal(it.body, 'Read this.');
+  assert.equal((await call('/posts/feed', { method: 'POST', body: { postId: 'nope' }, token: sharer })).status, 400);
+});
+
+test('replies: text and photo, rank and privacy, thread preview, report, delete', async () => {
+  const mk = async (email, name) => (await call('/signup', { method: 'POST', body: { email, name, password: 'longenough' } })).data.token;
+  const author = await mk('rauthor@x.org', 'Rita Author');
+  const friend = await mk('rfriend@x.org', 'Ray Friend');
+  const stranger = await mk('rstranger@x.org', 'Stan Stranger');
+  await call('/friends', { method: 'POST', body: { email: 'rauthor@x.org' }, token: friend });
+  const friendId = (await call('/me', { token: friend })).data.id;
+  await call(`/friends/${friendId}/accept`, { method: 'POST', token: author });
+
+  const post = (await call('/feed/posts', { method: 'POST', body: { body: 'Who is coming Saturday?' }, token: author })).data;
+  const key = post.key;
+  // Text reply, photo reply, and empty / bad replies.
+  const r1 = await call('/feed/replies', { method: 'POST', body: { item: key, body: 'Count me in. <i>yes</i>' }, token: friend });
+  assert.equal(r1.status, 200);
+  assert.equal(r1.data.reply.name, 'Ray Friend');
+  assert.equal(r1.data.reply.rank, 'Private');
+  const r2 = await call('/feed/replies', { method: 'POST', body: { item: key, body: 'Here is the map', image: { data: fakeJpeg(), w: 640, h: 480 } }, token: stranger });
+  assert.equal(r2.status, 200);
+  assert.match(r2.data.reply.image, /^\/api\/media\/[A-Za-z0-9_-]{22}\.jpg$/);
+  const img = await handle(new Request('http://t' + r2.data.reply.image));
+  assert.equal(img.status, 200);
+  assert.ok(!String.fromCharCode(...new Uint8Array(await img.arrayBuffer())).includes('GPS'));
+  assert.equal((await call('/feed/replies', { method: 'POST', body: { item: key, body: ' ' }, token: friend })).status, 400);
+  assert.equal((await call('/feed/replies', { method: 'POST', body: { item: 'u:999999', body: 'hi' }, token: friend })).status, 404);
+  assert.equal((await call('/feed/replies', { method: 'POST', body: { item: key, image: { data: btoa('<svg>') } }, token: friend })).status, 400);
+  const r3 = await call('/feed/replies', { method: 'POST', body: { item: key, body: 'Thanks both!' }, token: author });
+
+  // The feed item carries the count and the latest two; strangers get first name, last initial and town.
+  const seenBy = async (t) => (await feedAllOf(t)).find((i) => i.key === key);
+  let it = await seenBy(author);
+  assert.equal(it.replyCount, 3);
+  assert.deepEqual(it.replies.map((x) => x.id), [r2.data.reply.id, r3.data.reply.id]);
+  assert.equal(it.replies[0].name, 'Stan S.');
+  assert.ok(it.replies[0].rank);
+  it = await seenBy(stranger);
+  assert.equal(it.replies[1].name, 'Rita A.');
+  const thread = (await call(`/feed/replies?item=${encodeURIComponent(key)}`, { token: stranger })).data.replies;
+  assert.deepEqual(thread.map((x) => x.body), ['Count me in. <i>yes</i>', 'Here is the map', 'Thanks both!']);
+  assert.equal(thread[0].name, 'Ray F.');
+  assert.ok(thread[1].mine);
+
+  // Replies on activity and rank-ups work; voting status only for friends.
+  const act = (await call('/activity', { method: 'POST', body: { kind: 'canvass', quantity: 5 }, token: author })).data;
+  assert.equal((await call('/feed/replies', { method: 'POST', body: { item: `a:${act.activityId}`, body: 'Nice work' }, token: stranger })).status, 200);
+  assert.equal((await call('/participation', { method: 'POST', body: { electionId: 'tx-2026-general', kind: 'planned' }, token: author })).status, 200);
+  const planned = (await feedAllOf(friend)).find((i) => i.userId === r3.data.reply.userId && i.icon === 'planned');
+  assert.ok(planned);
+  assert.equal((await call('/feed/replies', { method: 'POST', body: { item: planned.key, body: 'Same' }, token: friend })).status, 200);
+  assert.equal((await call('/feed/replies', { method: 'POST', body: { item: planned.key, body: 'Same' }, token: stranger })).status, 404);
+
+  // Report: hidden for the reporter, flagged for the admin, still there for others.
+  assert.equal((await call('/feed/report', { method: 'POST', body: { item: r2.data.reply.key, reason: 'spam' }, token: friend })).status, 200);
+  assert.equal((await call('/feed/report', { method: 'POST', body: { item: r2.data.reply.key }, token: stranger })).status, 400);
+  assert.equal((await seenBy(friend)).replyCount, 2);
+  assert.equal((await seenBy(author)).replyCount, 3);
+  const flagged = (await call('/admin/reports', { token: ADMIN })).data;
+  assert.ok(flagged.some((x) => x.type === 'reply' && x.id === r2.data.reply.id && x.reports === 1));
+  assert.equal((await call(`/admin/replies/${r2.data.reply.id}`, { method: 'DELETE' })).status, 401);
+  assert.equal((await call(`/admin/replies/${r2.data.reply.id}`, { method: 'DELETE', token: ADMIN })).status, 200);
+  assert.equal((await handle(new Request('http://t' + r2.data.reply.image))).status, 404, 'photo goes with the reply');
+
+  // Delete your own reply only.
+  assert.equal((await call(`/feed/replies/${r1.data.reply.id}`, { method: 'DELETE', token: author })).status, 404);
+  assert.equal((await call(`/feed/replies/${r1.data.reply.id}`, { method: 'DELETE', token: friend })).status, 200);
+  assert.equal((await seenBy(author)).replyCount, 1);
+
+  // Deleting the post removes its replies; deleting an account removes that person's replies.
+  const r4 = (await call('/feed/replies', { method: 'POST', body: { item: key, body: 'one more', image: { data: fakeJpeg() } }, token: stranger })).data.reply;
+  await call(`/feed/posts/${post.post.id}`, { method: 'DELETE', token: author });
+  assert.equal((await handle(new Request('http://t' + r4.image))).status, 404);
+  assert.equal((await call(`/feed/replies?item=${key}`, { token: author })).status, 404);
+  const other = (await call('/feed/posts', { method: 'POST', body: { body: 'Still here' }, token: author })).data;
+  const r5 = (await call('/feed/replies', { method: 'POST', body: { item: other.key, body: 'bye', image: { data: fakeJpeg() } }, token: stranger })).data.reply;
+  assert.equal((await call('/me', { method: 'DELETE', token: stranger })).status, 200);
+  assert.equal((await handle(new Request('http://t' + r5.image))).status, 404);
+  assert.equal((await call(`/feed/replies?item=${other.key}`, { token: author })).data.replies.length, 0);
+});
