@@ -11,7 +11,7 @@ export function feedItemHtml(it) {
   return `<div class="feed-item">
     <span class="avatar" aria-hidden="true">${esc(initials(it.name))}</span>
     <div class="grow">
-      <div><strong>${esc(it.name)}</strong> ${esc(it.text)}</div>
+      <div><strong>${esc(it.name)}</strong>${it.rank && it.icon !== 'rank' ? ` <span class="feed-rank">${esc(it.rank)}</span>` : ''} ${esc(it.text)}</div>
       <div class="row tiny muted feed-meta">
         <span class="feed-kind">${icon(ACTIVITY_ICON[it.icon] || 'star')}</span>
         <span>${esc(ago(it.at))} ago${it.place && !mine ? `, ${esc(it.place.replace(/, [A-Z]{2}$/, ''))}` : ''}</span>

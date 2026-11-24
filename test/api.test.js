@@ -324,6 +324,17 @@ test('leaderboards: friends, groups and every area level, by week, month or all 
   }
   assert.ok(count['Precinct 101'] < count['Ellis County'] && count['Ellis County'] < count.Texas && count.Texas < count.Nationwide);
   const pre = (await call('/leaderboard?scope=area:precinct&period=all', { token: t })).data;
+  // Ladder rank beside the name: group-mates and opted-in strangers who share their status.
+  assert.ok(all.some((i) => i.name === 'Ray Delgado' && i.rank === 'Volunteer'));
+  assert.ok(all.some((i) => i.name === 'Earl P.' && i.rank === 'Precinct Chair'));
+  // A stranger who stops sharing their status keeps their activity in the feed but loses the rank.
+  const travis = await login('neighbor7@example.org');
+  await call('/me', { method: 'PATCH', body: { shareStatus: false }, token: travis });
+  const feedAll = async () => { const out = []; let c = 0; while (c !== null) { const p = (await call(`/feed?cursor=${c}`, { token: t })).data; out.push(...p.items); c = p.next; } return out; };
+  const hidden = (await feedAll()).filter((i) => i.name === 'Travis Y.');
+  assert.ok(hidden.length && hidden.every((i) => !i.rank && i.icon !== 'rank'));
+  await call('/me', { method: 'PATCH', body: { shareStatus: true }, token: travis });
+  assert.ok((await feedAll()).some((i) => i.name === 'Travis Y.' && i.rank === 'Regular'));
   assert.ok(pre.rows.some((r) => r.name === 'Ray Delgado')); // a group-mate: full name
   const county = (await call('/leaderboard?scope=area:tx-ellis&period=all', { token: t })).data;
   assert.ok(county.rows.some((r) => r.name === 'Travis Y.' && r.where === 'Midlothian, TX')); // a stranger: initial and town

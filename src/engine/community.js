@@ -78,7 +78,7 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
   const people = new Map();
   const who = (id) => {
     if (!people.has(id)) {
-      const u = db.prepare('SELECT id, name, jurisdiction_id, precinct, home_label, share_status, on_leaderboards FROM users WHERE id=?').get(id);
+      const u = db.prepare('SELECT id, name, jurisdiction_id, precinct, home_label, share_status, on_leaderboards, rung FROM users WHERE id=?').get(id);
       const mine = u.id === user.id;
       const isCrew = crew.has(u.id);
       people.set(id, {
@@ -96,7 +96,13 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
   };
 
   const items = [];
-  const push = (p, it) => items.push({ ...it, userId: p.u.id, name: p.mine || p.isCrew ? p.u.name : short(p.u.name), place: p.u.home_label || null, near: p.near.level, crew: p.isCrew });
+  // Their Ladder rank beside their name, under the same rule as rank-ups (and the leaderboard):
+  // yours always, anyone else's only if they share their status. Uses the stored rung, once per person.
+  const push = (p, it) => items.push({
+    ...it, userId: p.u.id, name: p.mine || p.isCrew ? p.u.name : short(p.u.name),
+    rank: p.seesRank ? LADDER[(p.u.rung || 1) - 1]?.name || null : null,
+    place: p.u.home_label || null, near: p.near.level, crew: p.isCrew,
+  });
 
   for (const r of db.prepare(
     `SELECT a.id, a.user_id, a.kind, a.quantity, a.verified, a.points, a.at, x.title FROM activity a

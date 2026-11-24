@@ -23,6 +23,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] Renamed Minute Man: Continental navy and brass, IM Fell English headings, tricorn icon (appId org.cvas.app and the workers.dev URL kept)
 - [x] Three tabs: Today, Feed, Leaderboard. Ballot opens from Today; profile from the avatar
 - [x] Feed: endless, ranked by impact × closeness × freshness with a per-person variety penalty; county muster totals (3+ active people only); cheers for anyone opted in
+- [x] Feed shows each person's Ladder rank as a brass chip by their name (yours always; others only if they share their status, same rule as rank-ups and the leaderboard)
 - [x] Leaderboard: precinct, districts, county, state, nationwide, friends and groups; week / 30 days / all time; your numbers, 8-week chart, 14 honors
 - [x] Sources fixed (AFI, then Trump, then only Republican); leader swapping, custom leaders, themes and leader console removed
 - [x] Group members can host events with a check-in code
