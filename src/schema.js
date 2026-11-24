@@ -228,4 +228,7 @@ export const MIGRATIONS = [
   'ALTER TABLE users ADD COLUMN rung INTEGER NOT NULL DEFAULT 1',
   'CREATE UNIQUE INDEX IF NOT EXISTS users_ref_code ON users(ref_code)',
   'CREATE INDEX IF NOT EXISTS users_referred_by ON users(referred_by)',
+  // Feed: recent activity and rank-ups across everyone.
+  'CREATE INDEX IF NOT EXISTS activity_at ON activity(at)',
+  'CREATE INDEX IF NOT EXISTS bonuses_at ON bonuses(at)',
 ];

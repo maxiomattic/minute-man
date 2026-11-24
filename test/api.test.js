@@ -106,10 +106,12 @@ test('signup, login, auth required', async () => {
   assert.equal((await call('/login', { method: 'POST', body: { email: 'new@x.org', password: 'wrong-pass' } })).status, 401);
 });
 
-test('signup binds AFI first, Trump second', async () => {
+test('every ballot uses AFI first, Trump second, and users cannot change that', async () => {
   const s = (await call('/signup', { method: 'POST', body: { email: 'binds@x.org', name: 'B', password: 'longenough' } })).data;
-  const b = (await call('/bindings', { token: s.token })).data;
+  const b = (await call('/sources', { token: s.token })).data;
   assert.deepEqual(b.map((x) => x.name), ['America First Insight', 'Donald J. Trump']);
+  for (const [method, path] of [['PUT', '/bindings'], ['POST', '/bindings'], ['DELETE', '/bindings/1'], ['POST', '/leaders'], ['PUT', '/leaders/1/recommendations'], ['POST', '/endorse']])
+    assert.equal((await call(path, { method, body: [], token: s.token })).status, 404, `${method} ${path}`);
 });
 
 test('sample ballot: AFI first, Trump as fallback, no invented picks', async () => {
@@ -132,20 +134,6 @@ test('sample ballot: AFI first, Trump as fallback, no invented picks', async () 
     assert.equal(rec('tx26-state-sen-2').sourceLeaderId, null);
   } else assert.deepEqual(rec('tx26-state-sen-2').choiceIds, []);
 
-  // Put Trump first: shared picks now credit Trump, AFI-only races still come from AFI
-  await call('/bindings', { method: 'PUT', body: [{ leaderId: trump }, { leaderId: afi }], token: t });
-  const b2 = (await call('/elections/tx-2026-general/ballot', { token: t })).data;
-  const src2 = (id) => b2.contests.find((c) => c.id === id).recommendation.sourceLeaderId;
-  assert.equal(src2('tx26-gov'), trump);
-  assert.ok(b.contests.some((c) => c.recommendation.sourceLeaderId === afi && src2(c.id) === afi), 'some AFI-only race keeps its AFI pick');
-  // Drop Trump: governor has no endorsement, so it falls to the only Republican, credited to nobody
-  await call(`/bindings/${trump}`, { method: 'DELETE', token: t });
-  const b3 = (await call('/elections/tx-2026-general/ballot', { token: t })).data;
-  const gov = b3.contests.find((c) => c.id === 'tx26-gov').recommendation;
-  assert.deepEqual([gov.choiceIds, gov.basis, gov.sourceLeaderId], [['tx26-gov-0'], 'party', null]);
-  await call('/bindings', { method: 'POST', body: { leaderId: trump }, token: t });
-  const back = (await call('/bindings', { method: 'PUT', body: [{ leaderId: afi }, { leaderId: trump }], token: t })).data;
-  assert.deepEqual(back.map((x) => x.leaderId), [afi, trump]);
 });
 
 test('endorsements browser: attributed picks by state', async () => {
@@ -157,11 +145,6 @@ test('endorsements browser: attributed picks by state', async () => {
   assert.ok(sen.pick.candidate.includes('Paxton'));
   const ga = (await call('/endorsements?state=GA', { token: tok })).data;
   assert.equal(ga.races.find((r) => r.race === 'GOV').pick.sourceName, 'Donald J. Trump');
-});
-
-test('source leaders cannot be edited by sample accounts', async () => {
-  const org = await login('org1@example.org');
-  assert.equal((await call('/leaders/1/recommendations', { method: 'PUT', body: { contestId: 'tx26-gov', choiceIds: ['tx26-gov-1'] }, token: org })).status, 403);
 });
 
 test('voting: turnout points, once per election, no vote choice accepted or stored', async () => {
@@ -236,14 +219,6 @@ test('registration status, eligibility and registered badge', async () => {
   assert.ok((await call('/recognition', { token: t })).data.badges.some((b) => b.id === 'registered'));
 });
 
-test('endorsing a source scores without any vote data', async () => {
-  const t = await login('demo@example.org');
-  const r0 = (await call('/recognition', { token: t })).data;
-  assert.equal(r0.breakdown.groupWins, 0); // no results before Nov 3
-  await call('/endorse', { method: 'POST', body: { leaderId: 1 }, token: t });
-  assert.equal((await call('/recognition', { token: t })).data.breakdown.endorsements, 20);
-});
-
 test('admin ingestion requires token and upserts', async () => {
   const data = { elections: [{ id: 'el-new', name: 'New Special', date: '2026-12-12', kind: 'special', jurisdictionId: 'tx-ellis-wax',
     contests: [{ id: 'c-new', title: 'Prop 1', kind: 'measure', choices: [{ id: 'n-y', label: 'Yes' }, { id: 'n-n', label: 'No' }] }] }] };
@@ -308,15 +283,57 @@ test('today: next action, quests, streak, claims', async () => {
   assert.ok(t.week.points >= done[0].xp);
 });
 
-test('feed shows crew actions and cheers work', async () => {
+test('feed: ranked, paged, opted-in only, never shows strangers voting', async () => {
   const t = await login('demo@example.org');
-  const f = (await call('/feed', { token: t })).data;
-  assert.ok(f.length > 0);
-  const item = f.find((x) => x.userId !== undefined);
-  const r = await call('/cheers', { method: 'POST', body: { item: item.key, ownerId: item.userId }, token: t });
-  assert.equal(r.data.cheers, item.cheers + 1);
-  const lb = (await call('/leaderboard?scope=friends&period=week', { token: t })).data;
-  assert.equal(lb.period, 'week');
+  const p1 = (await call('/feed', { token: t })).data;
+  assert.equal(p1.items.length, 15);
+  assert.ok(p1.next);
+  const p2 = (await call(`/feed?cursor=${p1.next}`, { token: t })).data;
+  const keys = [...p1.items, ...p2.items].map((i) => i.key);
+  assert.equal(new Set(keys).size, keys.length, 'no repeats across pages');
+  const all = [...p1.items, ...p2.items];
+  let cur = p2.next;
+  while (cur) { const p = (await call(`/feed?cursor=${cur}`, { token: t })).data; all.push(...p.items); cur = p.next; }
+  // Peggy Lindell keeps herself off leaderboards, so she never shows up.
+  assert.ok(!all.some((i) => /Peggy/.test(i.name)));
+  // Voting and plans only from friends and group-mates (full names), never strangers.
+  for (const i of all.filter((x) => ['voted', 'planned', 'registered'].includes(x.icon))) assert.ok(i.name.includes(' ') && !/\.$/.test(i.name), i.name);
+  // Strangers show a first name and last initial.
+  assert.ok(all.some((i) => i.name === 'Earl P.'));
+  // Near beats far: on average, precinct items rank above out-of-state ones.
+  const pos = (f) => { const ix = all.map((x, n) => (f(x) ? n : null)).filter((n) => n !== null); return ix.reduce((a, b) => a + b, 0) / ix.length; };
+  assert.ok(pos((i) => i.near === 'precinct') < pos((i) => i.near === 'nation'));
+  // You can cheer someone you can see, even a stranger.
+  const far = all.find((i) => i.near === 'nation');
+  const r = await call('/cheers', { method: 'POST', body: { item: far.key, ownerId: far.userId }, token: t });
+  assert.equal(r.data.cheers, far.cheers + 1);
+  const peggy = (await call('/leaderboard?scope=area:tx-ellis&period=all', { token: t })).data;
+  assert.ok(!peggy.rows.some((x) => /Peggy/.test(x.name)));
+});
+
+test('leaderboards: friends, groups and every area level, by week, month or all time', async () => {
+  const t = await login('demo@example.org');
+  const areas = (await call('/areas', { token: t })).data;
+  assert.deepEqual(areas.map((a) => a.label), ['Precinct 101', 'Your districts', 'Ellis County', 'Texas', 'Nationwide']);
+  const count = {};
+  for (const a of areas) {
+    const lb = (await call(`/leaderboard?scope=${a.scope}&period=month`, { token: t })).data;
+    assert.equal(lb.period, 'month');
+    assert.ok(lb.you && lb.you.me);
+    count[a.label] = lb.count;
+  }
+  assert.ok(count['Precinct 101'] < count['Ellis County'] && count['Ellis County'] < count.Texas && count.Texas < count.Nationwide);
+  const pre = (await call('/leaderboard?scope=area:precinct&period=all', { token: t })).data;
+  assert.ok(pre.rows.some((r) => r.name === 'Ray Delgado')); // a group-mate: full name
+  const county = (await call('/leaderboard?scope=area:tx-ellis&period=all', { token: t })).data;
+  assert.ok(county.rows.some((r) => r.name === 'Travis Y.' && r.where === 'Midlothian, TX')); // a stranger: initial and town
+  const fr = (await call('/leaderboard?scope=friends&period=week', { token: t })).data;
+  assert.ok(fr.rows.some((r) => r.name === 'Cody Ramirez'));
+  assert.equal((await call('/leaderboard?scope=area:fl', { token: t })).status, 400);
+  const st = (await call('/standing', { token: t })).data;
+  assert.equal(st.weeks.length, 8);
+  assert.equal(st.places.length, 5);
+  assert.ok(st.together.active >= 3 && st.together.doors > 0);
 });
 
 test('ladder: ranks follow the steps in order and coach the next one', async () => {

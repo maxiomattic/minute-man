@@ -135,6 +135,7 @@ export async function seed(db, { force = false } = {}) {
   const src = await loadSources(db);
   if (!fresh) {
     if (force) refreshEventDates(db);
+    seedNeighbors(db, await hashPw('demo-password'));
     return;
   }
   const hashed = await hashPw('demo-password');
@@ -181,6 +182,60 @@ export async function seed(db, { force = false } = {}) {
   part(friends[1], 'tx-2026-general', 'planned', -1);
   for (const u of [friends[0], friends[1], friends[2]]) part(u, null, 'registered', -300);
   db.prepare(`INSERT INTO nudges (from_id, to_id, election_id, at) VALUES (?,?, 'tx-2026-general', ?)`).run(friends[0], demo, at(-1, 19));
+  seedNeighbors(db, hashed);
+}
+
+// Fictional neighbors near and far, so the area feed and leaderboards have people on them.
+// [name, jurisdiction, home, precinct, rung, opted in to leaderboards]
+const NEIGHBORS = [
+  ['Ray Delgado', 'tx-ellis-wax', 'Waxahachie, TX', '101', 6, 1], ['Tammy Pruitt', 'tx-ellis-wax', 'Waxahachie, TX', '101', 4, 1],
+  ['Hank Osborne', 'tx-ellis-wax', 'Waxahachie, TX', '101', 3, 1], ['Lena Vasquez', 'tx-ellis-wax', 'Waxahachie, TX', '104', 5, 1],
+  ['Bo Whitfield', 'tx-ellis-wax', 'Waxahachie, TX', '104', 2, 1], ['Marcy Keller', 'tx-ellis-wax', 'Waxahachie, TX', '112', 7, 1],
+  ['Travis Yates', 'tx-ellis', 'Midlothian, TX', null, 5, 1], ['Jolene Mercer', 'tx-ellis', 'Midlothian, TX', null, 3, 1],
+  ['Gus Navarro', 'tx-ellis', 'Ennis, TX', null, 6, 1], ['Peggy Lindell', 'tx-ellis', 'Ennis, TX', null, 4, 0],
+  ['Dwayne Fisk', 'tx-ellis', 'Red Oak, TX', null, 3, 1], ['Carla Benson', 'tx', 'Fort Worth, TX', null, 7, 1],
+  ['Mitch Garrity', 'tx', 'Tyler, TX', null, 5, 1], ['Rosa Whitaker', 'tx', 'Amarillo, TX', null, 6, 1],
+  ['Glen Hartley', 'tx', 'The Woodlands, TX', null, 4, 1], ['Darla Simms', 'tx', 'Lubbock, TX', null, 3, 1],
+  ['Earl Pickens', 'fl', 'Ocala, FL', null, 8, 1], ['Jenna Kowalski', 'oh', 'Findlay, OH', null, 5, 1],
+  ['Luis Ortega', 'az', 'Prescott, AZ', null, 6, 1],
+];
+const RUNG_PTS = [0, 50, 100, 100, 150, 200, 300, 500];
+
+function seedNeighbors(db, hashed) {
+  if (db.prepare(`SELECT 1 FROM users WHERE email='neighbor1@example.org'`).get()) return;
+  // Small deterministic generator so every seed looks the same.
+  let x = 7;
+  const rnd = (n) => { x = (x * 1103515245 + 12345) % 2147483648; return x % n; };
+  const g = db.prepare(`SELECT id FROM groups WHERE invite_code='ELLIS101'`).get()?.id;
+  NEIGHBORS.forEach(([name, jid, home, precinct, rung, lb], i) => {
+    const id = Number(db.prepare(
+      `INSERT INTO users (email, name, pw_hash, jurisdiction_id, home_label, precinct, birth_date, share_status, on_leaderboards, rung)
+       VALUES (?,?,?,?,?,?,?,1,?,?)`,
+    ).run(`neighbor${i + 1}@example.org`, name, hashed, jid, home, precinct, `19${60 + rnd(40)}-0${1 + rnd(9)}-1${rnd(9)}`, lb, rung).lastInsertRowid);
+    bindDefaults(db, id);
+    if (g && precinct === '101') db.prepare('INSERT OR IGNORE INTO group_members (group_id, user_id) VALUES (?,?)').run(g, id);
+    db.prepare('INSERT INTO participation (user_id, election_id, kind, at) VALUES (?,NULL,?,?)').run(id, 'registered', at(-400, 12));
+    // Rank-ups: the latest one recent enough to show in the feed.
+    for (let l = 2; l <= rung; l++)
+      db.prepare('INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,?,?)').run(id, `rung:${l}`, RUNG_PTS[l - 1], at(l === rung ? -1 - rnd(12) : -60 - (rung - l) * 20, 15));
+    if (rung >= 3) db.prepare('INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,15,?)').run(id, 'learn:learn_local', at(-3 - rnd(20), 20));
+    if (rung >= 7) db.prepare('INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,15,?)').run(id, 'learn:learn_chair', at(-2 - rnd(10), 20));
+    const n = 2 + Math.floor(rung / 2) + rnd(3);
+    for (let k = 0; k < n; k++) {
+      const d = -rnd(26);
+      const pick = rnd(10);
+      const verified = rnd(3) ? 1 : 0;
+      let kind;
+      let qty = 1;
+      let pts;
+      if (pick < 4) { kind = 'canvass'; qty = 20 + rnd(90); pts = Math.min(100, qty) + (verified ? 20 : 0); }
+      else if (pick < 6) { kind = 'phonebank'; qty = 15 + rnd(80); pts = Math.min(100, qty) + (verified ? 20 : 0); }
+      else if (pick < 7) { kind = 'social'; qty = 1 + rnd(5); pts = Math.min(15, qty * 3); }
+      else { kind = ['council_meeting', 'party_meeting', 'volunteer', 'gotv'][rnd(4)]; pts = kind.endsWith('meeting') ? (verified ? 30 : 15) : (verified ? 40 : 20); }
+      db.prepare('INSERT INTO activity (user_id, kind, quantity, verified, points, day, at) VALUES (?,?,?,?,?,?,?)')
+        .run(id, kind, qty, verified, pts, day(d), at(d, 9 + rnd(11), rnd(4) * 15));
+    }
+  });
 }
 
 function refreshEventDates(db) {

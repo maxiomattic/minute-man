@@ -1,7 +1,8 @@
-import { engagementRoutes, luckyBonus, pointsSince, weekStart } from './engine/engage.js';
-import { aggregate, listStrategies } from './engine/recommend.js';
+import { engagementRoutes, luckyBonus } from './engine/engage.js';
+import { areasFor, leaderboard, standing } from './engine/community.js';
+import { aggregate } from './engine/recommend.js';
 import { ACTIVITY, PARTICIPATION, activityPoints, scorecard } from './engine/recognition.js';
-import { LADDER, LESSONS, LESSON_POINTS, ladderFor, recruitsOf, inviteCode, rankNamesFor } from './engine/ladder.js';
+import { LADDER, LESSONS, LESSON_POINTS, ladderFor, recruitsOf, inviteCode } from './engine/ladder.js';
 import { eligibility, jurisdictionChain, rulesFor } from './rules.js';
 
 class HttpError extends Error {
@@ -63,7 +64,6 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     id: u.id, email: u.email, name: u.name, role: u.role,
     jurisdictionId: u.jurisdiction_id, homeLabel: u.home_label, precinct: u.precinct, birthDate: u.birth_date,
     shareStatus: !!u.share_status, onLeaderboards: !!u.on_leaderboards,
-    theme: u.theme, strategy: u.strategy,
   });
 
   function issueSession(userId) {
@@ -86,6 +86,12 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     if (l.owner_id !== user.id) throw new HttpError(403, 'not your leadership source');
     return l;
   };
+
+  // The endorsement sources, in their fixed order: America First Insight, then Donald Trump.
+  const sourceLeaders = () => SOURCES.map((s, i) => {
+    const l = db.prepare('SELECT l.id, l.name, l.kind, l.brand_color FROM leaders l JOIN users u ON u.id=l.owner_id WHERE u.email=?').get(s.email);
+    return l && { id: l.id, leaderId: l.id, name: l.name, kind: l.kind, brandColor: l.brand_color, priority: i + 1, active: true };
+  }).filter(Boolean);
 
   const leaderOut = (l) => ({
     id: l.id, name: l.name, kind: l.kind, blurb: l.blurb, brandColor: l.brand_color,
@@ -166,9 +172,8 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   route('PATCH', '/api/me', ({ user, body }) => {
     const map = {
       name: 'name', jurisdictionId: 'jurisdiction_id', precinct: 'precinct', birthDate: 'birth_date',
-      shareStatus: 'share_status', onLeaderboards: 'on_leaderboards', theme: 'theme', strategy: 'strategy',
+      shareStatus: 'share_status', onLeaderboards: 'on_leaderboards',
     };
-    if (body.strategy && !listStrategies().includes(body.strategy)) throw bad('unknown strategy');
     if (body.birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(body.birthDate)) throw bad('birthDate must be YYYY-MM-DD');
     if (body.jurisdictionId && !db.prepare('SELECT 1 FROM jurisdictions WHERE id=?').get(body.jurisdictionId))
       throw bad('unknown jurisdiction');
@@ -205,7 +210,6 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   route('GET', '/api/clock', () => ({ ...clockConfig(), date: clockConfig().demoDate, now: new Date().toISOString() }), { auth: false });
 
   route('GET', '/api/meta', () => ({
-    strategies: listStrategies(),
     activityKinds: Object.entries(ACTIVITY).map(([k, v]) => ({ kind: k, ...v })),
     participationPoints: PARTICIPATION,
   }), { auth: false });
@@ -227,12 +231,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
          ORDER BY sort, title`,
       )
       .all(e.id, ...chain);
-    const binds = db
-      .prepare(
-        `SELECT b.priority, l.id, l.name FROM bindings b JOIN leaders l ON l.id=b.leader_id
-         WHERE b.user_id=? AND b.active=1 ORDER BY b.priority`,
-      )
-      .all(user.id);
+    const binds = sourceLeaders();
     const recStmt = db.prepare('SELECT choice_ids, note FROM recommendations WHERE leader_id=? AND contest_id=?');
     const out = contests.map((c) => {
       const choices = db
@@ -243,7 +242,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
         const r = recStmt.get(b.id, c.id);
         if (r) recs.push({ leaderId: b.id, leaderName: b.name, priority: b.priority, choiceIds: JSON.parse(r.choice_ids), note: r.note });
       }
-      let agg = aggregate(user.strategy, recs, { id: c.id, voteFor: c.vote_for });
+      let agg = aggregate('priority', recs, { id: c.id, voteFor: c.vote_for });
       // No source endorsed: if exactly one Republican is running, fill that candidate in. This is labelled as
       // a party default on the ballot, never as anyone's endorsement.
       if (!agg.choiceIds.length && c.vote_for === 1) {
@@ -257,7 +256,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
       };
     });
     const rules = rulesFor(db, user.jurisdiction_id || e.jurisdiction_id);
-    return { election: e, strategy: user.strategy, contests: out, rules, generatedAt: new Date().toISOString() };
+    return { election: e, strategy: 'priority', contests: out, rules, generatedAt: new Date().toISOString() };
   });
 
   route('GET', '/api/polling', ({ user, query }) => {
@@ -291,11 +290,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   // One row per race: the pick from each source, in the user's follow order.
   route('GET', '/api/endorsements', ({ user, query }) => {
     const state = String(query.get('state') || (user.jurisdiction_id || '').slice(0, 2)).toUpperCase();
-    const order = db.prepare(
-      `SELECT u.email FROM bindings b JOIN leaders l ON l.id=b.leader_id JOIN users u ON u.id=l.owner_id
-       WHERE b.user_id=? AND b.active=1 ORDER BY b.priority`,
-    ).all(user.id).map((r) => SOURCES.find((s) => s.email === r.email)?.key).filter(Boolean);
-    const keys = order.length ? order : SOURCES.map((s) => s.key);
+    const keys = SOURCES.map((s) => s.key);
     const races = new Map();
     for (const e of ENDORSEMENTS) {
       if (e.state !== state || !keys.includes(e.source)) continue;
@@ -317,28 +312,6 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     db.prepare('SELECT * FROM leaders WHERE public=1 ORDER BY name').all().map(leaderOut),
   { auth: false });
 
-  route('POST', '/api/leaders', ({ user, body }) => {
-    if (!body.name) throw bad('name required');
-    if (!['individual', 'organization', 'list'].includes(body.kind || 'organization')) throw bad('bad kind');
-    const r = db
-      .prepare('INSERT INTO leaders (owner_id, name, kind, blurb, brand_color, rank_names) VALUES (?,?,?,?,?,?)')
-      .run(user.id, body.name, body.kind || 'organization', body.blurb || null,
-        body.brandColor || null, body.rankNames ? JSON.stringify(body.rankNames) : null);
-    db.prepare(`UPDATE users SET role='leader' WHERE id=?`).run(user.id);
-    return leaderOut(db.prepare('SELECT * FROM leaders WHERE id=?').get(Number(r.lastInsertRowid)));
-  });
-
-  route('GET', '/api/leaders/mine', ({ user }) =>
-    db.prepare('SELECT * FROM leaders WHERE owner_id=?').all(user.id).map(leaderOut));
-
-  route('PATCH', '/api/leaders/:id', ({ user, params, body }) => {
-    const l = ownLeader(user, params.id);
-    db.prepare('UPDATE leaders SET name=?, blurb=?, brand_color=?, rank_names=? WHERE id=?').run(
-      body.name ?? l.name, body.blurb ?? l.blurb, body.brandColor ?? l.brand_color,
-      body.rankNames ? JSON.stringify(body.rankNames) : l.rank_names, l.id);
-    return leaderOut(db.prepare('SELECT * FROM leaders WHERE id=?').get(l.id));
-  });
-
   route('GET', '/api/leaders/:id/recommendations', ({ params }) =>
     db.prepare(
       `SELECT r.contest_id AS contestId, r.choice_ids AS choiceIds, r.note, c.title, c.election_id AS electionId
@@ -346,69 +319,9 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     ).all(Number(params.id)).map((r) => ({ ...r, choiceIds: JSON.parse(r.choiceIds) })),
   { auth: false });
 
-  route('PUT', '/api/leaders/:id/recommendations', ({ user, params, body }) => {
-    const l = ownLeader(user, params.id);
-    const items = Array.isArray(body) ? body : [body];
-    db.tx(() => {
-      for (const it of items) {
-        const c = db.prepare('SELECT * FROM contests WHERE id=?').get(it.contestId);
-        if (!c) throw bad(`unknown contest ${it.contestId}`);
-        const ids = it.choiceIds || [];
-        if (ids.length > c.vote_for) throw bad(`${c.title}: at most ${c.vote_for} choice(s)`);
-        for (const id of ids)
-          if (!db.prepare('SELECT 1 FROM choices WHERE id=? AND contest_id=?').get(id, c.id))
-            throw bad(`choice ${id} not in ${c.title}`);
-        db.prepare(
-          `INSERT INTO recommendations (leader_id, contest_id, choice_ids, note) VALUES (?,?,?,?)
-           ON CONFLICT(leader_id, contest_id) DO UPDATE SET choice_ids=excluded.choice_ids, note=excluded.note, updated_at=datetime('now')`,
-        ).run(l.id, c.id, JSON.stringify(ids), it.note || null);
-      }
-    });
-    return { ok: true, count: items.length };
-  });
-
-  route('DELETE', '/api/leaders/:id/recommendations/:contestId', ({ user, params }) => {
-    const l = ownLeader(user, params.id);
-    db.prepare('DELETE FROM recommendations WHERE leader_id=? AND contest_id=?').run(l.id, params.contestId);
-    return { ok: true };
-  });
-
   // ---------- bindings ----------
-  const listBindings = (uid) =>
-    db.prepare(
-      `SELECT b.leader_id AS leaderId, b.priority, b.active, l.name, l.kind, l.brand_color AS brandColor
-       FROM bindings b JOIN leaders l ON l.id=b.leader_id WHERE b.user_id=? ORDER BY b.priority`,
-    ).all(uid).map((b) => ({ ...b, active: !!b.active }));
-
-  route('GET', '/api/bindings', ({ user }) => listBindings(user.id));
-
-  route('POST', '/api/bindings', ({ user, body }) => {
-    const l = db.prepare('SELECT id FROM leaders WHERE id=?').get(Number(body.leaderId));
-    if (!l) throw new HttpError(404, 'no such leader');
-    const max = db.prepare('SELECT COALESCE(MAX(priority),0) m FROM bindings WHERE user_id=?').get(user.id).m;
-    db.prepare(
-      `INSERT INTO bindings (user_id, leader_id, priority) VALUES (?,?,?)
-       ON CONFLICT(user_id, leader_id) DO UPDATE SET active=1`,
-    ).run(user.id, l.id, max + 1);
-    return listBindings(user.id);
-  });
-
-  // Reorder / toggle: body = [{leaderId, active}] in priority order.
-  route('PUT', '/api/bindings', ({ user, body }) => {
-    if (!Array.isArray(body)) throw bad('array expected');
-    db.tx(() => {
-      body.forEach((b, i) => {
-        db.prepare('UPDATE bindings SET priority=?, active=? WHERE user_id=? AND leader_id=?')
-          .run(i + 1, b.active === false ? 0 : 1, user.id, Number(b.leaderId));
-      });
-    });
-    return listBindings(user.id);
-  });
-
-  route('DELETE', '/api/bindings/:leaderId', ({ user, params }) => {
-    db.prepare('DELETE FROM bindings WHERE user_id=? AND leader_id=?').run(user.id, Number(params.leaderId));
-    return listBindings(user.id);
-  });
+  // The endorsement sources every ballot uses. Fixed; not something users change.
+  route('GET', '/api/sources', () => sourceLeaders());
 
   // ---------- registration & eligibility ----------
   const getReg = (uid) => {
@@ -542,26 +455,15 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
        FROM activity a LEFT JOIN actions x ON x.id=a.action_id WHERE a.user_id=? ORDER BY a.at DESC LIMIT 100`,
     ).all(user.id));
 
-  route('POST', '/api/endorse', ({ user, body }) => {
-    const l = db.prepare('SELECT id FROM leaders WHERE id=?').get(Number(body.leaderId));
-    if (!l) throw new HttpError(404, 'no such leader');
-    if (body.remove) db.prepare('DELETE FROM endorsements WHERE user_id=? AND leader_id=?').run(user.id, l.id);
-    else db.prepare(`INSERT OR IGNORE INTO endorsements (user_id, leader_id, at) VALUES (?,?, datetime('now'))`).run(user.id, l.id);
-    return db.prepare('SELECT leader_id AS leaderId FROM endorsements WHERE user_id=?').all(user.id);
-  });
-
-  route('GET', '/api/endorse', ({ user }) =>
-    db.prepare('SELECT leader_id AS leaderId FROM endorsements WHERE user_id=?').all(user.id));
-
   // ---------- recognition ----------
   route('GET', '/api/recognition', ({ user }) => {
-    const rank = ladderFor(db, user, rankNamesFor(db, user));
+    const rank = ladderFor(db, user, null);
     return { ...scorecard(db, user.id), rank };
   });
 
   // ---------- the ladder ----------
   route('GET', '/api/ladder', ({ user }) => {
-    const names = rankNamesFor(db, user);
+    const names = null;
     const recruits = recruitsOf(db, user, names);
     const ladder = ladderFor(db, user, names);
     return { ...ladder, invite: { code: inviteCode(db, user) }, recruits };
@@ -571,57 +473,33 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     if (body.id !== 'precinct_chair') throw bad('unknown claim');
     if (body.remove) db.prepare(`DELETE FROM bonuses WHERE user_id=? AND source='claim:precinct_chair'`).run(user.id);
     else db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?, 'claim:precinct_chair', 100, datetime('now'))`).run(user.id);
-    return ladderFor(db, db.prepare('SELECT * FROM users WHERE id=?').get(user.id), rankNamesFor(db, user));
+    return ladderFor(db, db.prepare('SELECT * FROM users WHERE id=?').get(user.id), null);
   });
 
   // Finish a training. Only once each, and only after it's unlocked.
   route('POST', '/api/ladder/learn', ({ user, body }) => {
     const id = String(body.id || '');
     if (!LESSONS[id]) throw bad('unknown training');
-    const lad = ladderFor(db, user, rankNamesFor(db, user));
+    const lad = ladderFor(db, user, null);
     const step = lad.rungs.flatMap((r) => r.steps).find((x) => x.id === id);
     if (step.locked) throw new HttpError(409, `Finish ${step.lockedBy[0]} first`);
     db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,?, datetime('now'))`).run(user.id, `learn:${id}`, LESSON_POINTS);
-    return ladderFor(db, db.prepare('SELECT * FROM users WHERE id=?').get(user.id), rankNamesFor(db, user));
+    return ladderFor(db, db.prepare('SELECT * FROM users WHERE id=?').get(user.id), null);
   });
 
   route('GET', '/api/leaderboard', ({ user, query }) => {
-    const scope = query.get('scope') || 'friends';
-    const week = query.get('period') === 'week';
-    let ids;
-    let title;
-    if (scope === 'friends') {
-      ids = db.prepare(
-        `SELECT CASE WHEN a=?1 THEN b ELSE a END AS id FROM friendships WHERE status='accepted' AND (a=?1 OR b=?1)`,
-      ).all(user.id).map((r) => r.id);
-      ids.push(user.id);
-      title = 'Friends';
-    } else if (scope.startsWith('group:')) {
-      const gid = Number(scope.slice(6));
-      if (!db.prepare('SELECT 1 FROM group_members WHERE group_id=? AND user_id=?').get(gid, user.id))
-        throw new HttpError(403, 'not in that group');
-      ids = db.prepare('SELECT user_id AS id FROM group_members WHERE group_id=?').all(gid).map((r) => r.id);
-      title = db.prepare('SELECT name FROM groups WHERE id=?').get(gid).name;
-    } else if (scope.startsWith('leader:')) {
-      const lid = Number(scope.slice(7));
-      ids = db.prepare('SELECT user_id AS id FROM bindings WHERE leader_id=? AND active=1').all(lid).map((r) => r.id);
-      title = db.prepare('SELECT name FROM leaders WHERE id=?').get(lid)?.name || 'Leader';
-    } else throw bad('bad scope');
-    // Only people who opted in appear (you always see yourself).
-    const rows = [...new Set(ids)]
-      .map((id) => db.prepare('SELECT id, name, on_leaderboards, share_status, rung FROM users WHERE id=?').get(id))
-      .filter((u) => u && (u.on_leaderboards || u.id === user.id))
-      .map((u) => {
-        const s = scorecard(db, u.id);
-        const points = week ? pointsSince(db, u.id, weekStart()) : s.points;
-        return { userId: u.id, name: u.name, points, total: s.points, rank: u.share_status || u.id === user.id ? LADDER[(u.rung || 1) - 1].name : null, badges: s.badges.length, me: u.id === user.id };
-      })
-      .sort((a, b) => b.points - a.points);
-    rows.forEach((r, i) => (r.place = i + 1));
-    return { title, period: week ? 'week' : 'all', rows };
+    const period = ['week', 'month', 'all'].includes(query.get('period')) ? query.get('period') : 'week';
+    try {
+      return leaderboard(db, user, { scope: query.get('scope') || 'area:all', period });
+    } catch (e) {
+      if (e.status) throw new HttpError(e.status, e.message);
+      throw e;
+    }
   });
 
-  // ---------- groups ----------
+  route('GET', '/api/areas', ({ user }) => areasFor(db, user));
+  route('GET', '/api/standing', ({ user }) => standing(db, user));
+
   route('GET', '/api/groups', ({ user }) =>
     db.prepare(
       `SELECT g.id, g.name, g.kind, g.leader_id AS leaderId, g.invite_code AS inviteCode, g.owner_id=?1 AS owner,

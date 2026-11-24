@@ -1,9 +1,10 @@
-// Engagement: next action, daily quests, weekly streak, weekly points, friend feed, cheers.
+// Engagement: next action, daily quests, weekly streak, weekly points, cheers.
 // Ground rules (see README "Legal design"): everything here is honorific; nothing touches vote
 // choice; feed shows only positive actions by people who opted in; no fabricated urgency.
 import { ACTIVITY, PARTICIPATION, scorecard } from './recognition.js';
-import { ladderFor, rankNamesFor } from './ladder.js';
+import { ladderFor } from './ladder.js';
 import { localDay, utcAt, sqlShift } from '../time.js';
+import { canCheer, rankedFeed } from './community.js';
 
 const DAY = 86400000;
 const iso = (d) => d.toISOString().slice(0, 10);
@@ -183,44 +184,6 @@ function nextActions(db, user, ctx) {
   return out;
 }
 
-// ---------- feed ----------
-function feed(db, user, limit = 30) {
-  const ids = crewIds(db, user.id);
-  if (!ids.length) return [];
-  const ph = ids.map(() => '?').join(',');
-  const items = [];
-  for (const r of db.prepare(
-    `SELECT a.id, a.user_id, u.name, a.kind, a.quantity, a.verified, a.at, x.title FROM activity a JOIN users u ON u.id=a.user_id
-     LEFT JOIN actions x ON x.id=a.action_id
-     WHERE a.user_id IN (${ph}) AND (u.share_status=1 OR u.on_leaderboards=1) AND a.at > datetime('now','-14 days') ORDER BY a.at DESC LIMIT 50`,
-  ).all(...ids)) {
-    const k = ACTIVITY[r.kind];
-    const what = k?.perUnit ? `${r.quantity} ${k.unit}${r.quantity === 1 ? '' : 's'}` : null;
-    const verb = { canvass: 'knocked', phonebank: 'made', social: 'shared' }[r.kind];
-    items.push({ key: `a:${r.id}`, userId: r.user_id, name: r.name, at: r.at, icon: r.kind,
-      text: verb ? `${verb} ${what}` : r.title ? `went to ${r.title}` : `did a ${k?.label.toLowerCase() || r.kind}`, verified: !!r.verified });
-  }
-  for (const r of db.prepare(
-    `SELECT p.user_id, u.name, p.kind, p.at, e.name ename, p.election_id FROM participation p JOIN users u ON u.id=p.user_id
-     JOIN elections e ON e.id=p.election_id WHERE p.user_id IN (${ph}) AND u.share_status=1 AND p.kind IN ('voted','planned')
-     AND p.at > datetime('now','-14 days')`,
-  ).all(...ids))
-    items.push({ key: `p:${r.user_id}:${r.election_id}:${r.kind}`, userId: r.user_id, name: r.name, at: r.at, icon: r.kind,
-      text: r.kind === 'voted' ? `voted in the ${r.ename}` : `made a plan to vote in the ${r.ename}` });
-  for (const r of db.prepare(
-    `SELECT e.user_id, u.name, l.name lname, e.at, e.leader_id FROM endorsements e JOIN users u ON u.id=e.user_id JOIN leaders l ON l.id=e.leader_id
-     WHERE e.user_id IN (${ph}) AND e.at > datetime('now','-14 days')`,
-  ).all(...ids))
-    items.push({ key: `e:${r.user_id}:${r.leader_id}`, userId: r.user_id, name: r.name, at: r.at, icon: 'endorse', text: `endorsed ${r.lname}` });
-  items.sort((a, b) => (a.at < b.at ? 1 : -1));
-  const top = items.slice(0, limit);
-  for (const it of top) {
-    it.cheers = db.prepare('SELECT COUNT(*) n FROM cheers WHERE item=?').get(it.key).n;
-    it.cheered = !!db.prepare('SELECT 1 FROM cheers WHERE item=? AND user_id=?').get(it.key, user.id);
-  }
-  return top;
-}
-
 // ---------- routes ----------
 export function engagementRoutes(route, { db, HttpError, bad, upcomingElections, today }) {
   const nextElection = (user) => upcomingElections(user).find((e) => daysBetween(today(), e.date) <= 60) || null;
@@ -229,7 +192,7 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     const election = nextElection(user);
     const contests = election ? db.prepare('SELECT COUNT(*) n FROM contests WHERE election_id=?').get(election.id).n : 0;
     const bindings = db.prepare('SELECT COUNT(*) n FROM bindings WHERE user_id=? AND active=1').get(user.id).n;
-    const ladder = ladderFor(db, user, rankNamesFor(db, user)); // awards rung bonuses before we total points
+    const ladder = ladderFor(db, user); // awards rung bonuses before we total points
     const actions = nextActions(db, user, { election, contests, bindings, ladder });
     const sc = scorecard(db, user.id);
     const crew = crewIds(db, user.id);
@@ -279,13 +242,13 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     return { ok: true };
   });
 
-  route('GET', '/api/feed', ({ user }) => feed(db, user));
+  route('GET', '/api/feed', ({ user, query }) => rankedFeed(db, user, { cursor: Math.max(0, Number(query.get('cursor')) || 0) }));
 
   route('POST', '/api/cheers', ({ user, body }) => {
     const item = String(body.item || '');
     const owner = Number(body.ownerId);
     if (!item || owner === user.id) throw bad('cannot cheer that');
-    if (!crewIds(db, user.id).includes(owner)) throw new HttpError(403, 'not in your crew');
+    if (!canCheer(db, user, owner)) throw new HttpError(403, "you can't cheer that");
     if (body.remove) db.prepare('DELETE FROM cheers WHERE user_id=? AND item=?').run(user.id, item);
     else db.prepare(`INSERT OR IGNORE INTO cheers (user_id, item, owner_id, at) VALUES (?,?,?, datetime('now'))`).run(user.id, item, owner);
     return { cheers: db.prepare('SELECT COUNT(*) n FROM cheers WHERE item=?').get(item).n };

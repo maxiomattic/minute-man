@@ -270,10 +270,3 @@ export function inviteCode(db, user) {
 }
 
 export const RANK_NAMES = LADDER.map((r) => r.name);
-
-/** Custom rank names from the leader whose theme the user picked, if any. */
-export function rankNamesFor(db, user) {
-  if (!user.theme?.startsWith('leader:')) return null;
-  const l = db.prepare('SELECT rank_names FROM leaders WHERE id=?').get(Number(user.theme.slice(7)));
-  return l?.rank_names ? JSON.parse(l.rank_names) : null;
-}
