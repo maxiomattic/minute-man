@@ -204,15 +204,17 @@ test('activism: check-in codes verify, double check-in rejected, self-logging ca
   assert.equal((await call('/actions', { token: org })).data.find((x) => x.id === meet.id).checkinCode, 'MEET101');
 });
 
-test('leaderboards honor opt-out; groups and friends work', async () => {
+test('leaderboards and sharing status are always on; groups and friends work', async () => {
   const t = await login('demo@example.org');
   const f1 = await login('friend1@example.org');
-  await call('/me', { method: 'PATCH', body: { onLeaderboards: false }, token: f1 });
+  assert.equal((await call('/me', { method: 'PATCH', body: { onLeaderboards: false }, token: f1 })).status, 400);
+  assert.equal((await call('/me', { method: 'PATCH', body: { shareStatus: false }, token: f1 })).status, 400);
+  const still = (await call('/me', { token: f1 })).data;
+  assert.equal(still.onLeaderboards, true);
+  assert.equal(still.shareStatus, true);
   const lb = (await call('/leaderboard?scope=friends', { token: t })).data;
-  assert.ok(!lb.rows.some((r) => r.name === 'Cody Ramirez'));
+  assert.ok(lb.rows.some((r) => r.name === 'Cody Ramirez' && r.rank));
   assert.ok(lb.rows.some((r) => r.me));
-  assert.ok((await call('/leaderboard?scope=friends', { token: f1 })).data.rows.some((r) => r.me), 'you always see yourself');
-  await call('/me', { method: 'PATCH', body: { onLeaderboards: true }, token: f1 });
 
   const g = (await call('/groups', { method: 'POST', body: { name: 'Test Team' }, token: t })).data;
   assert.ok(g.inviteCode);
@@ -229,16 +231,19 @@ test('leaderboards honor opt-out; groups and friends work', async () => {
   assert.ok(!(await call('/notifications', { token: f4 })).data.some((x) => x.kind === 'nudge'));
   const after = (await call('/friends', { token: t })).data;
   assert.ok(after.every((x) => !('remindedToday' in x)));
-  // Accepted friends who share their status show their Ladder rank.
+  // Accepted friends show their Ladder rank.
   assert.ok(after.some((x) => x.state === 'friends' && x.rank));
   assert.ok(after.filter((x) => x.state !== 'friends').every((x) => !x.rank));
 });
 
-test('friends only see participation status when shared', async () => {
+test('friends always see whether you voted; nobody sees how', async () => {
   const t = await login('demo@example.org');
   const f3 = await login('friend3@example.org');
-  await call('/me', { method: 'PATCH', body: { shareStatus: false }, token: f3 });
-  assert.equal((await call('/friends', { token: t })).data.find((x) => x.name === 'Wade Collier').status, undefined);
+  assert.equal((await call('/me', { method: 'PATCH', body: { shareStatus: false }, token: f3 })).status, 400);
+  assert.ok((await call('/friends', { token: t })).data.find((x) => x.name === 'Wade Collier').status);
+  // Vote choice is never stored: nothing about picks appears in the data export.
+  const ex = JSON.stringify((await call('/me/export', { token: f3 })).data);
+  assert.ok(!/choice_id|"picks?"/.test(ex));
 });
 
 test('registration status, eligibility and registered badge', async () => {
@@ -324,8 +329,9 @@ test('feed: ranked, paged, opted-in only, never shows strangers voting', async (
   const all = [...p1.items, ...p2.items];
   let cur = p2.next;
   while (cur) { const p = (await call(`/feed?cursor=${cur}`, { token: t })).data; all.push(...p.items); cur = p.next; }
-  // Peggy Lindell keeps herself off leaderboards, so she never shows up.
-  assert.ok(!all.some((i) => /Peggy/.test(i.name)));
+  // Everyone is on the feed; strangers show as first name, last initial.
+  assert.ok(all.some((i) => i.name === 'Peggy L.'));
+  assert.ok(!all.some((i) => /Peggy Lindell/.test(i.name)));
   // Voting and plans only from friends and group-mates (full names), never strangers.
   for (const i of all.filter((x) => ['voted', 'planned', 'registered'].includes(x.icon))) assert.ok(i.name.includes(' ') && !/\.$/.test(i.name), i.name);
   // Strangers show a first name and last initial.
@@ -338,21 +344,18 @@ test('feed: ranked, paged, opted-in only, never shows strangers voting', async (
   const r = await call('/cheers', { method: 'POST', body: { item: far.key, ownerId: far.userId }, token: t });
   assert.equal(r.data.cheers, far.cheers + 1);
   const peggy = (await call('/leaderboard?scope=area:tx-ellis&period=all', { token: t })).data;
-  assert.ok(!peggy.rows.some((x) => /Peggy/.test(x.name)));
-  // Ladder rank beside the name: group-mates and opted-in strangers who share their status.
+  assert.ok(peggy.rows.some((x) => x.name === 'Peggy L.' && x.where === 'Ennis, TX'));
+  // Ladder rank beside the name, for everyone.
   assert.ok(all.some((i) => i.name === 'Ray Delgado' && i.rank === 'Captain'));
   assert.ok(all.some((i) => i.name === 'Earl P.' && i.rank === 'Colonel'));
   // Rank-ups read with the military rank names (rendered from the stored level, not stored text).
   assert.ok(all.some((i) => i.icon === 'rank' && /^became an? (Corporal|Sergeant|Ensign|Lieutenant|Captain|Major|Colonel)$/.test(i.text)));
   assert.ok(!all.some((i) => /Volunteer|Newcomer|Messenger|Block Captain|Precinct Chair|Registered Voter|Active Voter/.test(i.text)));
-  // A stranger who stops sharing their status keeps their activity in the feed but loses the rank.
+  // A stranger can't hide their rank; their voting stays hidden from strangers.
   const travis = await login('neighbor7@example.org');
-  await call('/me', { method: 'PATCH', body: { shareStatus: false }, token: travis });
-  const feedAll = async () => { const out = []; let c = 0; while (c !== null) { const p = (await call(`/feed?cursor=${c}`, { token: t })).data; out.push(...p.items); c = p.next; } return out; };
-  const hidden = (await feedAll()).filter((i) => i.name === 'Travis Y.');
-  assert.ok(hidden.length && hidden.every((i) => !i.rank && i.icon !== 'rank'));
-  await call('/me', { method: 'PATCH', body: { shareStatus: true }, token: travis });
-  assert.ok((await feedAll()).some((i) => i.name === 'Travis Y.' && i.rank === 'Lieutenant'));
+  assert.equal((await call('/me', { method: 'PATCH', body: { shareStatus: false }, token: travis })).status, 400);
+  assert.ok(all.some((i) => i.name === 'Travis Y.' && i.rank === 'Lieutenant'));
+  assert.ok(!all.some((i) => i.name === 'Travis Y.' && ['voted', 'planned', 'registered'].includes(i.icon)));
 });
 
 test('leaderboards: friends, groups and every area level, by week, month or all time', async () => {
@@ -421,14 +424,13 @@ test('invites: recruiter earns a bonus as recruits climb, sees rank only if shar
   let d = (await call('/ladder', { token: demo })).data;
   assert.equal(d.recruits.length, 1);
   assert.equal(d.recruits[0].name, 'Riley');
-  assert.equal(d.recruits[0].rank, null); // not sharing
+  assert.equal(d.recruits[0].rank, 'Private'); // everyone shares their rank
   assert.equal(d.recruits[0].earned, 25);
   assert.ok((await call('/friends', { token: r })).data.some((f) => f.name === 'Demo Voter' && f.state === 'friends'));
 
   await call('/me/address', { method: 'POST', token: r, body: { address: '401 S Rogers St, Waxahachie, TX' } });
   await call('/registration', { method: 'PUT', token: r, body: { status: 'confirmed' } });
   await call('/participation', { method: 'POST', token: r, body: { electionId: 'tx-2026-general', kind: 'planned' } });
-  await call('/me', { method: 'PATCH', token: r, body: { shareStatus: true } });
   d = (await call('/ladder', { token: demo })).data;
   assert.equal(d.recruits[0].rank, 'Corporal');
   assert.equal(d.recruits[0].earned, 75);
@@ -674,13 +676,7 @@ test('feed posts: text and photo, visibility, limits, report, delete, account de
   assert.equal(ff.length, 2);
   assert.ok(ff.every((i) => i.name === 'Paula Poster'));
   assert.ok(ff.some((i) => i.body === 'Knocked on Elm St. <b>Great</b> folks.'), 'stored as text; the client escapes it');
-  // If the author can be off leaderboards, strangers don't see their posts (friends still do).
-  if ((await call('/me', { method: 'PATCH', body: { onLeaderboards: false }, token: author })).status === 200) {
-    assert.ok(!(await feedAllOf(stranger)).some((i) => i.userId === me.id));
-    assert.equal((await feedAllOf(friend)).filter((i) => i.userId === me.id && i.icon === 'post').length, 2);
-  }
-  // On leaderboards, strangers see posts as first name, last initial.
-  await call('/me', { method: 'PATCH', body: { onLeaderboards: true }, token: author });
+  // Strangers see posts too, as first name, last initial.
   const sf = (await feedAllOf(stranger)).filter((i) => i.userId === me.id && i.icon === 'post');
   assert.equal(sf.length, 2);
   assert.ok(sf.every((i) => i.name === 'Paula P.'));

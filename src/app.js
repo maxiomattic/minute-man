@@ -114,7 +114,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
     if (db.prepare('SELECT 1 FROM users WHERE email=?').get(email.toLowerCase()))
       throw new HttpError(409, 'email already registered');
     const r = db
-      .prepare('INSERT INTO users (email, name, pw_hash) VALUES (?,?,?)')
+      .prepare('INSERT INTO users (email, name, pw_hash, share_status, on_leaderboards) VALUES (?,?,?,1,1)')
       .run(email.toLowerCase(), name, await hashPw(password));
     const id = Number(r.lastInsertRowid);
     bindDefaults(db, id);
@@ -170,8 +170,10 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
   route('PATCH', '/api/me', ({ user, body }) => {
     const map = {
       name: 'name', jurisdictionId: 'jurisdiction_id', precinct: 'precinct', birthDate: 'birth_date',
-      shareStatus: 'share_status', onLeaderboards: 'on_leaderboards',
     };
+    // Being on the feed and leaderboards and sharing your rank are part of Minute Man, not settings.
+    if (body.shareStatus === false || body.onLeaderboards === false)
+      throw bad("These can't be turned off. Minute Man shows what you do, your rank and, to friends, whether you voted. Never how you vote.");
     if (body.birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(body.birthDate)) throw bad('birthDate must be YYYY-MM-DD');
     if (body.jurisdictionId && !db.prepare('SELECT 1 FROM jurisdictions WHERE id=?').get(body.jurisdictionId))
       throw bad('unknown jurisdiction');
@@ -654,9 +656,9 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
     const next = els[0];
     return rows.map((f) => {
       const other = f.a === user.id ? f.b : f.a;
-      const u = db.prepare('SELECT id, name, share_status, rung FROM users WHERE id=?').get(other);
+      const u = db.prepare('SELECT id, name, rung FROM users WHERE id=?').get(other);
       let status;
-      if (f.status === 'accepted' && u.share_status && next) {
+      if (f.status === 'accepted' && next) {
         const p = db.prepare('SELECT kind FROM participation WHERE user_id=? AND election_id=?').all(u.id, next.id).map((r) => r.kind);
         status = p.includes('voted') ? 'voted' : p.includes('planned') ? 'planned' : 'not_yet';
       }
@@ -664,8 +666,8 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
         userId: u.id, name: u.name,
         state: f.status === 'accepted' ? 'friends' : f.a === user.id ? 'requested' : 'incoming',
         status, electionId: next?.id,
-        // Their Ladder rank, under the same rule as the feed: friends who share their status.
-        rank: f.status === 'accepted' && u.share_status ? LADDER[(u.rung || 1) - 1]?.name || null : null,
+        // Their Ladder rank, once you're friends.
+        rank: f.status === 'accepted' ? LADDER[(u.rung || 1) - 1]?.name || null : null,
       };
     });
   });

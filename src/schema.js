@@ -11,10 +11,10 @@ CREATE TABLE IF NOT EXISTS users (
   home_label TEXT,                             -- like "Waxahachie, TX" (never the street address)
   precinct TEXT,
   birth_date TEXT,
-  share_status INTEGER NOT NULL DEFAULT 0,     -- opt-in: friends can see participation
+  share_status INTEGER NOT NULL DEFAULT 1,     -- always 1: friends see whether you voted, others see your rank
   theme TEXT NOT NULL DEFAULT 'neutral',       -- neutral | leader:<id>
   strategy TEXT NOT NULL DEFAULT 'priority',   -- recommendation aggregation strategy
-  on_leaderboards INTEGER NOT NULL DEFAULT 0,  -- opt-in
+  on_leaderboards INTEGER NOT NULL DEFAULT 1,  -- always 1: you're on the feed and leaderboards
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -261,6 +261,9 @@ export const MIGRATIONS = [
   'ALTER TABLE users ADD COLUMN rung INTEGER NOT NULL DEFAULT 1',
   'CREATE UNIQUE INDEX IF NOT EXISTS users_ref_code ON users(ref_code)',
   'CREATE INDEX IF NOT EXISTS users_referred_by ON users(referred_by)',
+  // Being on the feed and leaderboards, and sharing your rank and whether you voted, are no longer optional.
+  // Older databases default these to 0; this turns them on for everyone (cheap and safe to run every start).
+  'UPDATE users SET share_status=1, on_leaderboards=1 WHERE share_status<>1 OR on_leaderboards<>1',
   // Feed: recent activity and rank-ups across everyone.
   'CREATE INDEX IF NOT EXISTS activity_at ON activity(at)',
   'CREATE INDEX IF NOT EXISTS bonuses_at ON bonuses(at)',

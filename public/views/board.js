@@ -1,5 +1,5 @@
 // Leaderboard: where you stand, the people near you, your numbers and your honors.
-// Only people who chose to appear are listed. Points are honorific and can't be traded for anything.
+// Everyone is listed; strangers see first name, last initial and town. Points are honorific and can't be traded for anything.
 import { $, $$, api, esc, guard, icon, insignia, initials, plural, state, store } from '../core.js';
 import { renderFriends, renderGroups } from './crew.js';
 
@@ -109,10 +109,8 @@ export async function render(el, sub) {
       if (me.place === 1) nudge = `You lead ${esc(lb.title)}${period === 'all' ? '' : period === 'week' ? ' this week' : ' over 30 days'}.`;
       else if (above) nudge = above.points === me.points ? `Tied with ${esc(first(above.name))}. One more action puts you ahead.` : `${plural(above.points - me.points, 'point')} behind ${esc(first(above.name))}.`;
     }
-    const hidden = state.me && !state.me.onLeaderboards
-      ? `<p class="small muted board-hidden">${icon('lock')}<span>Others can't see you here. <a href="#/me">Change that in your settings</a></span></p>` : '';
     if (rows.length <= 1) {
-      out.innerHTML = `${hidden}<div class="panel empty"><h2>Just you so far</h2>
+      out.innerHTML = `<div class="panel empty"><h2>Just you so far</h2>
         <p>${scope === 'friends' ? 'Add friends to see how you compare.' : 'Invite people to join you here.'}</p>
         <a class="btn go" href="#/board/${scope === 'friends' ? 'friends' : 'groups'}">${scope === 'friends' ? 'Add a friend' : 'Invite people'}</a></div>`;
       return;
@@ -124,9 +122,9 @@ export async function render(el, sub) {
         <div class="board-pts"><span class="pts num">${n(r.points)}</span><span class="tiny muted">pts</span></div>
       </li>`;
     const meOutside = me && !rows.some((r) => r.me);
-    out.innerHTML = `${nudge ? `<p class="board-nudge">${nudge}</p>` : ''}${hidden}
+    out.innerHTML = `${nudge ? `<p class="board-nudge">${nudge}</p>` : ''}
       <ul class="list board panel flush">${rows.map(row).join('')}${meOutside ? `<li class="gap" aria-hidden="true">⋯</li>${row(me)}` : ''}</ul>
-      <p class="tiny muted" style="margin-top:10px">${n(lb.count)} ${lb.count === 1 ? 'person' : 'people'} in ${esc(lb.title.replace(/^Your /, 'your '))} chose to be listed.</p>`;
+      <p class="tiny muted" style="margin-top:10px">${n(lb.count)} ${lb.count === 1 ? 'person' : 'people'} in ${esc(lb.title.replace(/^Your /, 'your '))}.</p>`;
   });
   $$('[data-p]', el).forEach((b) => (b.onclick = () => { period = b.dataset.p; store.set('lbperiod', period); paint(); }));
   $('#lbScope', el).onchange = (e) => { scope = e.target.value; store.set('lbscope', scope); paint(); };

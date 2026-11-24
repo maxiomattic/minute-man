@@ -1,10 +1,9 @@
 // Community: the ranked feed, area leaderboards and your standing.
 //
 // Ground rules (see README "Legal design"):
-//   - Only people who opted in appear. Strangers see someone only if they chose "Show me on
-//     leaderboards"; friends and group-mates also see what you chose to share with them.
+//   - Everyone appears on the feed and leaderboards, with their rank. It isn't a setting.
 //   - Nobody ever sees how anyone voted. Strangers never see whether you voted either; only
-//     friends do, and only if you share your status.
+//     friends and group-mates do.
 //   - People outside your friends and groups see a first name and last initial.
 //   - Points are honorific and can't be redeemed.
 import { ACTIVITY, scorecard } from './recognition.js';
@@ -28,7 +27,6 @@ const LEARNED = {
   learn_election: 'finished poll watcher training',
   learn_chair: 'learned what a precinct chair does',
 };
-const ageMs = (at) => Date.now() - Date.parse(at.replace(' ', 'T') + 'Z');
 
 // ---------- where people are, relative to you ----------
 function chains(db) {
@@ -78,17 +76,14 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
   const people = new Map();
   const who = (id) => {
     if (!people.has(id)) {
-      const u = db.prepare('SELECT id, name, jurisdiction_id, precinct, home_label, share_status, on_leaderboards, rung FROM users WHERE id=?').get(id);
+      const u = db.prepare('SELECT id, name, jurisdiction_id, precinct, home_label, rung FROM users WHERE id=?').get(id);
       const mine = u.id === user.id;
       const isCrew = crew.has(u.id);
       people.set(id, {
         u, mine, isCrew,
-        // Activism: anyone on leaderboards, or friends and group-mates who share their status.
-        sees: mine || u.on_leaderboards || (isCrew && u.share_status),
-        // Rank-ups and trainings say something about you, so they also need "share status" for strangers.
-        seesRank: mine || (u.share_status && (u.on_leaderboards || isCrew)),
-        // Voting: friends and group-mates only, only if shared. Never strangers.
-        seesVote: mine || (isCrew && u.share_status),
+        // Everyone's activity, posts and rank-ups show to everyone (strangers get a short name).
+        // Whether someone voted, planned or registered: only friends and group-mates. Never strangers.
+        seesVote: mine || isCrew,
         near: closeness(user, myChain, u, chainOf(u.jurisdiction_id)),
       });
     }
@@ -100,11 +95,10 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
   const hidden = new Set(db.prepare('SELECT item FROM post_reports WHERE user_id=?').all(user.id).map((r) => r.item));
   // Words and a photo someone added (feed posts, src/engine/feedposts.js).
   const words = (r) => (r.pid ? { postId: r.pid, body: r.body || null, image: r.image ? `/api/media/${r.image}` : null, imageW: r.image_w, imageH: r.image_h } : {});
-  // Their Ladder rank beside their name, under the same rule as rank-ups (and the leaderboard):
-  // yours always, anyone else's only if they share their status. Uses the stored rung, once per person.
+  // Their Ladder rank beside their name (the stored rung).
   const push = (p, it) => hidden.has(it.key) || items.push({
     ...it, userId: p.u.id, name: p.mine || p.isCrew ? p.u.name : short(p.u.name),
-    rank: p.seesRank ? LADDER[(p.u.rung || 1) - 1]?.name || null : null,
+    rank: LADDER[(p.u.rung || 1) - 1]?.name || null,
     place: p.u.home_label || null, near: p.near.level, crew: p.isCrew,
   });
 
@@ -114,7 +108,6 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
      LEFT JOIN actions x ON x.id=a.action_id LEFT JOIN posts p ON p.activity_id=a.id WHERE a.at > ? ORDER BY a.at DESC LIMIT 2000`,
   ).all(since)) {
     const p = who(r.user_id);
-    if (!p.sees) continue;
     const k = ACTIVITY[r.kind];
     const qty = k?.perUnit ? `${r.quantity.toLocaleString('en-US')} ${k.unit}${r.quantity === 1 ? '' : 's'}` : null;
     const verb = { canvass: 'knocked', phonebank: 'made', social: 'shared' }[r.kind];
@@ -126,7 +119,6 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
   }
   for (const r of db.prepare(`SELECT user_id, source, points, at FROM bonuses WHERE at > ? AND (source LIKE 'rung:%' OR source LIKE 'learn:%')`).all(since)) {
     const p = who(r.user_id);
-    if (!p.seesRank) continue;
     if (r.source.startsWith('rung:')) {
       const name = LADDER[Number(r.source.slice(5)) - 1]?.name;
       if (name) push(p, { key: `b:${r.user_id}:${r.source}`, at: r.at, icon: 'rank', points: r.points, text: `became ${article(name)} ${name}`, milestone: true });
@@ -145,16 +137,16 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     push(p, { key: `p:${r.user_id}:${r.election_id}:${r.kind}`, at: r.at, icon: r.kind, points: { voted: 100, planned: 10, registered: 50 }[r.kind], text });
   }
 
-  // Posts people wrote: the same audience as their activity, and friends and group-mates always.
+  // Posts people wrote. Everyone sees them.
   for (const r of db.prepare(
     `SELECT id pid, user_id, body, image, image_w, image_h, at FROM posts WHERE activity_id IS NULL AND at > ? ORDER BY at DESC LIMIT 1000`,
   ).all(since)) {
     const p = who(r.user_id);
-    if (!(p.mine || p.isCrew || ('sees' in p ? p.sees : true))) continue;
     push(p, { key: `u:${r.pid}`, at: r.at, icon: 'post', points: 0, text: '', post: true, ...words(r) });
   }
 
   const cheers = db.prepare('SELECT COUNT(*) n FROM cheers WHERE item=?');
+  const now = Date.now();
   for (const it of items) {
     it.cheers = cheers.get(it.key).n;
     // A post earns no points; it counts like a small unverified action (impact 3, about 6 points' worth),
@@ -163,7 +155,9 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     const photo = it.image ? (it.post ? 1.1 : 1.15) : 1;
     const impact = (it.post ? 3 : Math.log2(2 + it.points)) * (it.verified ? 1.4 : 1) * (it.milestone ? 1.3 : 1) * photo * (1 + 0.15 * Math.min(it.cheers, 10));
     const near = people.get(it.userId).near.w * (it.crew ? 1.5 : 1);
-    const fresh = 0.5 ** (Math.max(0, ageMs(it.at)) / (3 * DAY));
+    // One clock reading for the whole list, and no clamp at age 0: items from the same second score
+    // the same, and every item decays by the same factor between requests, so pages never shift.
+    const fresh = 0.5 ** ((now - Date.parse(it.at.replace(' ', 'T') + 'Z')) / (3 * DAY));
     it.score = impact * near * fresh;
   }
   items.sort((a, b) => b.score - a.score || (a.key < b.key ? -1 : 1));
@@ -189,8 +183,7 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
 /** May this user cheer an item owned by owner? Only things they can see in their feed. */
 export function canCheer(db, user, ownerId) {
   if (ownerId === user.id) return false;
-  if (crewIds(db, user.id).includes(ownerId)) return true;
-  return !!db.prepare('SELECT 1 FROM users WHERE id=? AND on_leaderboards=1').get(ownerId);
+  return !!db.prepare('SELECT 1 FROM users WHERE id=?').get(ownerId);
 }
 
 // ---------- leaderboards ----------
@@ -212,7 +205,7 @@ function scopeMembers(db, user, scope) {
   const area = areasFor(db, user).find((a) => a.scope === scope);
   if (!area) throw Object.assign(new Error('bad scope'), { status: 400 });
   let ids;
-  if (scope === 'area:all') ids = db.prepare(`SELECT id FROM users WHERE on_leaderboards=1 OR id=?`).all(user.id).map((r) => r.id);
+  if (scope === 'area:all') ids = db.prepare('SELECT id FROM users').all().map((r) => r.id);
   else if (scope === 'area:precinct') ids = db.prepare('SELECT id FROM users WHERE jurisdiction_id=? AND precinct=?').all(user.jurisdiction_id, user.precinct).map((r) => r.id);
   else {
     const jid = scope.slice(5);
@@ -228,15 +221,15 @@ export function leaderboard(db, user, { scope = 'area:all', period = 'week', top
   const since = periodStart(period);
   const crewSet = new Set(crewIds(db, user.id));
   const rows = [...new Set(ids)]
-    .map((id) => db.prepare('SELECT id, email, name, on_leaderboards, share_status, rung, home_label FROM users WHERE id=?').get(id))
-    .filter((u) => u && (u.on_leaderboards || u.id === user.id) && !/@sources\./.test(u.email || ''))
+    .map((id) => db.prepare('SELECT id, email, name, rung, home_label FROM users WHERE id=?').get(id))
+    .filter((u) => u && !/@sources\./.test(u.email || ''))
     .map((u) => {
       const me = u.id === user.id;
       const points = since ? pointsSince(db, u.id, since) : scorecard(db, u.id).points;
       const known = me || crew || crewSet.has(u.id);
       return {
         userId: u.id, name: known ? u.name : short(u.name), points, me,
-        rank: u.share_status || me ? LADDER[(u.rung || 1) - 1].name : null,
+        rank: LADDER[(u.rung || 1) - 1].name,
         place: known ? null : u.home_label,
       };
     })

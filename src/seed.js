@@ -93,7 +93,7 @@ export async function loadSources(db) {
     let owner = db.prepare('SELECT id FROM users WHERE email=?').get(s.email)?.id;
     if (!owner) {
       owner = Number(db.prepare(
-        `INSERT INTO users (email, name, pw_hash, role, share_status, on_leaderboards) VALUES (?,?,?,?,0,0)`,
+        `INSERT INTO users (email, name, pw_hash, role, share_status, on_leaderboards) VALUES (?,?,?,?,1,1)`,
       ).run(s.email, s.name, await hashPw(crypto.randomUUID() + crypto.randomUUID()), 'leader').lastInsertRowid);
     }
     let id = db.prepare('SELECT id FROM leaders WHERE owner_id=?').get(owner)?.id;
@@ -186,18 +186,18 @@ export async function seed(db, { force = false } = {}) {
 }
 
 // Fictional neighbors near and far, so the area feed and leaderboards have people on them.
-// [name, jurisdiction, home, precinct, rung, opted in to leaderboards]
+// [name, jurisdiction, home, precinct, rung]
 const NEIGHBORS = [
-  ['Ray Delgado', 'tx-ellis-wax', 'Waxahachie, TX', '101', 6, 1], ['Tammy Pruitt', 'tx-ellis-wax', 'Waxahachie, TX', '101', 4, 1],
-  ['Hank Osborne', 'tx-ellis-wax', 'Waxahachie, TX', '101', 3, 1], ['Lena Vasquez', 'tx-ellis-wax', 'Waxahachie, TX', '104', 5, 1],
-  ['Bo Whitfield', 'tx-ellis-wax', 'Waxahachie, TX', '104', 2, 1], ['Marcy Keller', 'tx-ellis-wax', 'Waxahachie, TX', '112', 7, 1],
-  ['Travis Yates', 'tx-ellis', 'Midlothian, TX', null, 5, 1], ['Jolene Mercer', 'tx-ellis', 'Midlothian, TX', null, 3, 1],
-  ['Gus Navarro', 'tx-ellis', 'Ennis, TX', null, 6, 1], ['Peggy Lindell', 'tx-ellis', 'Ennis, TX', null, 4, 0],
-  ['Dwayne Fisk', 'tx-ellis', 'Red Oak, TX', null, 3, 1], ['Carla Benson', 'tx', 'Fort Worth, TX', null, 7, 1],
-  ['Mitch Garrity', 'tx', 'Tyler, TX', null, 5, 1], ['Rosa Whitaker', 'tx', 'Amarillo, TX', null, 6, 1],
-  ['Glen Hartley', 'tx', 'The Woodlands, TX', null, 4, 1], ['Darla Simms', 'tx', 'Lubbock, TX', null, 3, 1],
-  ['Earl Pickens', 'fl', 'Ocala, FL', null, 8, 1], ['Jenna Kowalski', 'oh', 'Findlay, OH', null, 5, 1],
-  ['Luis Ortega', 'az', 'Prescott, AZ', null, 6, 1],
+  ['Ray Delgado', 'tx-ellis-wax', 'Waxahachie, TX', '101', 6], ['Tammy Pruitt', 'tx-ellis-wax', 'Waxahachie, TX', '101', 4],
+  ['Hank Osborne', 'tx-ellis-wax', 'Waxahachie, TX', '101', 3], ['Lena Vasquez', 'tx-ellis-wax', 'Waxahachie, TX', '104', 5],
+  ['Bo Whitfield', 'tx-ellis-wax', 'Waxahachie, TX', '104', 2], ['Marcy Keller', 'tx-ellis-wax', 'Waxahachie, TX', '112', 7],
+  ['Travis Yates', 'tx-ellis', 'Midlothian, TX', null, 5], ['Jolene Mercer', 'tx-ellis', 'Midlothian, TX', null, 3],
+  ['Gus Navarro', 'tx-ellis', 'Ennis, TX', null, 6], ['Peggy Lindell', 'tx-ellis', 'Ennis, TX', null, 4],
+  ['Dwayne Fisk', 'tx-ellis', 'Red Oak, TX', null, 3], ['Carla Benson', 'tx', 'Fort Worth, TX', null, 7],
+  ['Mitch Garrity', 'tx', 'Tyler, TX', null, 5], ['Rosa Whitaker', 'tx', 'Amarillo, TX', null, 6],
+  ['Glen Hartley', 'tx', 'The Woodlands, TX', null, 4], ['Darla Simms', 'tx', 'Lubbock, TX', null, 3],
+  ['Earl Pickens', 'fl', 'Ocala, FL', null, 8], ['Jenna Kowalski', 'oh', 'Findlay, OH', null, 5],
+  ['Luis Ortega', 'az', 'Prescott, AZ', null, 6],
 ];
 const RUNG_PTS = [0, 50, 100, 100, 150, 200, 300, 500];
 
@@ -207,11 +207,11 @@ function seedNeighbors(db, hashed) {
   let x = 7;
   const rnd = (n) => { x = (x * 1103515245 + 12345) % 2147483648; return x % n; };
   const g = db.prepare(`SELECT id FROM groups WHERE invite_code='ELLIS101'`).get()?.id;
-  NEIGHBORS.forEach(([name, jid, home, precinct, rung, lb], i) => {
+  NEIGHBORS.forEach(([name, jid, home, precinct, rung], i) => {
     const id = Number(db.prepare(
       `INSERT INTO users (email, name, pw_hash, jurisdiction_id, home_label, precinct, birth_date, share_status, on_leaderboards, rung)
-       VALUES (?,?,?,?,?,?,?,1,?,?)`,
-    ).run(`neighbor${i + 1}@example.org`, name, hashed, jid, home, precinct, `19${60 + rnd(40)}-0${1 + rnd(9)}-1${rnd(9)}`, lb, rung).lastInsertRowid);
+       VALUES (?,?,?,?,?,?,?,1,1,?)`,
+    ).run(`neighbor${i + 1}@example.org`, name, hashed, jid, home, precinct, `19${60 + rnd(40)}-0${1 + rnd(9)}-1${rnd(9)}`, rung).lastInsertRowid);
     bindDefaults(db, id);
     if (g && precinct === '101') db.prepare('INSERT OR IGNORE INTO group_members (group_id, user_id) VALUES (?,?)').run(g, id);
     db.prepare('INSERT INTO participation (user_id, election_id, kind, at) VALUES (?,NULL,?,?)').run(id, 'registered', at(-400, 12));

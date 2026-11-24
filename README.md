@@ -26,8 +26,9 @@ Minute Man is free, open-source software under the MIT License (see `LICENSE`). 
 
 ### Who sees what
 
-- Strangers see only people who opted in ("Show what I do on the feed and leaderboards"), as first name, last initial and town.
-- Whether someone voted, and their plan, show only to friends and group-mates, and only if they share their status. Rank-ups and trainings need that setting too.
+- Everyone is on the feed and leaderboards, with their rank. This isn't a setting; anyone who doesn't want it can delete their account.
+- Strangers see first name, last initial and town. Friends and group-mates see the full name.
+- Whether someone voted, and their plan, show only to friends and group-mates.
 - Posts, notes and photos people add reach the same people as their activity, and friends and group-mates always. No points for them. Photos are shrunk and re-encoded on the phone (dropping EXIF and GPS), checked and stripped again on the server, and served at unguessable URLs. Reporting a post hides it for you and flags it for review; deleting a post or your account deletes its photos.
 - Area totals appear only when at least 3 people are active there.
 - Nobody, including the app, knows how anyone voted.

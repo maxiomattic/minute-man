@@ -85,6 +85,4 @@ export async function render(el) {
   // Stop watching once this page is gone.
   const stop = () => { io.disconnect(); window.removeEventListener('hashchange', stop); };
   window.addEventListener('hashchange', stop);
-  if (!state.me?.onLeaderboards)
-    moreEl.insertAdjacentHTML('beforebegin', '<p class="tiny muted feed-privacy">Others don\'t see your actions here. <a href="#/me">Show me to others</a></p>');
 }
