@@ -52,6 +52,8 @@ export const ago = (ts) => {
   return `${Math.round(s / 86400)}d`;
 };
 export const initials = (name) => String(name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+/** Collapsed "tell me more" section, so screens lead with the action and keep detail one tap away. */
+export const more = (label, html, cls = '') => `<details class="more ${cls}"><summary>${label}</summary><div class="more-body">${html}</div></details>`;
 export const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 // ---------- icons (24px stroke set) ----------
@@ -140,7 +142,7 @@ export function celebrate({ big, title, body, cta = 'Keep going' }) {
     el.className = 'celebrate';
     el.setAttribute('role', 'dialog');
     el.innerHTML = `<div style="max-width:420px">
-      <div class="ring"><span class="big" style="font-size:64px">${esc(big)}</span></div>
+      <div class="ring"><span class="big" style="font-size:${String(big).length > 4 ? 44 : 64}px">${esc(big)}</span></div>
       <h1 style="color:inherit">${esc(title)}</h1>
       <p style="opacity:.9;margin-bottom:28px">${esc(body || '')}</p>
       <button class="btn go block">${esc(cta)}</button></div>`;
@@ -178,7 +180,7 @@ export async function checkLevelUp(rank) {
   const last = store.get(key);
   store.set(key, rank.level);
   if (last != null && rank.level > last) {
-    await celebrate({ big: `L${rank.level}`, title: `You're a ${rank.name} now`, body: rank.nextName ? `Next up: ${rank.nextName}.` : 'Top rank. Thank you.' });
+    await celebrate({ big: `Level ${rank.level}`, title: `You're ${/^[aeiou]/i.test(rank.name) ? 'an' : 'a'} ${rank.name} now`, body: rank.nextName ? `Next up: ${rank.nextName}.` : 'Top rank. Thank you.' });
   }
 }
 

@@ -1,5 +1,5 @@
 // You: profile, recognition, who you follow, registration help, and the leader console.
-import { $, $$, api, confetti, esc, fmtDate, fmtWhen, guard, haptic, icon, ACTIVITY_ICON, plural, refreshStats, sheet, state, store, toast, xpFly } from '../core.js';
+import { $, $$, api, confetti, esc, fmtDate, fmtWhen, guard, haptic, icon, ACTIVITY_ICON, more, plural, refreshStats, sheet, state, store, toast, xpFly } from '../core.js';
 
 // Every badge the server can award (see scorecard() in src/engine/recognition.js).
 const BADGES = [
@@ -24,7 +24,7 @@ const STRATEGY = {
   priority: ['Top priority wins', 'The first person on your list with a pick fills each contest.'],
   consensus: ['Consensus', 'Everyone you follow votes, weighted by priority.'],
 };
-const DEFAULT_RANKS = ['Newcomer', 'Registered', 'Voter', 'Messenger', 'Regular', 'Volunteer', 'Block Captain', 'Precinct Chair'];
+const DEFAULT_RANKS = ['Newcomer', 'Registered Voter', 'Active Voter', 'Messenger', 'Regular', 'Volunteer', 'Block Captain', 'Precinct Chair'];
 
 const chev = () => `<span class="chev">${icon('chevron')}</span>`;
 const download = (name, data) => {
@@ -318,60 +318,62 @@ export async function renderRegister(el) {
   const stateName = state.me.homeLabel?.split(', ').pop() === 'TX' ? 'Texas' : 'your state';
   const next = (elig.elections || []).find((x) => x.election?.registration_deadline) || null;
   const e = next?.election;
-  const deadlineLine = e ? `To vote in the ${esc(e.name)} (${esc(fmtDate(e.date))}), register by <b>${esc(fmtDate(e.registration_deadline))}</b>${(() => { const a = next.actions.find((x) => x.daysLeft != null); return a ? `, ${daysLeftText(a.daysLeft)}` : ''; })()}.` : '';
+  const deadlineLine = e ? `Register by <b>${esc(fmtDate(e.registration_deadline))}</b> to vote on ${esc(fmtDate(e.date))}${(() => { const a = next.actions.find((x) => x.daysLeft != null); return a ? ` (${daysLeftText(a.daysLeft)})` : ''; })()}.` : '';
   const status = reg.answered ? reg.status : null;
 
-  const leaveNote = (g) => `<p class="tiny muted" style="margin:8px 0 0">Opens ${esc(g.site)} in your browser. CVAS isn't part of it and doesn't see what you enter.${g.mobile === 'ok' ? ' It works fine on a phone.' : ''}</p>`;
+  const leaveNote = (g) => `<p class="tiny muted">Opens ${esc(g.site)} in your browser. CVAS doesn't see what you enter there.${g.mobile === 'ok' ? ' Works fine on a phone.' : ''}</p>`;
   const needsList = (items) => `<ul class="checklist">${items.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>`;
   const answer = (choices) => `<div class="answers">${choices.map(([v, label]) => `<button class="btn line" data-status="${v}">${label}</button>`).join('')}</div>`;
+  const home = '<a class="btn quiet block" href="#/today" style="margin-top:10px">Back to Today</a>';
 
   let step;
   if (!status) {
-    step = `<h2>Are you registered to vote at your current address?</h2>
-      <p class="muted small">If you moved, your registration doesn't follow you automatically.</p>
+    step = `<h2>Are you registered at your current address?</h2>
       ${answer([['confirmed', 'Yes, I checked'], ['not_registered', 'No'], ['unknown', 'Not sure']])}`;
   } else if (status === 'unknown' || status === 'submitted') {
     const g = guide.lookup || { url: rules.statusLookupUrl, site: 'your state election site', needs: [] };
-    step = `<h2>${status === 'submitted' ? 'See if your registration went through' : 'Check your registration'}</h2>
-      ${status === 'submitted' && guide.afterSubmit ? `<p class="muted">${esc(guide.afterSubmit)}</p>` : ''}
-      ${g.needs?.length ? `<p>It takes about 2 minutes. Have these ready:</p>${needsList(g.needs)}` : ''}
-      ${g.url ? `<a class="btn go block" href="${esc(g.url)}" target="_blank" rel="noopener" id="go">Open the ${esc(stateName === 'Texas' ? 'Texas' : 'state')} lookup</a>${leaveNote(g)}` : '<p>Ask your county elections office.</p>'}
-      <div class="after"><p class="small"><b>When you're back:</b> what did it say?</p>
-      ${answer([['confirmed', "I'm registered"], ['not_registered', "It couldn't find me"]])}</div>`;
+    step = `<h2>${status === 'submitted' ? 'See if it went through' : 'Check your registration'}</h2>
+      <p class="muted">${status === 'submitted' ? 'Your county mails a certificate within about 30 days. Check the lookup in a week or two.' : 'Takes about 2 minutes on the state\'s lookup page.'}</p>
+      ${g.url ? `<a class="btn go block" href="${esc(g.url)}" target="_blank" rel="noopener" id="go">Open the ${stateName === 'Texas' ? 'Texas' : 'state'} lookup</a>` : '<p>Ask your county elections office.</p>'}
+      ${g.needs?.length ? more('What you\'ll need', `${needsList(g.needs)}${g.url ? leaveNote(g) : ''}`) : ''}
+      <div class="after"><p class="small"><b>Back from the lookup?</b> What did it say?</p>
+      ${answer([['confirmed', "I'm registered"], ['not_registered', "It couldn't find me"]])}</div>
+      ${status === 'submitted' ? home : ''}`;
   } else if (status === 'not_registered') {
     const g = guide.apply;
     step = g ? `<h2>Register to vote</h2>
-      <p>${esc(g.intro)}</p>
-      <ol class="steps">${g.steps.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>
-      <a class="btn go block" href="${esc(g.url)}" target="_blank" rel="noopener">Start the application</a>${leaveNote(g)}
-      ${g.mobile === 'print' ? `<div class="aside-box"><p class="small"><b>On your phone?</b> You'll need a printer for step 2. ${esc(g.noPrinter || '')}</p>
-        <button class="btn line sm" id="later">Send it to myself for later</button></div>` : ''}
-      ${g.update ? `<p class="small">${esc(g.update.text)} <a href="${esc(g.update.url)}" target="_blank" rel="noopener">Update it on Texas.gov</a>.</p>` : ''}
+      <p class="muted">${esc(g.intro)}</p>
+      <a class="btn go block" href="${esc(g.url)}" target="_blank" rel="noopener">Start the application</a>
+      ${more(`How it works (${g.steps.length} steps)`, `<ol class="steps">${g.steps.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>${leaveNote(g)}`)}
+      ${g.mobile === 'print' ? more('No printer?', `<p class="small">${esc(g.noPrinter || '')}</p><button class="btn line sm" id="later">Send the steps to myself</button>`) : ''}
+      ${g.update ? more('Already registered and just moved?', `<p class="small">${esc(g.update.text)} <a href="${esc(g.update.url)}" target="_blank" rel="noopener">Update it on Texas.gov</a>.</p>`) : ''}
       <div class="after"><p class="small"><b>Mailed it?</b></p>${answer([['submitted', 'I mailed my application']])}</div>`
       : `<h2>Register to vote</h2>${rules.onlineRegistrationUrl ? `<a class="btn go block" href="${esc(rules.onlineRegistrationUrl)}" target="_blank" rel="noopener">Open your state's registration site</a>` : '<p>Contact your county elections office.</p>'}
       <div class="after">${answer([['submitted', "I've applied"]])}</div>`;
   } else {
     step = `<h2>You're registered</h2>
       <p class="muted">Nothing else to do here unless you move.</p>
-      ${rules.idNote ? `<p class="small"><b>When you vote in person:</b> ${esc(rules.idNote)}</p>` : ''}
-      <button class="link-btn small" data-status="unknown">I moved or want to check again</button>`;
+      ${e ? `<a class="btn go block" href="#/vote/${esc(e.id)}">Next: make your voting plan</a>` : ''}
+      ${home}
+      ${rules.idNote ? more('What ID to bring when you vote', `<p class="small">${esc(rules.idNote)}</p>`) : ''}
+      <p style="margin:8px 0 0"><button class="link-btn small" data-status="unknown">I moved or want to check again</button></p>`;
   }
 
   const closed = rules.closedPrimaries;
   el.innerHTML = `<div class="vb page">
+    <a class="back" href="#/today">${icon('chevron')}Today</a>
     <h1>Registration</h1>
-    ${deadlineLine ? `<p class="muted">${deadlineLine}</p>` : ''}
+    ${deadlineLine && status !== 'confirmed' ? `<p class="muted">${deadlineLine}</p>` : ''}
     <section class="panel reg-step">${step}</section>
     ${closed ? `<section><div class="section-head"><h2>Your party</h2></div>
       <form class="panel" id="rs">
-        <p class="small muted">Primaries here are closed: you can only vote in your own party's primary. Party changes are due ${rules.partyChangeDeadlineDays ?? 'some'} days before the primary.</p>
+        ${more('Why this matters', `<p class="small muted">Primaries here are closed: you can only vote in your own party's primary. Party changes are due ${rules.partyChangeDeadlineDays ?? 'some'} days before the primary.</p>`)}
         <div class="grid2">
           <div><label class="field" for="rp">Party now</label><input id="rp" name="party" value="${esc(reg.party || '')}" placeholder="Like Unaffiliated"></div>
           <div><label class="field" for="rdp">Party you want</label><input id="rdp" name="desiredParty" value="${esc(reg.desiredParty || '')}"></div>
         </div>
         <button class="btn block" style="margin-top:14px">Save party</button>
       </form></section>` : ''}
-    ${rules.notes ? `<p class="legal">${esc(rules.notes)}</p>` : ''}
   </div>`;
 
   $$('[data-status]', el).forEach((b) => (b.onclick = guard(async () => {

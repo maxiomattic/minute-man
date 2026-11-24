@@ -1,5 +1,5 @@
 // Your path: the ranked ladder of political engagement, a coach for the next step, and invites.
-import { $, $$, api, confetti, esc, guard, icon, isNative, plural, refreshStats, toast } from '../core.js';
+import { $, $$, api, confetti, esc, guard, icon, isNative, more, plural, refreshStats, toast } from '../core.js';
 
 const PUBLIC_URL = 'https://cvas.careride.workers.dev';
 export const inviteUrl = (code) => `${isNative ? PUBLIC_URL : location.origin}/#/join/${code}`;
@@ -46,7 +46,7 @@ export async function render(el, arg) {
         <div class="grow">
           <div class="rung-head"><h3>${esc(r.name)}</h3>${r.bonus ? `<span class="tiny muted">+${r.bonus} XP</span>` : ''}</div>
           <p class="small muted">${esc(r.blurb)}${state === 'done' && r.level === L.level ? ' <strong class="you">You are here</strong>' : ''}</p>
-          ${state === 'done' && r.level !== L.level ? '' : steps}
+          ${state === 'done' && r.level !== L.level ? '' : state === 'later' && steps ? more('See steps', steps) : steps}
         </div></li>`;
   };
 
@@ -54,16 +54,16 @@ export async function render(el, arg) {
   const invite = `<section id="invite">
       <div class="section-head"><h2>Bring people in</h2>${R.length ? `<span class="muted small">${plural(R.length, 'recruit')}</span>` : ''}</div>
       <div class="panel">
-        <p>Send your link to friends and family. When they join, they're added to your crew, and you earn a bonus each time one of them reaches a new rank.</p>
-        <ul class="bonus-list small">
+        <p>Friends who join with your link land in your crew. You earn points as they move up.</p>
+        <div class="invite-row"><code class="code">${esc(inviteUrl(L.invite.code).replace(/^https?:\/\//, ''))}</code></div>
+        <button class="btn go block" id="share">Share my invite link</button>
+        ${more('How the bonuses work', `<ul class="bonus-list small">
           <li><span>They join</span><b class="num">+${RECRUIT_BONUS[0]}</b></li>
-          <li><span>They reach Registered</span><b class="num">+${RECRUIT_BONUS[1]}</b></li>
+          <li><span>They reach Registered Voter</span><b class="num">+${RECRUIT_BONUS[1]}</b></li>
           <li><span>They vote</span><b class="num">+${RECRUIT_BONUS[2]}</b></li>
           <li><span>Each rank after that</span><b class="num">+${Math.min(...RECRUIT_BONUS.slice(3))} to +${Math.max(...RECRUIT_BONUS.slice(3))}</b></li>
         </ul>
-        <div class="invite-row"><code class="code">${esc(inviteUrl(L.invite.code).replace(/^https?:\/\//, ''))}</code></div>
-        <button class="btn go block" id="share">Share my invite link</button>
-        <p class="tiny muted" style="margin:10px 0 0">You see a recruit's rank only if they let friends see their voting status. Nobody sees how anyone voted.</p>
+        <p class="tiny muted" style="margin:10px 0 0">You see a recruit's rank only if they let friends see their voting status. Nobody sees how anyone voted.</p>`)}
       </div>
       ${R.length ? `<div class="panel flush" style="margin-top:12px"><ul class="list">${R.map((x) => `<li class="recruit">
           <span class="avatar" aria-hidden="true">${esc(x.name[0] || '?')}</span>
@@ -73,8 +73,9 @@ export async function render(el, arg) {
 
   el.innerHTML = `<div class="page two path">
       <div class="main">
+        <a class="back" href="#/today">${icon('chevron')}Today</a>
         <h1>Your path</h1>
-        <p class="muted">Level ${L.level} of ${L.rungs.length}: <strong>${esc(L.name)}</strong>. Each rank is a step up in political engagement. Finish every step to move up.</p>
+        <p class="muted">Level ${L.level} of ${L.rungs.length}: <strong>${esc(L.name)}</strong>. Finish every step to move up.</p>
         ${coach}
         <section><div class="section-head"><h2>The ladder</h2></div>
           <ol class="ladder panel">${L.rungs.slice(1).map(rung).join('')}</ol></section>

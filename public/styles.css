@@ -611,3 +611,20 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand-text); 
 .recruit .title { display: block; font-weight: 600; }
 .recruit .sub { display: block; font-size: 13px; color: var(--muted); }
 .invited { background: var(--marker); color: var(--on-marker); border-radius: var(--r-md); padding: 10px 14px; font-weight: 600; }
+
+/* "Tell me more": detail one tap away so each screen leads with the action. */
+.more { margin: 10px 0 0; }
+.more > summary { list-style: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-weight: 600; font-size: 15px; color: var(--brand-text); cursor: pointer; }
+.more > summary::-webkit-details-marker { display: none; }
+.more > summary::after { content: ''; width: 7px; height: 7px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg) translateY(-2px); transition: transform .15s; }
+.more[open] > summary::after { transform: rotate(-135deg) translate(-2px, 0); }
+.more > summary:focus-visible { outline: 2px solid var(--brand-text); outline-offset: 2px; border-radius: 4px; }
+.more-body { padding: 2px 0 4px; }
+.more-body > p:first-child { margin-top: 0; }
+.more-body > :last-child { margin-bottom: 0; }
+.contest .note .more { margin: 0; }
+.contest .note .more-body p { margin: 4px 0 0; }
+.ballot-info { display: flex; flex-direction: column; align-items: flex-start; }
+.back { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; margin: -4px 0 4px; font-weight: 600; text-decoration: none; }
+.back svg { transform: rotate(180deg); width: 18px; height: 18px; }
+@media (prefers-reduced-motion: reduce) { .more > summary::after { transition: none; } }

@@ -123,7 +123,14 @@ test('sample ballot: AFI first, Trump as fallback, no invented picks', async () 
   assert.equal(rec('tx26-us-sen').sourceLeaderId, afi);
   assert.equal(rec('tx26-gov').sourceLeaderId, trump); // Abbott, via fallback
   assert.equal(rec('tx26-state-house-10').sourceLeaderId, afi);
-  assert.deepEqual(rec('tx26-state-sen-2').choiceIds, []); // neither source endorsed
+  // Neither source endorsed and one Republican is running: filled in, marked as a party default, credited to nobody.
+  const sen2 = b.contests.find((c) => c.id === 'tx26-state-sen-2');
+  const reps = sen2.choices.filter((c) => c.party === 'Republican');
+  if (reps.length === 1) {
+    assert.deepEqual(rec('tx26-state-sen-2').choiceIds, [reps[0].id]);
+    assert.equal(rec('tx26-state-sen-2').basis, 'party');
+    assert.equal(rec('tx26-state-sen-2').sourceLeaderId, null);
+  } else assert.deepEqual(rec('tx26-state-sen-2').choiceIds, []);
 
   // Put Trump first: shared picks now credit Trump, AFI-only races still come from AFI
   await call('/bindings', { method: 'PUT', body: [{ leaderId: trump }, { leaderId: afi }], token: t });
@@ -131,10 +138,11 @@ test('sample ballot: AFI first, Trump as fallback, no invented picks', async () 
   const src2 = (id) => b2.contests.find((c) => c.id === id).recommendation.sourceLeaderId;
   assert.equal(src2('tx26-gov'), trump);
   assert.ok(b.contests.some((c) => c.recommendation.sourceLeaderId === afi && src2(c.id) === afi), 'some AFI-only race keeps its AFI pick');
-  // Drop Trump: governor has no pick
+  // Drop Trump: governor has no endorsement, so it falls to the only Republican, credited to nobody
   await call(`/bindings/${trump}`, { method: 'DELETE', token: t });
   const b3 = (await call('/elections/tx-2026-general/ballot', { token: t })).data;
-  assert.deepEqual(b3.contests.find((c) => c.id === 'tx26-gov').recommendation.choiceIds, []);
+  const gov = b3.contests.find((c) => c.id === 'tx26-gov').recommendation;
+  assert.deepEqual([gov.choiceIds, gov.basis, gov.sourceLeaderId], [['tx26-gov-0'], 'party', null]);
   await call('/bindings', { method: 'POST', body: { leaderId: trump }, token: t });
   const back = (await call('/bindings', { method: 'PUT', body: [{ leaderId: afi }, { leaderId: trump }], token: t })).data;
   assert.deepEqual(back.map((x) => x.leaderId), [afi, trump]);
@@ -319,16 +327,16 @@ test('ladder: ranks follow the steps in order and coach the next one', async () 
   await call('/participation', { method: 'POST', token: t, body: { electionId: 'tx-2026-general', kind: 'planned' } });
   l = (await call('/ladder', { token: t })).data;
   assert.equal(l.level, 2);
-  assert.equal(l.name, 'Registered');
+  assert.equal(l.name, 'Registered Voter');
   // Voting isn't open on Oct 1, so the coach waits on it and suggests the next rung meanwhile.
   assert.equal(l.coach.step.id, 'vote');
   assert.match(l.coach.step.opensLabel, /Opens Oct 19/);
   assert.equal(l.coach.meanwhile.rung, 'Messenger');
   assert.ok(l.rungs[3].steps.find((s) => s.id === 'posts').done);
   const rec = (await call('/recognition', { token: t })).data;
-  assert.equal(rec.rank.name, 'Registered');
+  assert.equal(rec.rank.name, 'Registered Voter');
   assert.ok(rec.breakdown.bonus >= 50);
-  assert.equal((await call('/today', { token: t })).data.rank.name, 'Registered');
+  assert.equal((await call('/today', { token: t })).data.rank.name, 'Registered Voter');
 });
 
 test('invites: recruiter earns a bonus as recruits climb, sees rank only if shared', async () => {
@@ -353,7 +361,7 @@ test('invites: recruiter earns a bonus as recruits climb, sees rank only if shar
   await call('/participation', { method: 'POST', token: r, body: { electionId: 'tx-2026-general', kind: 'planned' } });
   await call('/me', { method: 'PATCH', token: r, body: { shareStatus: true } });
   d = (await call('/ladder', { token: demo })).data;
-  assert.equal(d.recruits[0].rank, 'Registered');
+  assert.equal(d.recruits[0].rank, 'Registered Voter');
   assert.equal(d.recruits[0].earned, 75);
   assert.equal((await call('/recognition', { token: demo })).data.points - before >= 75, true);
   assert.ok(d.rungs[3].steps.find((s) => s.id === 'recruit1').done);

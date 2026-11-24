@@ -74,7 +74,7 @@ export function streak(db, uid) {
 
 // ---------- quests ----------
 const QUESTS = {
-  ballot: { title: 'Look over your sample ballot', xp: 15, when: (c) => c.election, check: (c) => c.ev(`ballot_viewed:${c.election.id}`) },
+  ballot: { title: 'See who to vote for', xp: 15, when: (c) => c.election, check: (c) => c.ev(`ballot_viewed:${c.election.id}`) },
   remind: { title: 'Remind a friend to vote', xp: 20, when: (c) => c.election && c.friends > 0, check: (c) => c.count('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND date(at, ?)=?') > 0 },
   cheer: { title: 'Cheer someone in your crew', xp: 10, when: (c) => c.crew > 0, check: (c) => c.count('SELECT COUNT(*) n FROM cheers WHERE user_id=? AND date(at, ?)=?') > 0 },
   post: { title: 'Share a post about a local issue', xp: 15, check: (c) => c.count(`SELECT COUNT(*) n FROM activity WHERE user_id=? AND kind='social' AND day=?`) > 0 },
@@ -144,7 +144,7 @@ function nextActions(db, user, ctx) {
     if (!parts.includes('voted') && !parts.includes('planned'))
       add({ kind: 'plan', title: 'Make your voting plan', body: `Pick when and where you'll vote in ${e.name}. It takes 30 seconds.`, cta: 'Make a plan', href: `#/vote/${e.id}`, xp: 10 });
     if (!parts.includes('voted') && !db.prepare('SELECT 1 FROM events WHERE user_id=? AND kind=?').get(user.id, `ballot_viewed:${e.id}`))
-      add({ kind: 'ballot', title: 'Check your ballot', body: `${ctx.contests} contests. Your leaders' picks are already filled in.`, cta: 'Open ballot', href: `#/ballot/${e.id}`, xp: 15 });
+      add({ kind: 'ballot', title: 'See who to vote for', body: `${ctx.contests} races, already filled in from your endorsements.`, cta: 'See my picks', href: `#/ballot/${e.id}`, xp: 15 });
     if (d <= 14) {
       const f = db.prepare(
         `SELECT u.id, u.name FROM friendships fr JOIN users u ON u.id = CASE WHEN fr.a=?1 THEN fr.b ELSE fr.a END

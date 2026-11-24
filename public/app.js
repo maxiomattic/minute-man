@@ -19,7 +19,7 @@ const ROUTES = {
   crew: ['crew', 'crew'],
   me: ['me', null],
   leaders: ['me', null],           // renderLeaders
-  register: ['me', null],          // renderRegister
+  register: ['me', 'today'],       // renderRegister
   lead: ['me', null],              // renderLead
   path: ['path', 'today'],
 };
@@ -174,5 +174,22 @@ async function boot() {
   route();
 }
 boot();
+// Android back: close whatever is on top (a sheet or celebration), then go to the previous
+// screen, then Today. Only leave the app from Today, and then just send it to the background.
+const NativeApp = window.Capacitor?.Plugins?.App;
+NativeApp?.addListener?.('backButton', ({ canGoBack }) => {
+  const overlays = $$('.celebrate, .sheet-backdrop');
+  const top = overlays[overlays.length - 1];
+  if (top) {
+    if (top.classList.contains('celebrate')) $('button', top)?.click();
+    else top.click();
+    return;
+  }
+  const here = location.hash.replace(/^#\/?/, '');
+  const home = !here || here === 'today' || here === 'welcome';
+  if (!home && canGoBack) history.back();
+  else if (!home) location.hash = '#/today';
+  else NativeApp.minimizeApp();
+});
 if ('serviceWorker' in navigator && !isNative) navigator.serviceWorker.register('/sw.js').catch(() => {});
 export { route, toast };

@@ -16,7 +16,10 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] Demo clock pinned to Oct 1, 2026 (server + client)
 - [x] Home address lookup (Census geocoder) sets the voter's districts; no precinct or area picker
 - [x] Guided registration flow: asks first, says what to have ready before leaving the app, phone notes per state site
-- [x] The Ladder: 8 ranks earned by doing each step in order (Registered → Voter → Messenger → Regular → Volunteer → Block Captain → Precinct Chair), a coach for the next step, rank bonuses
+- [x] The Ladder: 8 ranks earned by doing each step in order (Registered Voter → Active Voter → Messenger → Regular → Volunteer → Block Captain → Precinct Chair), a coach for the next step, rank bonuses
+- [x] Screens lead with the action; detail sits in tap-to-open sections. Registration ends with "Next: make your voting plan" and "Back to Today"
+- [x] Android back button: closes sheets, then goes to the previous screen, then Today; only backgrounds the app from Today
+- [x] Races with no endorsement and exactly one Republican fill in that candidate, labelled "Only Republican" (never shown as an endorsement)
 - [x] Invite links: recruits join your crew; you earn a bonus each time a recruit reaches a new rank
 - [x] 24 tests pass; screens checked at Pixel 7 and 1280x800
 - [x] Android app installed and verified on the Pixel 6 (rebuild: `scripts/android.sh <phone-ip:port>`)

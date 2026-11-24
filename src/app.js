@@ -243,7 +243,13 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
         const r = recStmt.get(b.id, c.id);
         if (r) recs.push({ leaderId: b.id, leaderName: b.name, priority: b.priority, choiceIds: JSON.parse(r.choice_ids), note: r.note });
       }
-      const agg = aggregate(user.strategy, recs, { id: c.id, voteFor: c.vote_for });
+      let agg = aggregate(user.strategy, recs, { id: c.id, voteFor: c.vote_for });
+      // No source endorsed: if exactly one Republican is running, fill that candidate in. This is labelled as
+      // a party default on the ballot, never as anyone's endorsement.
+      if (!agg.choiceIds.length && c.vote_for === 1) {
+        const reps = choices.filter((ch) => /^republican$/i.test(ch.party || ''));
+        if (reps.length === 1) agg = { choiceIds: [reps[0].id], sourceLeaderId: null, conflicts: [], basis: 'party' };
+      }
       return {
         id: c.id, title: c.title, kind: c.kind, voteFor: c.vote_for, description: c.description,
         choices, recommendation: agg,

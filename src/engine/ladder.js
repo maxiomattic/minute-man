@@ -61,7 +61,7 @@ const fmtDay = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US',
 export const LADDER = [
   { name: 'Newcomer', blurb: 'You joined. Welcome.', steps: [] },
   {
-    name: 'Registered', blurb: 'Get ready to vote.',
+    name: 'Registered Voter', blurb: 'Get ready to vote.',
     steps: [
       { id: 'address', cta: 'Add your address', label: 'Add your home address', how: 'It finds your exact ballot and districts. We keep the city, not the street.', href: '#/me/profile', check: (f) => +f.address },
       { id: 'registered', cta: 'Check registration', label: 'Confirm you\'re registered', how: 'The state lookup takes about 2 minutes. If you aren\'t registered, we walk you through it.', href: '#/register', check: (f) => +f.registered },
@@ -69,7 +69,7 @@ export const LADDER = [
     ],
   },
   {
-    name: 'Voter', blurb: 'Cast your ballot.',
+    name: 'Active Voter', blurb: 'Cast your ballot.',
     steps: [
       { id: 'vote', cta: 'Vote', label: 'Vote, early if you can', how: 'Early voting means no election-day lines, and it frees you up to drive friends on election day. Voting early earns 25 extra XP.',
         href: (f) => (f.election ? `#/vote/${f.election.id}` : '#/ballot'), check: (f) => +f.voted,
@@ -96,7 +96,7 @@ export const LADDER = [
     steps: [
       { id: 'doors', cta: 'Find a block walk', label: 'Knock 100 doors', how: 'Block walks are the most effective thing a volunteer can do. Most campaigns will pair you with someone your first time.', href: '#/act', goal: 100, check: (f) => f.doors },
       { id: 'shift', cta: 'Find a shift', label: 'Work a campaign or GOTV shift', how: 'Phone banks, sign waving, office help, or rides to the polls.', href: '#/act', check: (f) => f.shifts },
-      { id: 'recruit3', cta: 'See your recruits', label: '3 recruits reach Registered', how: 'Help the people you brought in check their registration and make a plan.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsRegistered },
+      { id: 'recruit3', cta: 'See your recruits', label: '3 recruits reach Registered Voter', how: 'Help the people you brought in check their registration and make a plan.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsRegistered },
     ],
   },
   {
