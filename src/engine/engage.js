@@ -175,7 +175,11 @@ function nextActions(db, user, ctx) {
      ORDER BY a.starts_at LIMIT 1`,
   ).get(user.id);
   if (ev) add({ kind: 'event', title: ev.title, body: `${ACTIVITY[ev.kind]?.label || 'Event'}. Check in there for full points.`, cta: 'See event', href: `#/act/${ev.id}`, xp: ACTIVITY[ev.kind]?.verified || 20, when: ev.starts_at });
-  add({ kind: 'log', title: 'Did something civic today?', body: 'Log a post, a call, or a conversation with a neighbor.', cta: 'Log it', href: '#/act/log', xp: 3 });
+  // Then the open actions on your skill tree, each a specific task.
+  const skip = new Set(['address', 'registered', 'plan', 'vote']); // covered above
+  for (const s of (ctx.ladder?.rungs || []).flatMap((r) => r.steps))
+    if (!s.done && !s.locked && !s.opensOn && !skip.has(s.id) && !s.action)
+      add({ kind: `step:${s.id}`, title: s.label, progress: s.goal > 1 ? `${s.have} of ${s.goal} done` : null, body: s.goal > 1 ? `${s.have} of ${s.goal} done. ${s.how}` : s.how, cta: s.cta, href: s.href, xpText: s.xp });
   return out;
 }
 
@@ -225,8 +229,8 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     const election = nextElection(user);
     const contests = election ? db.prepare('SELECT COUNT(*) n FROM contests WHERE election_id=?').get(election.id).n : 0;
     const bindings = db.prepare('SELECT COUNT(*) n FROM bindings WHERE user_id=? AND active=1').get(user.id).n;
-    const actions = nextActions(db, user, { election, contests, bindings });
     const ladder = ladderFor(db, user, rankNamesFor(db, user)); // awards rung bonuses before we total points
+    const actions = nextActions(db, user, { election, contests, bindings, ladder });
     const sc = scorecard(db, user.id);
     const crew = crewIds(db, user.id);
     let proof = null;
@@ -240,7 +244,7 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     const place = weekBoard.filter((p) => p > week).length + 1;
     return {
       next: actions[0],
-      upNext: actions.slice(1, 3),
+      upNext: actions.slice(1, 4),
       quests: dailyQuests(db, user, election),
       streak: streak(db, user.id),
       points: sc.points,

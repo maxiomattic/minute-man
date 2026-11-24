@@ -111,7 +111,7 @@ export const LESSONS = {
   },
 };
 const lesson = (id, label, needs) => ({
-  id, label, cta: 'Start the training', how: LESSONS[id].title + '. Takes about 5 minutes.', lesson: true, needs, xp: `+${LESSON_POINTS}`,
+  id, label, cta: 'Start the training', href: `#/path/learn/${id}`, how: LESSONS[id].title + '. Takes about 5 minutes.', lesson: true, needs, xp: `+${LESSON_POINTS}`,
   check: (f) => +f.learned.has(id),
 });
 
@@ -138,7 +138,7 @@ export const LADDER = [
   {
     name: 'Messenger', blurb: 'Spread the word.',
     steps: [
-      { id: 'posts', needs: ['registered'], xp: '+3 per post', cta: 'Log a post', label: 'Share 5 posts', how: 'Repost your candidates and local news. Log each one so it counts.', href: '#/act/log', goal: 5, check: (f) => f.posts },
+      { id: 'posts', needs: ['registered'], xp: '+3 per post', cta: 'Log a post', label: 'Share 5 posts', how: 'Repost your candidates and local news. Log each one so it counts.', href: '#/act/log/social', goal: 5, check: (f) => f.posts },
       { id: 'remind', needs: ['plan'], xp: '+5 per friend', cta: 'Remind friends', label: 'Remind 3 friends to vote', how: 'A personal reminder works better than any ad.', href: '#/crew/friends', goal: 3, check: (f) => f.reminded },
       { id: 'recruit1', needs: ['posts'], xp: '+25 each', cta: 'Share your invite', label: 'Bring 1 person to CVAS', how: 'Send your invite link. You earn a bonus every time they climb a rank.', href: '#/path/invite', check: (f) => f.recruits },
     ],
@@ -148,7 +148,7 @@ export const LADDER = [
     steps: [
       lesson('learn_local', 'Learn how local government works', ['plan']),
       lesson('learn_party', 'Learn how your county party works', ['learn_local']),
-      { id: 'meetings', needs: ['learn_party'], xp: '+30 each', cta: 'Find a meeting', label: 'Go to 2 local meetings', how: 'Your county GOP meeting and a city council or commissioners court meeting. Check in with the event code for full points.', href: '#/act', goal: 2, check: (f) => f.meetings },
+      { id: 'meetings', needs: ['learn_party'], log: 'party_meeting', xp: '+30 each', cta: 'Find a meeting', label: 'Go to 2 local meetings', how: 'Your county GOP meeting and a city council or commissioners court meeting. Check in with the event code for full points.', href: '#/act', goal: 2, check: (f) => f.meetings },
       { id: 'group', needs: ['learn_party'], cta: 'Find a group', label: 'Join a local group', how: 'Ask the organizer at a meeting for their CVAS invite code.', href: '#/crew/groups', check: (f) => +f.inGroup },
     ],
   },
@@ -156,18 +156,18 @@ export const LADDER = [
     name: 'Volunteer', blurb: 'Work for a campaign.',
     steps: [
       lesson('learn_canvass', 'Learn how a block walk works', ['group']),
-      { id: 'doors', needs: ['learn_canvass'], xp: '+1 per door', cta: 'Find a block walk', label: 'Knock 100 doors', how: 'Block walks are the most effective thing a volunteer can do. Most campaigns will pair you with someone your first time.', href: '#/act', goal: 100, check: (f) => f.doors },
-      { id: 'shift', needs: ['group'], xp: '+40', cta: 'Find a shift', label: 'Work a campaign or GOTV shift', how: 'Phone banks, sign waving, office help, or rides to the polls.', href: '#/act', check: (f) => f.shifts },
+      { id: 'doors', needs: ['learn_canvass'], log: 'canvass', xp: '+1 per door', cta: 'Find a block walk', label: 'Knock 100 doors', how: 'Block walks are the most effective thing a volunteer can do. Most campaigns will pair you with someone your first time.', href: '#/act', goal: 100, check: (f) => f.doors },
+      { id: 'shift', needs: ['group'], log: 'volunteer', xp: '+40', cta: 'Find a shift', label: 'Work a campaign or GOTV shift', how: 'Phone banks, sign waving, office help, or rides to the polls.', href: '#/act', check: (f) => f.shifts },
       { id: 'recruit3', needs: ['recruit1'], xp: '+50 each', cta: 'See your recruits', label: '3 recruits reach Registered Voter', how: 'Help the people you brought in check their registration and make a plan.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsRegistered },
     ],
   },
   {
     name: 'Block Captain', blurb: 'Organize your neighborhood.',
     steps: [
-      { id: 'doors500', needs: ['doors'], xp: '+1 per door', cta: 'Find a block walk', label: 'Knock 500 doors', how: 'Own your block: know who lives there and who still needs to vote.', href: '#/act', goal: 500, check: (f) => f.doors },
+      { id: 'doors500', needs: ['doors'], log: 'canvass', xp: '+1 per door', cta: 'Find a block walk', label: 'Knock 500 doors', how: 'Own your block: know who lives there and who still needs to vote.', href: '#/act', goal: 500, check: (f) => f.doors },
       { id: 'lead', needs: ['group'], cta: 'Start a group', label: 'Start a group with 5 members', how: 'Create a group for your block or church and share its invite code.', href: '#/crew/groups', goal: 5, check: (f) => f.ledGroup },
       lesson('learn_election', 'Take poll watcher training', ['shift']),
-      { id: 'work', needs: ['learn_election'], xp: '+60', cta: 'Log a shift', label: 'Work an election', how: 'Serve as a poll watcher or election worker. Your county party chair appoints poll watchers and recommends election judges.', href: '#/act/log', check: (f) => f.electionWork },
+      { id: 'work', needs: ['learn_election'], xp: '+60', cta: 'Log a shift', label: 'Work an election', how: 'Serve as a poll watcher or election worker. Your county party chair appoints poll watchers and recommends election judges.', href: '#/act/log/election_work', check: (f) => f.electionWork },
     ],
   },
   {
@@ -194,7 +194,7 @@ export function ladderFor(db, user, names) {
         id: s.id, label: s.label, cta: s.cta || null, how: s.how, goal, have, done: have >= goal,
         href: typeof s.href === 'function' ? s.href(f) : s.href || null,
         action: s.action || null, actionLabel: s.actionLabel || null, link: s.link || null,
-        needs: s.needs || [], xp: s.xp || null, lesson: s.lesson ? LESSONS[s.id] : null,
+        needs: s.needs || [], xp: s.xp || null, log: s.log || null, lesson: s.lesson ? LESSONS[s.id] : null,
         opensOn: have < goal && opens && day < opens ? opens : null,
         opensLabel: have < goal && opens && day < opens ? `Opens ${fmtDay(opens)}` : null,
       };

@@ -108,38 +108,31 @@ function openEvent(a, rerender) {
   $('#nocode', el).onclick = () => go(false);
 }
 
-function openLog(rerender) {
-  const kinds = state.meta?.activityKinds || [];
-  let pick = null;
+/** Log one specific kind of work (a task from your list or skill tree). No catch-all picker. */
+function openLog(rerender, kind) {
+  const pick = (state.meta?.activityKinds || []).find((k) => k.kind === kind);
+  if (!pick) return toast('Pick a task from your list.');
+  const title = { social: 'Log your posts', canvass: 'Log doors you knocked', phonebank: 'Log calls you made', election_work: 'Log your election shift',
+    party_meeting: 'Log a party meeting', council_meeting: 'Log a council meeting', volunteer: 'Log a campaign shift', gotv: 'Log a GOTV shift' }[kind] || `Log: ${pick.label}`;
   const { el, close } = sheet(`<div class="vb">
-    <div class="row between" style="margin-bottom:8px"><h2 style="margin:0">Log something you did</h2>
+    <div class="row between" style="margin-bottom:8px"><h2 style="margin:0">${esc(title)}</h2>
       <button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
-    <p class="muted small">Logging on your own earns fewer points than checking in at an event with the host's code.</p>
+    ${pick.perUnit ? '' : '<p class="muted small">Checking in at the event with the host\'s code earns more.</p>'}
     <form id="lg">
-      <div class="tiles" role="radiogroup" aria-label="What did you do?">${kinds.map((k) => `<label class="tile">
-        <input type="radio" name="kind" value="${esc(k.kind)}">${icon(ACTIVITY_ICON[k.kind] || 'star')}
-        <span>${esc(k.label)}</span><span class="xp">${k.perUnit ? `+${k.perUnit}/${esc(k.unit)}` : `+${k.self}`}</span></label>`).join('')}</div>
-      <div id="qty"></div>
+      ${pick.perUnit ? `<label class="field">How many ${esc(pick.unit)}s?</label>${stepper('quantity', pick.unit)}` : ''}
       <label class="field" for="note">Note <span class="muted">(optional)</span></label>
       <input id="note" name="note" maxlength="280" placeholder="What happened?">
-      <button class="btn go block" type="submit" style="margin-top:16px" disabled>Log it</button>
+      <button class="btn go block" type="submit" style="margin-top:16px">Log it</button>
     </form></div>`);
   $('[data-close]', el).onclick = close;
   const form = $('#lg', el);
   const btn = $('button[type=submit]', form);
   const updateBtn = () => {
-    if (!pick) return;
     const qty = Number(form.quantity?.value) || 1;
     btn.innerHTML = `Log it <span class="xp">+${selfPoints(pick, qty)}</span>`;
   };
-  $$('input[name=kind]', form).forEach((r) => (r.onchange = () => {
-    pick = kindOf(r.value);
-    $('#qty', el).innerHTML = pick.perUnit ? `<label class="field">How many ${esc(pick.unit)}s?</label>${stepper('quantity', pick.unit)}` : '';
-    wireSteppers(el);
-    btn.disabled = false;
-    updateBtn();
-    haptic();
-  }));
+  wireSteppers(el);
+  updateBtn();
   form.addEventListener('input', updateBtn);
   form.onsubmit = guard(async (e) => {
     e.preventDefault();
@@ -159,7 +152,7 @@ function openLog(rerender) {
  * Events near you, the log button and your record. Lives inside the Today tab (`embedded`), so
  * "what I'm doing" is one place. `viewed` marks the events quest done (only when you opened it).
  */
-export async function render(el, arg, { embedded = false, viewed = true } = {}) {
+export async function render(el, arg, { embedded = false, viewed = true, sub = null } = {}) {
   if (viewed) api('/events', { method: 'POST', body: { kind: 'events_viewed' } }).then(refreshStats).catch(() => {});
   const [actions, activity, mine] = await Promise.all([
     api('/actions'),
@@ -197,7 +190,6 @@ export async function render(el, arg, { embedded = false, viewed = true } = {}) 
       <div>
         <h1>Act</h1>
         <p class="muted">Block walks, phone banks and meetups near you. Check in with the host's code for full points.</p>
-        <button class="btn go block" id="log" style="margin-top:12px">${icon('plus')}Log something you did</button>
       </div>
       ${actions.length ? order.filter((g) => groups[g]).map((g) => `<section>
         <div class="section-head"><h2>${g}</h2><span class="muted small">${groups[g].length}</span></div>
@@ -220,16 +212,14 @@ export async function render(el, arg, { embedded = false, viewed = true } = {}) 
         <div class="section-head"><h2 class="h3">Events near you</h2>${actions.length ? `<span class="muted small">${actions.filter((a) => bucket(a) !== 'Recent').length}</span>` : ''}</div>
         ${upcoming.length ? `<div class="panel flush"><ul class="list">${upcoming.flatMap((g) => groups[g]).map(row).join('')}</ul></div>`
           : `<div class="panel small muted">No events coming up. <a href="#/crew">Join a local group</a> and its block walks and meetups show up here.</div>`}
-        <button class="btn line block" id="log" style="margin-top:12px">${icon('plus')}Log something you did</button>
         ${rec ? more('Your record', `<div class="panel flush"><ul class="list compact">${rec}</ul></div>`) : ''}
         ${mine.length ? `<p class="small"><a href="#/lead/${mine[0].id}">Host an event</a> <span class="muted">for ${esc(mine[0].name)}</span></p>` : ''}
       </section>`;
   }
-  $('#log', el).onclick = () => openLog(rerender);
   $$('[data-a]', el).forEach((b) => (b.onclick = () => openEvent(actions.find((a) => a.id === Number(b.dataset.a)), rerender)));
   // Deep links open a sheet once; drop the arg so a reload doesn't reopen it.
   if (arg) history.replaceState(null, '', embedded ? '#/today' : '#/act');
-  if (arg === 'log') openLog(rerender);
+  if (arg === 'log') openLog(rerender, sub);
   else if (arg && /^\d+$/.test(arg)) {
     const a = actions.find((x) => x.id === Number(arg));
     if (a) openEvent(a, rerender); else toast("That event isn't on your list anymore.");

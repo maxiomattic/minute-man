@@ -6,8 +6,8 @@ import { render as renderEvents } from './act.js';
 import { pathCard } from './path.js';
 
 const QUEST_HREF = {
-  ballot: '#/ballot', remind: '#/crew/friends', cheer: '#/crew/feed', post: '#/act/log',
-  events: '#/act', doors: '#/act/log', calls: '#/act/log', follow: '#/leaders',
+  ballot: '#/ballot', remind: '#/crew/friends', cheer: '#/crew/feed', post: '#/act/log/social',
+  events: '#/act', doors: '#/act/log/canvass', calls: '#/act/log/phonebank', follow: '#/leaders',
 };
 const BADGE_ICON = {
   registered: 'check', voted: 'ballot', primary: 'ballot', local: 'hall', streak3: 'star', streak10: 'star',
@@ -29,12 +29,15 @@ function kickerFor(n, t) {
 // Smooth a couple of server phrasings ("in the next 1 day") without changing meaning.
 const heroTitle = (n) => n.title.replace(/^Register in the next 1 day$/, 'Register by tomorrow');
 
+/** '+15' reads as '+15 XP'; '+3 per post' stays as is. */
+const xpLabel = (t) => (/per|each/.test(t) ? t : `${t} XP`);
+
 const actionAttrs = (a, i) => (a.action ? `data-act="${i}"` : `href="${esc(a.href || '#/today')}"`);
 
 /** #/act and #/act/<id|log> land here too: Today, scrolled to events or with that sheet open. */
-export const renderAct = (el, arg) => render(el, arg, true);
+export const renderAct = (el, arg, sub) => render(el, arg, true, sub);
 
-export async function render(el, arg, fromAct = false) {
+export async function render(el, arg, fromAct = false, sub = null) {
   const t = await api('/today');
   state.today = t;
   window.dispatchEvent(new CustomEvent('cvas:stats'));
@@ -57,14 +60,14 @@ export async function render(el, arg, fromAct = false) {
       <h1 id="heroTitle">${esc(heroTitle(n))}</h1>
       <p>${esc(String(n.body || '').replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (d) => fmtDate(d)))}</p>
       ${n.action ? `<button class="btn go" data-act="0">${esc(n.cta)}${n.xp > 0 ? ` <span class="xp">+${n.xp} XP</span>` : ''}</button>`
-        : `<a class="btn go" href="${esc(n.href)}">${esc(n.cta)}${n.xp > 0 ? ` <span class="xp">+${n.xp} XP</span>` : ''}</a>`}
+        : `<a class="btn go" href="${esc(n.href)}">${esc(n.cta)}${n.xp > 0 ? ` <span class="xp">+${n.xp} XP</span>` : n.xpText ? ` <span class="xp">${esc(n.xpText)}</span>` : ''}</a>`}
     </section>` : '';
 
   const upNext = t.upNext?.length ? `<section>
-      <div class="section-head"><h2 class="h3">After that</h2></div>
+      <div class="section-head"><h2 class="h3">Your tasks</h2><a href="#/path">Skill tree</a></div>
       <ul class="list links panel flush">${t.upNext.map((a, i) => `<li>
         <${a.action ? 'button' : 'a'} class="rowlink" ${actionAttrs(a, i + 1)}>
-          <span class="grow"><span class="title">${esc(a.title)}</span>${a.xp > 0 ? ` <span class="tiny muted">+${a.xp} XP</span>` : ''}</span>
+          <span class="grow"><span class="title">${esc(a.title)}</span>${a.progress || a.xpText ? `<span class="sub">${[a.progress, a.xpText && xpLabel(a.xpText)].filter(Boolean).map(esc).join('. ')}</span>` : a.xp > 0 ? ` <span class="tiny muted">+${a.xp} XP</span>` : ''}</span>
           ${icon('chevron', 'chev')}
         </${a.action ? 'button' : 'a'}></li>`).join('')}</ul>
     </section>` : '';
@@ -129,7 +132,7 @@ export async function render(el, arg, fromAct = false) {
     await render(el);
   })));
 
-  await renderEvents($('#events-slot', el), arg, { embedded: true, viewed: fromAct });
+  await renderEvents($('#events-slot', el), arg, { embedded: true, viewed: fromAct, sub });
   if (fromAct && !arg) $('#events', el)?.scrollIntoView({ block: 'start' });
 
   $$('[data-claim]', el).forEach((b) => (b.onclick = guard(async () => {

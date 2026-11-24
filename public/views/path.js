@@ -50,7 +50,8 @@ function openNode(s, rerender, claim) {
     : L ? `<ul class="lesson">${L.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>
         ${L.source ? `<p class="small"><a href="${esc(L.source.url)}" target="_blank" rel="noopener">${esc(L.source.label)}</a></p>` : ''}
         ${s.done ? '<p class="tag good">Finished</p>' : `<button class="btn go block" id="learned">I finished it <span class="xp">${esc(s.xp)}</span></button>`}`
-    : `<p>${esc(s.how)}</p>${s.goal > 1 ? `<p class="small muted num">${s.have} of ${s.goal}</p>` : ''}${s.done ? '<p class="tag good">Done</p>' : stepCta(s, 'btn go block')}`;
+    : `<p>${esc(s.how)}</p>${s.goal > 1 ? `<p class="small muted num">${s.have} of ${s.goal}</p>` : ''}${s.done ? '<p class="tag good">Done</p>' : stepCta(s, 'btn go block')}
+      ${!s.done && s.log ? `<a class="btn quiet block" style="margin-top:10px" href="#/act/log/${esc(s.log)}">Did it without an event? Log it</a>` : ''}`;
   const { el, close } = sheet(`<div class="vb"><div class="row between"><h2 style="margin:0">${esc(L && !s.locked ? L.title : s.label)}</h2><button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
     <p class="tiny muted" style="margin:4px 0 12px">Part of ${esc(s.rung)}${s.xp ? `. ${esc(s.xp)} XP` : ''}</p>${body}</div>`);
   $('[data-close]', el).onclick = close;
@@ -69,7 +70,7 @@ function openNode(s, rerender, claim) {
 
 const count = (s) => (s.goal > 1 ? `<span class="num small muted">${Math.min(s.have, s.goal)} / ${s.goal}</span>` : '');
 
-export async function render(el, arg) {
+export async function render(el, arg, sub) {
   const L = await api('/ladder');
   const next = L.rungs[L.level] || null;
   const c = L.coach;
@@ -162,6 +163,7 @@ export async function render(el, arg) {
   $$('[data-claim]', el).forEach((b) => (b.onclick = claim));
 
   if (arg === 'invite') $('#invite', el)?.scrollIntoView({ block: 'start' });
+  if (arg === 'learn' && steps.has(sub)) { history.replaceState(null, '', '#/path'); openNode(steps.get(sub), () => render(el), claim); }
 }
 
 /** Small card for the Today screen: where you are, and the one next step. */
