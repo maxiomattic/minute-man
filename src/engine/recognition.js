@@ -13,7 +13,7 @@ export const ACTIVITY = {
   gotv: { label: 'GOTV shift', verified: 40, self: 20, unit: 'shift' },
   canvass: { label: 'Door knocking', perUnit: 1, dailyCap: 100, verifiedBonus: 20, unit: 'door' },
   phonebank: { label: 'Phone banking', perUnit: 1, dailyCap: 100, verifiedBonus: 20, unit: 'call' },
-  social: { label: 'Social media post', perUnit: 3, dailyCap: 15, unit: 'post' },
+  social: { label: 'Shared post', perUnit: 3, dailyCap: 15, unit: 'post' },
   election_work: { label: 'Poll watcher or election worker', verified: 60, self: 40, unit: 'shift' },
 };
 

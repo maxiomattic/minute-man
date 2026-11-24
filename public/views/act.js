@@ -59,6 +59,7 @@ async function landPoints(points, lucky, fromEl) {
 }
 
 function openEvent(a, rerender) {
+  if (a.kind === 'social' && !a.done) return openShare(rerender, a.id);
   const k = kindOf(a.kind);
   const host = a.leaderName || a.groupName;
   const half = k.perUnit ? null : k.self;
@@ -108,11 +109,83 @@ function openEvent(a, rerender) {
   $('#nocode', el).onclick = () => go(false);
 }
 
+/**
+ * Share a ready-made post from your own account. The phone's share sheet sends it; finishing the share
+ * (or copying it) is what records the post. Cancelling records nothing. Minute Man never posts for you.
+ */
+async function sendPost(text, url) {
+  const NativeShare = window.Capacitor?.Plugins?.Share;
+  try {
+    if (NativeShare) { await NativeShare.share({ title: 'Minute Man', text, url, dialogTitle: 'Share this post' }); return true; }
+    if (navigator.share) { await navigator.share({ text, url }); return true; }
+  } catch (e) {
+    if (e?.name === 'AbortError' || /cancel/i.test(e?.message || '')) return false;
+  }
+  try {
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    return 'copied';
+  } catch {
+    toast("Couldn't open sharing on this device.");
+    return false;
+  }
+}
+
+export async function openShare(rerender, actionId = null) {
+  const d = await api('/posts');
+  if (!d.posts.length) return toast('Nothing to share yet.');
+  let i = 0;
+  const { el, close } = sheet(`<div class="vb">
+    <div class="row between" style="margin-bottom:4px"><h2 style="margin:0">Share a post</h2>
+      <button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
+    <p class="muted small" id="pts"></p>
+    <figure class="post-card"><p class="post-text" id="ptext"></p><figcaption class="post-link" id="plink"></figcaption></figure>
+    <div class="row between" style="margin:6px 0 14px"><span class="tiny muted" id="pcount"></span>
+      <button type="button" class="link-btn" id="pnext">Show another</button></div>
+    <button class="btn go block" id="psend">Share this post</button>
+    <p class="tiny muted center" style="margin-top:10px">Posts go out from your own account, only when you send them.</p>
+  </div>`);
+  $('[data-close]', el).onclick = close;
+  const btn = $('#psend', el);
+  const paint = () => {
+    const p = d.posts[i];
+    $('#ptext', el).textContent = p.text;
+    $('#plink', el).textContent = d.url.replace(/^https?:\/\//, '');
+    $('#pcount', el).textContent = `${i + 1} of ${d.posts.length}`;
+    $('#pnext', el).hidden = d.posts.length < 2;
+    const left = d.pointsLeftToday;
+    $('#pts', el).textContent = left > 0 ? `+${d.perPost} XP per share, up to ${d.dailyCap} a day.`
+      : "You've earned today's share points. Shares still count toward your goal.";
+    btn.innerHTML = `Share this post${left > 0 ? ` <span class="xp">+${Math.min(d.perPost, left)}</span>` : ''}`;
+  };
+  paint();
+  $('#pnext', el).onclick = () => { i = (i + 1) % d.posts.length; haptic(); paint(); };
+  btn.onclick = guard(async () => {
+    const p = d.posts[i];
+    btn.disabled = true;
+    try {
+      const how = await sendPost(p.text, d.url);
+      if (!how) return;
+      const r = await api('/posts/share', { method: 'POST', body: { postId: p.id, actionId: actionId || undefined } });
+      d.pointsLeftToday = Math.max(0, d.pointsLeftToday - r.points);
+      haptic('success');
+      const xp = r.points ? ` +${r.points} XP` : '';
+      toast(how === 'copied' ? `Copied. Paste it into any app.${xp}` : r.points ? `Shared.${xp}` : 'Shared. Thanks for spreading the word.');
+      if (r.points) xpFly(r.points, btn);
+      refreshStats();
+      // Offer the next post so sharing a few in a row is easy.
+      if (d.posts.length > 1) i = (i + 1) % d.posts.length;
+      paint();
+      rerender?.();
+    } finally { btn.disabled = false; }
+  });
+}
+
 /** Log one specific kind of work (a task from your list or skill tree). No catch-all picker. */
 function openLog(rerender, kind) {
+  if (kind === 'social') return openShare(rerender);
   const pick = (state.meta?.activityKinds || []).find((k) => k.kind === kind);
   if (!pick) return toast('Pick a task from your list.');
-  const title = { social: 'Log your posts', canvass: 'Log doors you knocked', phonebank: 'Log calls you made', election_work: 'Log your election shift',
+  const title = { canvass: 'Log doors you knocked', phonebank: 'Log calls you made', election_work: 'Log your election shift',
     party_meeting: 'Log a party meeting', council_meeting: 'Log a council meeting', volunteer: 'Log a campaign shift', gotv: 'Log a GOTV shift' }[kind] || `Log: ${pick.label}`;
   const { el, close } = sheet(`<div class="vb">
     <div class="row between" style="margin-bottom:8px"><h2 style="margin:0">${esc(title)}</h2>
@@ -220,6 +293,7 @@ export async function render(el, arg, { embedded = false, viewed = true, sub = n
   // Deep links open a sheet once; drop the arg so a reload doesn't reopen it.
   if (arg) history.replaceState(null, '', embedded ? '#/today' : '#/act');
   if (arg === 'log') openLog(rerender, sub);
+  else if (arg === 'share') openShare(rerender);
   else if (arg && /^\d+$/.test(arg)) {
     const a = actions.find((x) => x.id === Number(arg));
     if (a) openEvent(a, rerender); else toast("That event isn't on your list anymore.");

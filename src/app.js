@@ -3,6 +3,7 @@ import { areasFor, leaderboard, standing, together } from './engine/community.js
 import { aggregate } from './engine/recommend.js';
 import { ACTIVITY, PARTICIPATION, activityPoints, scorecard } from './engine/recognition.js';
 import { LADDER, LESSONS, LESSON_POINTS, ladderFor, recruitsOf, inviteCode } from './engine/ladder.js';
+import { PUBLIC_URL, buildPosts } from './engine/posts.js';
 import { eligibility, jurisdictionChain, rulesFor } from './rules.js';
 
 class HttpError extends Error {
@@ -221,9 +222,8 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
 
   route('GET', '/api/elections', ({ user }) => upcomingElections(user));
 
-  route('GET', '/api/elections/:id/ballot', ({ user, params }) => {
-    const e = db.prepare('SELECT * FROM elections WHERE id=?').get(params.id);
-    if (!e) throw new HttpError(404, 'no such election');
+  /** The voter's ballot for one election, each race filled in from the fixed sources. */
+  function ballotFor(user, e) {
     const chain = user.jurisdiction_id ? jurisdictionChain(db, user.jurisdiction_id) : [e.jurisdiction_id];
     const contests = db
       .prepare(
@@ -255,8 +255,14 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
         notes: recs.filter((r) => r.note).map((r) => ({ leaderName: r.leaderName, note: r.note })),
       };
     });
+    return out;
+  }
+
+  route('GET', '/api/elections/:id/ballot', ({ user, params }) => {
+    const e = db.prepare('SELECT * FROM elections WHERE id=?').get(params.id);
+    if (!e) throw new HttpError(404, 'no such election');
     const rules = rulesFor(db, user.jurisdiction_id || e.jurisdiction_id);
-    return { election: e, strategy: 'priority', contests: out, rules, generatedAt: new Date().toISOString() };
+    return { election: e, strategy: 'priority', contests: ballotFor(user, e), rules, generatedAt: new Date().toISOString() };
   });
 
   route('GET', '/api/polling', ({ user, query }) => {
@@ -423,6 +429,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   route('POST', '/api/actions/:id/checkin', ({ user, params, body }) => {
     const a = db.prepare('SELECT * FROM actions WHERE id=?').get(Number(params.id));
     if (!a) throw new HttpError(404, 'no such event');
+    if (a.kind === 'social') throw bad('Share a post from this event to count it.');
     const verified = body.code ? String(body.code).trim().toUpperCase() === a.checkin_code : false;
     if (body.code && !verified) throw bad('wrong check-in code');
     if (db.prepare('SELECT 1 FROM activity WHERE user_id=? AND action_id=?').get(user.id, a.id))
@@ -440,6 +447,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   // Self-logged activism with no event (e.g., posted on social media, knocked doors solo).
   route('POST', '/api/activity', ({ user, body }) => {
     if (!ACTIVITY[body.kind]) throw bad('unknown kind');
+    if (body.kind === 'social') throw bad('Posts count when you share one from Minute Man.');
     const qty = Math.max(1, Math.min(1000, Number(body.quantity) || 1));
     const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=?`).get(user.id, body.kind, today()).q;
     const perUnit = ACTIVITY[body.kind].perUnit || 0;
@@ -447,6 +455,42 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     db.prepare(`INSERT INTO activity (user_id, kind, quantity, note, points, day, at) VALUES (?,?,?,?,?,?, datetime('now'))`)
       .run(user.id, body.kind, qty, body.note ? String(body.note).slice(0, 280) : null, pts, today());
     return { ok: true, points: pts };
+  });
+
+  // ---------- ready-made posts ----------
+  // The voter shares a post from their own account through the phone's share sheet. Nothing is posted
+  // automatically. A finished share (or a copy) is what records the post: honor system, capped daily.
+  const postsFor = (user) => {
+    const election = upcomingElections(user)[0] || null;
+    const stateId = (user.jurisdiction_id || '').split('-')[0];
+    const stateName = stateId ? db.prepare('SELECT name FROM jurisdictions WHERE id=?').get(stateId)?.name || null : null;
+    const names = Object.fromEntries(sourceLeaders().map((b) => [b.id, b.name]));
+    const endorsed = election ? ballotFor(user, election)
+      .filter((c) => c.recommendation.sourceLeaderId && c.recommendation.choiceIds.length === 1 && c.voteFor === 1)
+      .map((c) => ({ contestId: c.id, title: c.title, source: names[c.recommendation.sourceLeaderId],
+        candidate: c.choices.find((ch) => ch.id === c.recommendation.choiceIds[0])?.label }))
+      .filter((r) => r.source && r.candidate) : [];
+    return buildPosts({ election, stateName, endorsed, today: today() });
+  };
+  const sharedToday = (uid) => db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind='social' AND day=?`).get(uid, today()).q;
+
+  route('GET', '/api/posts', ({ user }) => {
+    const k = ACTIVITY.social;
+    const shared = sharedToday(user.id);
+    return { posts: postsFor(user), url: `${PUBLIC_URL}/#/join/${inviteCode(db, user)}`, perPost: k.perUnit, dailyCap: k.dailyCap,
+      sharedToday: shared, pointsLeftToday: Math.max(0, k.dailyCap - shared * k.perUnit) };
+  });
+
+  route('POST', '/api/posts/share', ({ user, body }) => {
+    const post = postsFor(user).find((p) => p.id === String(body.postId || ''));
+    if (!post) throw bad('Pick a post to share');
+    const pts = activityPoints('social', 1, false, sharedToday(user.id) * ACTIVITY.social.perUnit);
+    // Sharing for a "share your ballot" event counts as doing it, once.
+    const ev = body.actionId ? db.prepare(`SELECT id FROM actions WHERE id=? AND kind='social'`).get(Number(body.actionId)) : null;
+    const actionId = ev && !db.prepare('SELECT 1 FROM activity WHERE user_id=? AND action_id=?').get(user.id, ev.id) ? ev.id : null;
+    db.prepare(`INSERT INTO activity (user_id, action_id, kind, quantity, note, points, day, at) VALUES (?,?,'social',1,?,?,?, datetime('now'))`)
+      .run(user.id, actionId, post.text.split('\n')[0].slice(0, 280), pts, today());
+    return { ok: true, points: pts, sharedToday: sharedToday(user.id) };
   });
 
   route('GET', '/api/activity', ({ user }) =>

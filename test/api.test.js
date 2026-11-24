@@ -170,10 +170,25 @@ test('activism: check-in codes verify, double check-in rejected, self-logging ca
   assert.ok(ok.data.points > 0);
   assert.equal(ok.data.verified, true);
   assert.equal((await call(`/actions/${meet.id}/checkin`, { method: 'POST', body: { code: 'MEET101' }, token: t })).status, 409);
-  const a = await call('/activity', { method: 'POST', body: { kind: 'social', quantity: 4 }, token: t });
-  assert.equal(a.data.points, 12);
-  const b = await call('/activity', { method: 'POST', body: { kind: 'social', quantity: 4 }, token: t });
-  assert.equal(b.data.points, 3); // cap 15/day
+  // Posts count only when shared from the app: no manual count entry.
+  assert.equal((await call('/activity', { method: 'POST', body: { kind: 'social', quantity: 4 }, token: t })).status, 400);
+  const posts = (await call('/posts', { token: t })).data;
+  assert.match(posts.url, /^https:\/\/cvas\.careride\.workers\.dev\/#\/join\/[A-Z0-9]{6}$/);
+  const ballot = posts.posts.find((p) => p.id === 'ballot');
+  assert.match(ballot.text, /Senate: Ken Paxton \(AFI\)/);
+  assert.ok(posts.posts.some((p) => /register to vote in Texas is Mon, Oct 5/.test(p.text)));
+  assert.ok(posts.posts.every((p) => p.text.length <= 260));
+  // Races filled in only because one Republican is running are never posted as endorsements.
+  assert.ok(posts.posts.every((p) => !/Buckingham|Sheets|Bob Hall/.test(p.text)));
+  assert.equal((await call('/posts/share', { method: 'POST', body: { postId: 'nope' }, token: t })).status, 400);
+  const pts = [];
+  for (let i = 0; i < 6; i++) pts.push((await call('/posts/share', { method: 'POST', body: { postId: posts.posts[i % posts.posts.length].id }, token: t })).data.points);
+  assert.deepEqual(pts, [3, 3, 3, 3, 3, 0]); // cap 15/day
+  assert.equal((await call('/posts', { token: t })).data.pointsLeftToday, 0);
+  const shareEv = acts.find((a) => a.kind === 'social');
+  assert.equal((await call(`/actions/${shareEv.id}/checkin`, { method: 'POST', body: { quantity: 5 }, token: t })).status, 400);
+  await call('/posts/share', { method: 'POST', body: { postId: 'ballot', actionId: shareEv.id }, token: t });
+  assert.ok((await call('/actions', { token: t })).data.find((a) => a.id === shareEv.id).done);
   assert.ok((await call('/recognition', { token: t })).data.badges.some((x) => x.id === 'party'));
   const org = await login('org1@example.org');
   assert.equal((await call('/actions', { token: org })).data.find((x) => x.id === meet.id).checkinCode, 'MEET101');
@@ -263,7 +278,7 @@ test('today: next action, quests, streak, claims', async () => {
   // Do the ballot quest if offered, then claim it
   await call('/events', { method: 'POST', body: { kind: 'ballot_viewed:tx-2026-general' }, token: s.token });
   await call('/events', { method: 'POST', body: { kind: 'events_viewed' }, token: s.token });
-  await call('/activity', { method: 'POST', body: { kind: 'social', quantity: 1 }, token: s.token });
+  await call('/posts/share', { method: 'POST', body: { postId: 'join' }, token: s.token });
   t = (await call('/today', { token: s.token })).data;
   const done = t.quests.quests.filter((q) => q.done);
   assert.ok(done.length >= 1);
@@ -355,7 +370,7 @@ test('ladder: ranks follow the steps in order and coach the next one', async () 
   assert.equal(l.name, 'Newcomer');
   assert.equal(l.coach.step.id, 'address');
   // Doing a later rung's step first doesn't skip the basics.
-  await call('/activity', { method: 'POST', token: t, body: { kind: 'social', quantity: 5 } });
+  for (let i = 0; i < 5; i++) await call('/posts/share', { method: 'POST', token: t, body: { postId: 'join' } });
   assert.equal((await call('/ladder', { token: t })).data.level, 1);
   await call('/me/address', { method: 'POST', token: t, body: { address: '401 S Rogers St, Waxahachie, TX' } });
   await call('/registration', { method: 'PUT', token: t, body: { status: 'confirmed' } });

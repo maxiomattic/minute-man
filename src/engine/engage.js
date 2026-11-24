@@ -88,7 +88,7 @@ const QUESTS = {
   ballot: { title: 'See who to vote for', xp: 15, when: (c) => c.election, check: (c) => c.ev(`ballot_viewed:${c.election.id}`) },
   remind: { title: 'Remind a friend to vote', xp: 20, when: (c) => c.election && c.friends > 0, check: (c) => c.count('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND date(at, ?)=?') > 0 },
   cheer: { title: 'Cheer someone in your feed', xp: 10, when: () => true, check: (c) => c.count('SELECT COUNT(*) n FROM cheers WHERE user_id=? AND date(at, ?)=?') > 0 },
-  post: { title: 'Share a post about a local issue', xp: 15, check: (c) => c.count(`SELECT COUNT(*) n FROM activity WHERE user_id=? AND kind='social' AND day=?`) > 0 },
+  post: { title: 'Share a post', xp: 15, check: (c) => c.count(`SELECT COUNT(*) n FROM activity WHERE user_id=? AND kind='social' AND day=?`) > 0 },
   events: { title: "See what's happening this week", xp: 10, check: (c) => c.ev('events_viewed') },
   doors: { title: 'Knock on 10 doors', xp: 30, check: (c) => c.count(`SELECT COALESCE(SUM(quantity),0) n FROM activity WHERE user_id=? AND kind='canvass' AND day=?`) >= 10 },
   calls: { title: 'Make 10 calls', xp: 30, check: (c) => c.count(`SELECT COALESCE(SUM(quantity),0) n FROM activity WHERE user_id=? AND kind='phonebank' AND day=?`) >= 10 },

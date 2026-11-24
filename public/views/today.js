@@ -6,7 +6,7 @@ import { render as renderEvents } from './act.js';
 import { pathCard } from './path.js';
 
 const QUEST_HREF = {
-  ballot: '#/ballot', remind: '#/board/friends', cheer: '#/feed', post: '#/act/log/social',
+  ballot: '#/ballot', remind: '#/board/friends', cheer: '#/feed', post: '#/act/share',
   events: '#/act', doors: '#/act/log/canvass', calls: '#/act/log/phonebank',
 };
 const BADGE_ICON = {

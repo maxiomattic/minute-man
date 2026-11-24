@@ -734,3 +734,7 @@ h1 + #together:empty { display: none; }
 .about h3 { font-family: var(--display); font-weight: 400; font-size: 21px; }
 /* The points chip shares the .xp class; keep it on the coat like the streak chip. */
 .topbar .chip-stat.xp { height: 34px; padding: 0 12px; font-size: 19px; background: color-mix(in srgb, var(--on-coat) 10%, transparent); color: var(--on-coat); }
+/* Share a post: the ready-made post, shown as it will read. */
+.post-card { margin: 12px 0 0; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--brand-text); border-radius: var(--r-sm); padding: 14px 16px; }
+.post-text { margin: 0; white-space: pre-line; line-height: 1.45; }
+.post-link { margin-top: 8px; font-size: 13px; color: var(--brand-text); word-break: break-all; }

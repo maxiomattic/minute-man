@@ -53,7 +53,7 @@ function openNode(s, rerender, claim) {
     : `<p>${esc(s.how)}</p>${s.goal > 1 ? `<p class="small muted num">${s.have} of ${s.goal}</p>` : ''}${s.done ? '<p class="tag good">Done</p>' : stepCta(s, 'btn go block')}
       ${!s.done && s.log ? `<a class="btn quiet block" style="margin-top:10px" href="#/act/log/${esc(s.log)}">Did it without an event? Log it</a>` : ''}`;
   const { el, close } = sheet(`<div class="vb"><div class="row between"><h2 style="margin:0">${esc(L && !s.locked ? L.title : s.label)}</h2><button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
-    <p class="tiny muted" style="margin:4px 0 12px">Part of ${esc(s.rung)}${s.xp ? `. ${esc(s.xp)} XP` : ''}</p>${body}</div>`);
+    <p class="tiny muted" style="margin:4px 0 12px">Part of ${esc(s.rung)}${s.xp ? `. ${esc(/per|each/.test(s.xp) ? s.xp.replace(/^\+(\d+)/, '+$1 XP') : `${s.xp} XP`)}` : ''}</p>${body}</div>`);
   $('[data-close]', el).onclick = close;
   $$('a[href^="#"]', el).forEach((a) => a.addEventListener('click', close));
   $('#learned', el)?.addEventListener('click', guard(async (e) => {

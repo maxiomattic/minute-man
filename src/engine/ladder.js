@@ -138,7 +138,7 @@ export const LADDER = [
   {
     name: 'Messenger', blurb: 'Spread the word.',
     steps: [
-      { id: 'posts', needs: ['registered'], xp: '+3 per post', cta: 'Log a post', label: 'Share 5 posts', how: 'Repost your candidates and local news. Log each one so it counts.', href: '#/act/log/social', goal: 5, check: (f) => f.posts },
+      { id: 'posts', needs: ['registered'], xp: '+3 per share', cta: 'Share a post', label: 'Share 5 posts', how: 'Pick a ready-made post about your ballot or a deadline and share it from your own account. Each share counts.', href: '#/act/share', goal: 5, check: (f) => f.posts },
       { id: 'remind', needs: ['plan'], xp: '+5 per friend', cta: 'Remind friends', label: 'Remind 3 friends to vote', how: 'A personal reminder works better than any ad.', href: '#/board/friends', goal: 3, check: (f) => f.reminded },
       { id: 'recruit1', needs: ['posts'], xp: '+25 each', cta: 'Share your invite', label: 'Bring 1 person to Minute Man', how: 'Send your invite link. You earn a bonus every time they climb a rank.', href: '#/path/invite', check: (f) => f.recruits },
     ],
