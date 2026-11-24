@@ -20,7 +20,26 @@ const TX_RULES = {
   registrationDeadlineDays: 30, idRequired: 'strict',
   idNote: "Bring a Texas driver license, Texas personal ID, election ID certificate, handgun license, U.S. passport, U.S. military ID or U.S. citizenship certificate with photo. If you can't get one, you can sign a Reasonable Impediment Declaration at the polls.",
   onlineRegistrationUrl: 'https://www.votetexas.gov/register-to-vote/',
-  statusLookupUrl: 'https://teamrv-mvp.sos.texas.gov/MVP/mvp.do',
+  statusLookupUrl: 'https://goelect.txelections.civixapps.com/ivis-mvp-ui/#/login',
+  // How-to for the registration screen. mobile: 'ok' (fine on a phone) or 'print' (needs a printer).
+  registration: {
+    lookup: {
+      url: 'https://goelect.txelections.civixapps.com/ivis-mvp-ui/#/login', site: "the Texas Secretary of State's Am I Registered page", mobile: 'ok',
+      needs: ['Your first and last name', 'Your date of birth', 'One of these: your Texas driver license number, your county and ZIP code, or your voter ID number'],
+    },
+    apply: {
+      url: 'https://www.votetexas.gov/register-to-vote/', site: 'VoteTexas.gov', mobile: 'print',
+      intro: "Texas doesn't let new voters sign up online. You fill in an application, print it, sign it and mail it.",
+      steps: [
+        "Fill in the application on VoteTexas.gov. Have your Texas driver license or ID number ready. If you have neither, use the last 4 digits of your Social Security number.",
+        'Print it and sign it.',
+        'Mail it to your county voter registrar (the address prints on the form). It must be postmarked by the deadline. At the post office counter, ask for a hand postmark so the date is right.',
+      ],
+      noPrinter: 'No printer? Your county elections office will mail you a postage-paid application. Allow a week for it to arrive.',
+      update: { text: 'Already registered in Texas and just moved? If you have a Texas driver license, you can update your address online instead.', url: 'https://txapps.texas.gov/tolapp/sos/SOSACManager' },
+    },
+    afterSubmit: 'The county mails you a voter registration certificate, usually within 30 days. You can check the lookup again in a week or two.',
+  },
   pollingLookupUrl: 'https://www.elliscountytx.gov/312/Elections',
   ballotPhotoAllowed: false,
   notes: "Texas has no online registration: print or request the application, mail it, and it must be postmarked by the deadline. Phones and cameras aren't allowed within 100 feet of the voting stations.",

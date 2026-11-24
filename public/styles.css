@@ -555,3 +555,17 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand-text); 
 .endorse-list li h3 { margin: 0; font-size: 17px; }
 .endorse-list li p { margin: 6px 0 0; }
 @media (min-width: 900px) { .endorse-list { grid-template-columns: 1fr 1fr; } }
+
+/* registration flow */
+.reg-step h2 { margin: 0 0 8px; }
+.reg-step > p { margin: 0 0 12px; }
+.answers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.answers .btn { flex: 1 1 140px; }
+.checklist { margin: 0 0 16px; padding-left: 20px; }
+.checklist li { margin: 4px 0; }
+.steps { margin: 0 0 16px; padding-left: 22px; }
+.steps li { margin: 8px 0; }
+.reg-step .after { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.reg-step .after p { margin: 0; }
+.aside-box { margin: 16px 0; padding: 12px 14px; border-radius: var(--r-md); background: var(--sunk); }
+.aside-box p { margin: 0 0 10px; }

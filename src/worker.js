@@ -14,7 +14,8 @@ export class CvasDb extends DurableObject {
     this.handle = createApp(this.db, { adminToken: env.CVAS_ADMIN_TOKEN, seed });
     ctx.blockConcurrencyWhile(async () => {
       const n = this.db.prepare('SELECT COUNT(*) n FROM users').get().n;
-      if (!n) await seed(this.db, { force: true });
+      // Always refresh reference data (jurisdictions, rules, sources); sample people only on an empty database.
+      await seed(this.db, { force: !n });
     });
   }
   fetch(request) {

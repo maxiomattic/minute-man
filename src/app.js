@@ -388,9 +388,10 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   });
 
   // ---------- registration & eligibility ----------
-  const getReg = (uid) =>
-    db.prepare('SELECT status, party, desired_party AS desiredParty, updated_at AS updatedAt FROM registrations WHERE user_id=?').get(uid) ||
-    { status: 'unknown', party: null, desiredParty: null };
+  const getReg = (uid) => {
+    const r = db.prepare('SELECT status, party, desired_party AS desiredParty, updated_at AS updatedAt FROM registrations WHERE user_id=?').get(uid);
+    return r ? { ...r, answered: true } : { status: 'unknown', party: null, desiredParty: null, answered: false };
+  };
 
   route('GET', '/api/registration', ({ user }) => getReg(user.id));
 
