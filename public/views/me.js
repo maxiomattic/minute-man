@@ -136,6 +136,10 @@ function profileSheet() {
       <p class="tiny muted" style="margin-top:6px">${me.homeLabel ? `Now set to ${esc(me.homeLabel)}. Enter a new address only if you moved. ` : ''}We look up your districts from it once and keep only your city.</p>
       <label class="field" for="pb">Birth date</label><input id="pb" name="birthDate" type="date" value="${esc(me.birthDate || '')}">
       <p class="tiny muted" style="margin-top:6px">Your birth date lets us check you're old enough to register.</p>
+      <fieldset class="field-set"><legend class="field">How involved</legend>
+        <label class="choice"><input type="radio" name="mode" value="voter" ${me.mode === 'voter' ? 'checked' : ''}><span><strong>Just help me vote</strong><span class="tiny muted"> Reminders, your picks and where to vote.</span></span></label>
+        <label class="choice"><input type="radio" name="mode" value="minuteman" ${me.mode !== 'voter' ? 'checked' : ''}><span><strong>Minute Man</strong><span class="tiny muted"> Ranks, quests, events and the whole game.</span></span></label>
+      </fieldset>
       <button class="btn go block" style="margin-top:16px">Save profile</button>
     </form></div>`);
   $('[data-close]', el).onclick = close;

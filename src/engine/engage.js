@@ -186,10 +186,19 @@ function nextActions(db, user, ctx) {
       const left = daysBetween(day, e.registration_deadline);
       add({ kind: 'register', title: left === 0 ? 'Registration closes today' : left === 1 ? 'Register by tomorrow' : `Register in the next ${left} days`, body: `Deadline for ${e.name} is ${longDate(e.registration_deadline)}. Check your status in about 2 minutes.`, cta: 'Check registration', href: '#/register', xp: 50, urgent: left <= 7 });
     } else if (open) {
-      add({ kind: 'vote', title: d === 0 ? 'Election day. Go vote.' : 'Voting is open', body: `${e.name}. Your cheat sheet and polling place are ready.`, cta: 'Start voting', href: `#/vote/${e.id}`, xp: 100, urgent: d <= 3 });
+      add(d === 0
+        ? { kind: 'vote', title: 'Election day. Go vote.', body: `${e.name}. Your picks and polling place are ready.`, cta: 'Start voting', href: `#/vote/${e.id}`, xp: 100, urgent: true }
+        : { kind: 'vote', title: 'Vote early. It\'s open now.', body: `Skip the Election Day line. ${e.name} is ${d === 1 ? 'tomorrow' : `in ${d} days`}, and your picks and polling place are ready.`, cta: 'Start voting', href: `#/vote/${e.id}`, xp: 100, urgent: d <= 3 });
     }
     if (!parts.includes('voted') && !parts.includes('planned'))
       add({ kind: 'plan', title: 'Make your voting plan', body: `Pick when and where you'll vote in ${e.name}. It takes 30 seconds.`, cta: 'Make a plan', href: `#/vote/${e.id}`, xp: 10 });
+    // The bottom rung (mode 'voter'): register, plan, see the picks, vote. Nothing else.
+    if (user.mode === 'voter') {
+      if (!parts.includes('voted'))
+        add({ kind: 'picks', title: 'Your picks are ready', body: open ? `${ctx.contests} races, already filled in. Take them with you when you vote.` : `${ctx.contests} races, already filled in. Early voting starts ${longDate(opens)}, and we'll remind you.`, cta: 'See your picks', href: `#/ballot/${e.id}`, xp: 0 });
+      else add({ kind: 'voted', title: 'You voted. Thank you.', body: `Minute Man will remind you before the next election.`, cta: 'See your picks', href: `#/ballot/${e.id}`, xp: 0 });
+      return out;
+    }
     const br = ctx.review;
     if (!parts.includes('voted') && br.total > 0 && br.have < br.total)
       add({ kind: 'ballot', title: 'Review your ballot', progress: `${br.have} of ${br.total} races reviewed`, body: `${br.total} races, already filled in with Minute Man's picks. Read why each pick was made and tap Got it.`, cta: br.have ? 'Keep reviewing' : 'See why', href: `#/ballot/${e.id}/examine`, xp: 15 });
@@ -197,6 +206,7 @@ function nextActions(db, user, ctx) {
     if (d <= 14 && !db.prepare(`SELECT 1 FROM activity WHERE user_id=? AND kind='reminded' AND day=?`).get(user.id, day))
       add({ kind: 'remind', title: 'Remind someone to vote', body: `${e.name} is ${d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`}. Text a quick reminder to someone who isn't on Minute Man.`, cta: 'Write a reminder', href: '#/act/remind', xp: 5 });
   }
+  if (user.mode === 'voter') return out;
   const ev = db.prepare(
     `SELECT a.id, a.title, a.starts_at, a.kind FROM actions a
      WHERE a.starts_at BETWEEN datetime('now','-2 hours') AND datetime('now','+7 days')
@@ -246,7 +256,11 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
       rank: { level: ladder.level, name: ladder.name, duty: ladder.duty, nextName: ladder.nextName, progress: ladder.progress, coach: ladder.coach, of: ladder.rungs.length },
       badges: sc.badges,
       week: { points: week, place, of: weekBoard.length },
-      election: election && { ...election, daysLeft: daysBetween(today(), election.date), contests },
+      mode: user.mode === 'voter' ? 'voter' : 'minuteman',
+      // For the phone's own reminders (public/notify.js): what's done for this election.
+      election: election && { ...election, daysLeft: daysBetween(today(), election.date), contests,
+        voted: !!db.prepare(`SELECT 1 FROM participation WHERE user_id=? AND election_id=? AND kind='voted'`).get(user.id, election.id),
+        registered: db.prepare('SELECT status FROM registrations WHERE user_id=?').get(user.id)?.status === 'confirmed' },
       proof,
     };
   });

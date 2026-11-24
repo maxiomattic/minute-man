@@ -307,4 +307,20 @@ export const MIGRATIONS = [
     PRIMARY KEY (user_id, day)
   )`,
   'ALTER TABLE post_reports ADD COLUMN reply_id INTEGER REFERENCES replies(id) ON DELETE SET NULL',
+  // How involved you want to be: 'voter' (register, get reminded, see the picks, vote) or 'minuteman'
+  // (the full game: ranks, quests, streaks, events). Older accounts keep the full game; new ones start as voters.
+  "ALTER TABLE users ADD COLUMN mode TEXT NOT NULL DEFAULT 'minuteman'",
+  // What officials elected on Minute Man's picks have done since. Entered by an admin with a source,
+  // shown in the feed of everyone whose areas include the official's.
+  `CREATE TABLE IF NOT EXISTS deliveries (
+    id INTEGER PRIMARY KEY,
+    jurisdiction_id TEXT NOT NULL REFERENCES jurisdictions(id),
+    official TEXT NOT NULL,
+    office TEXT NOT NULL,
+    body TEXT NOT NULL,
+    source_url TEXT,
+    source_label TEXT,
+    at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  'CREATE INDEX IF NOT EXISTS deliveries_at ON deliveries(at)',
 ];

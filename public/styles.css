@@ -893,3 +893,25 @@ h1 + #together:empty { display: none; }
 .sheet .composer.take .composer-photo img { max-height: 150px; }
 .sheet .composer.take .composer-bar { padding-top: 8px; }
 /* ===== end replies ===== */
+
+/* Delivered: what an official elected on Minute Man's picks has done since */
+.feed-item.delivered { background: color-mix(in srgb, var(--marker) 7%, var(--surface)); box-shadow: inset 3px 0 0 var(--marker); }
+.seal-av { background: var(--brand); color: var(--marker); }
+.seal-av svg { width: 20px; height: 20px; }
+.delivered-kicker { text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--red); margin-bottom: 2px; }
+.delivered-body { margin: 6px 0 0; }
+.feed-source { margin-left: auto; color: var(--brand-text); font-weight: 600; }
+
+/* The bottom rung: Today with just the next voting step */
+.today.voter { max-width: 640px; margin-inline: auto; }
+.enlist { margin-top: 16px; border-style: dashed; }
+.enlist h2 { margin: 0 0 4px; }
+.enlist p { margin: 0 0 12px; }
+
+/* Profile: how involved */
+.field-set { border: 0; padding: 0; margin: 16px 0 0; display: grid; gap: 8px; }
+.field-set legend { padding: 0; margin-bottom: 6px; }
+.choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
+.choice input { margin-top: 3px; accent-color: var(--brand); }
+.choice:has(input:checked) { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+.choice > span { display: grid; gap: 2px; }

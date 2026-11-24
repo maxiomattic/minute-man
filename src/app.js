@@ -66,6 +66,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
     id: u.id, email: u.email, name: u.name, role: u.role,
     jurisdictionId: u.jurisdiction_id, homeLabel: u.home_label, precinct: u.precinct, birthDate: u.birth_date,
     shareStatus: !!u.share_status, onLeaderboards: !!u.on_leaderboards,
+    mode: u.mode === 'voter' ? 'voter' : 'minuteman',
   });
 
   function issueSession(userId) {
@@ -114,8 +115,9 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
     if (db.prepare('SELECT 1 FROM users WHERE email=?').get(email.toLowerCase()))
       throw new HttpError(409, 'email already registered');
     const r = db
-      .prepare('INSERT INTO users (email, name, pw_hash, share_status, on_leaderboards) VALUES (?,?,?,1,1)')
-      .run(email.toLowerCase(), name, await hashPw(password));
+      .prepare('INSERT INTO users (email, name, pw_hash, share_status, on_leaderboards, mode) VALUES (?,?,?,1,1,?)')
+      // New accounts start on the bottom rung (just vote); "Join the Minute Men" turns on the full game.
+      .run(email.toLowerCase(), name, await hashPw(password), body.mode === 'minuteman' ? 'minuteman' : 'voter');
     const id = Number(r.lastInsertRowid);
     bindDefaults(db, id);
     // Joined through someone's invite link: they become your recruiter and your friend.
@@ -175,6 +177,10 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
     if (body.shareStatus === false || body.onLeaderboards === false)
       throw bad("These can't be turned off. Minute Man shows what you do, your rank and, to friends, whether you voted. Never how you vote.");
     if (body.birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(body.birthDate)) throw bad('birthDate must be YYYY-MM-DD');
+    if ('mode' in body) {
+      if (!['voter', 'minuteman'].includes(body.mode)) throw bad("mode must be 'voter' or 'minuteman'");
+      db.prepare('UPDATE users SET mode=? WHERE id=?').run(body.mode, user.id);
+    }
     if (body.jurisdictionId && !db.prepare('SELECT 1 FROM jurisdictions WHERE id=?').get(body.jurisdictionId))
       throw bad('unknown jurisdiction');
     for (const [k, col] of Object.entries(map)) {
@@ -743,6 +749,34 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
       for (const r of body)
         db.prepare('INSERT OR REPLACE INTO results (contest_id, winner_ids) VALUES (?,?)').run(r.contestId, JSON.stringify(r.winnerIds));
     });
+    return { ok: true };
+  }, { auth: 'admin' });
+
+  // What officials elected on Minute Man's picks have done: [{id?, jurisdictionId, official, office, text, sourceUrl?, sourceLabel?, at?}].
+  // With an id it replaces that entry. Each needs a jurisdiction we know and, ideally, a source link.
+  route('POST', '/api/admin/deliveries', ({ body }) => {
+    if (!Array.isArray(body)) throw bad('send an array of deliveries');
+    const ids = [];
+    db.tx(() => {
+      for (const d of body) {
+        const text = String(d.text || '').trim();
+        if (!d.official || !d.office || !text) throw bad('each delivery needs official, office and text');
+        if (!db.prepare('SELECT 1 FROM jurisdictions WHERE id=?').get(d.jurisdictionId)) throw bad(`unknown jurisdiction ${d.jurisdictionId}`);
+        if (d.sourceUrl && !/^https?:\/\//.test(d.sourceUrl)) throw bad('sourceUrl must be a web link');
+        const row = [d.jurisdictionId, String(d.official), String(d.office), text.slice(0, 400), d.sourceUrl || null, d.sourceLabel || null,
+          d.at ? String(d.at).replace('T', ' ').slice(0, 19) : new Date().toISOString().replace('T', ' ').slice(0, 19)];
+        if (d.id) {
+          db.prepare('UPDATE deliveries SET jurisdiction_id=?, official=?, office=?, body=?, source_url=?, source_label=?, at=? WHERE id=?').run(...row, Number(d.id));
+          ids.push(Number(d.id));
+        } else {
+          ids.push(Number(db.prepare('INSERT INTO deliveries (jurisdiction_id, official, office, body, source_url, source_label, at) VALUES (?,?,?,?,?,?,?)').run(...row).lastInsertRowid));
+        }
+      }
+    });
+    return { ok: true, ids };
+  }, { auth: 'admin' });
+  route('DELETE', '/api/admin/deliveries/:id', ({ params }) => {
+    db.prepare('DELETE FROM deliveries WHERE id=?').run(Number(params.id));
     return { ok: true };
   }, { auth: 'admin' });
 

@@ -63,7 +63,26 @@ function postActions(it, mine) {
   return `<button type="button" class="feed-menu" data-menu="${esc(it.key)}" aria-label="${mine ? 'Edit or delete' : 'More options'}">${DOTS}</button>`;
 }
 
+/** An official elected on Minute Man's picks did something. Not a person's post: no cheers or replies. */
+function deliveredHtml(it) {
+  ITEMS.set(it.key, it);
+  return `<div class="feed-item delivered" data-key="${esc(it.key)}">
+    <span class="avatar seal-av" aria-hidden="true">${icon('hall')}</span>
+    <div class="grow">
+      <div class="delivered-kicker tiny">Delivered</div>
+      <div><strong>${esc(it.name)}</strong> <span class="muted">${esc(it.office)}</span></div>
+      <p class="delivered-body">${esc(it.text)}</p>
+      <div class="row tiny muted feed-meta">
+        <span class="feed-kind">${icon('check')}</span>
+        <span>${esc(ago(it.at))} ago. Elected with Minute Man's pick</span>
+        ${it.source ? `<a class="feed-source" href="${esc(it.source.url)}" target="_blank" rel="noopener">${esc(it.source.label || 'Source')}</a>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
 export function feedItemHtml(it) {
+  if (it.delivered) return deliveredHtml(it);
   const mine = it.userId === state.me?.id;
   ITEMS.set(it.key, it);
   const { body, photo } = postParts(it);

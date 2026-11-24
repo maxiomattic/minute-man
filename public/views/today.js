@@ -4,6 +4,7 @@
 import { $, $$, api, checkLevelUp, confetti, esc, guard, icon, plural, refreshStats, state, toast, xpFly, fmtDate, fmtWhen } from '../core.js';
 import { render as renderEvents } from './act.js';
 import { pathCard } from './path.js';
+import { scheduleVoteReminders } from '../notify.js';
 
 const QUEST_HREF = {
   ballot: '#/ballot', remind: '#/act/remind', cheer: '#/feed', post: '#/act/share',
@@ -97,6 +98,26 @@ export async function render(el, arg, fromAct = false, sub = null) {
       <div class="panel flush"><ul class="list links">${q.quests.map(questRow).join('')}</ul>${chest}</div>
     </section>`;
 
+  // The bottom rung: just the next voting step and the picks, plus a way up.
+  if (t.mode === 'voter') {
+    el.innerHTML = `<div class="page today voter">
+        <div class="main">${electionLine}${hero}
+        <section class="panel enlist">
+          <h2 class="h3">Want to do more?</h2>
+          <p class="small">Join the Minute Men. Earn ranks from Private to Colonel, take on daily quests, and see what your neighbors are getting done.</p>
+          <button class="btn quiet" id="enlist">Join the Minute Men</button>
+        </section></div>
+      </div>`;
+    $('#enlist', el).onclick = guard(async () => {
+      state.me = await api('/me', { method: 'PATCH', body: { mode: 'minuteman' } });
+      confetti(24);
+      toast('Welcome to the Minute Men, Private.');
+      await render(el, arg, fromAct, sub);
+    });
+    scheduleVoteReminders(t);
+    return;
+  }
+
   // ----- side column -----
   const left = Math.max(0, s.goal - s.pointsThisWeek);
   const streakLine = s.activeThisWeek ? 'This week counts. See you next week.'
@@ -138,5 +159,6 @@ export async function render(el, arg, fromAct = false, sub = null) {
     await render(el);
   })));
 
+  scheduleVoteReminders(t);
   await checkLevelUp(t.rank);
 }

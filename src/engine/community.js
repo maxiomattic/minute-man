@@ -148,6 +148,20 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     push(p, { key: `u:${r.pid}`, at: r.at, icon: 'post', points: 0, text: '', post: true, ...words(r), ...(r.quote ? { quote: r.quote } : {}) });
   }
 
+  // What officials elected on Minute Man's picks have done, for everyone whose areas include theirs.
+  // Not a person's item: no cheers, replies or reports, and weighted by how local the office is.
+  const area = db.prepare('SELECT name FROM jurisdictions WHERE id=?');
+  for (const r of db.prepare('SELECT * FROM deliveries WHERE at > ? ORDER BY at DESC LIMIT 200').all(since)) {
+    const i = myChain.indexOf(r.jurisdiction_id);
+    if (i < 0) continue;
+    items.push({
+      key: `d:${r.id}`, at: r.at, icon: 'delivered', delivered: true, userId: null,
+      name: r.official, office: r.office, text: r.body, place: area.get(r.jurisdiction_id)?.name || null,
+      source: r.source_url ? { url: r.source_url, label: r.source_label || null } : null,
+      points: 0, nearW: [3, 2.2, 1.6, 1.25][Math.min(i, 3)],
+    });
+  }
+
   const cheers = db.prepare('SELECT COUNT(*) n FROM cheers WHERE item=?');
   const talk = db.prepare('SELECT COUNT(DISTINCT user_id) n FROM replies WHERE item=?');
   const now = Date.now();
@@ -158,8 +172,9 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     // so it never outranks verified work of the same age and distance (at least 7). A photo adds a
     // little: more on real work (an activity) than on a free-form post.
     const photo = it.image ? (it.post ? 1.1 : 1.15) : 1;
-    const impact = (it.post ? 3 : Math.log2(2 + it.points)) * (it.verified ? 1.4 : 1) * (it.milestone ? 1.3 : 1) * photo * (1 + 0.15 * Math.min(it.cheers, 10)) * (1 + 0.1 * Math.min(talkers, 10));
-    const near = people.get(it.userId).near.w * (it.crew ? 1.5 : 1);
+    // An official delivering counts like a rank-up of real work (about 100 points' worth).
+    const impact = it.delivered ? Math.log2(102) * 1.3 : (it.post ? 3 : Math.log2(2 + it.points)) * (it.verified ? 1.4 : 1) * (it.milestone ? 1.3 : 1) * photo * (1 + 0.15 * Math.min(it.cheers, 10)) * (1 + 0.1 * Math.min(talkers, 10));
+    const near = it.delivered ? it.nearW : people.get(it.userId).near.w * (it.crew ? 1.5 : 1);
     // One clock reading for the whole list, and no clamp at age 0: items from the same second score
     // the same, and every item decays by the same factor between requests, so pages never shift.
     const fresh = 0.5 ** ((now - Date.parse(it.at.replace(' ', 'T') + 'Z')) / (3 * DAY));
@@ -180,9 +195,10 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
   for (const it of page) {
     it.cheered = !!mine.get(it.key, user.id);
     delete it.score;
+    delete it.nearW;
     delete it.crew;
   }
-  addThreads(db, user, page, crew);
+  addThreads(db, user, page.filter((it) => !it.delivered), crew);
   return { items: page, next: cursor + limit < items.length ? cursor + limit : null };
 }
 
