@@ -4,6 +4,8 @@ import { localDay, utcAt } from './time.js';
 
 const day = (offset) => localDay(new Date(Date.now() + offset * 86400000));
 const at = (offset, hour) => utcAt(day(offset), hour);
+// Days until the next Saturday (1-7), so the weekend canvass lands on a Saturday.
+const untilSat = () => (6 - new Date(day(0) + 'T12:00:00Z').getUTCDay() + 7) % 7 || 7;
 
 export function demoData() {
   return {
@@ -134,7 +136,7 @@ export async function seed(db, { force = false } = {}) {
        VALUES (?, 'city-maple', ?,?,?,?,?,?,?)`,
     ).run(l, kind, title, loc, at(offset, hour), at(offset, hour + 2), codeStr, org1).lastInsertRowid);
   action(l1, 'council_meeting', 'City Council regular session — zoning item 7', 'City Hall Chambers', 2, 18, 'COUNCIL1');
-  action(l1, 'canvass', 'Saturday canvass: Precinct 12', 'Meet at Elm St Coffee', 4, 10, 'KNOCK12');
+  action(l1, 'canvass', 'Saturday canvass: Precinct 12', 'Meet at Elm St Coffee', untilSat(), 10, 'KNOCK12');
   action(l1, 'phonebank', 'Evening phone bank', 'Riverbend office or remote', 3, 18, 'CALLS3');
   action(l1, 'gotv', 'Election-day GOTV shift', 'Riverbend office', 9, 8, 'GOTV9');
   action(l1, 'party_meeting', 'Ward 4 monthly meeting', 'VFW Hall', 6, 19, 'WARD4');

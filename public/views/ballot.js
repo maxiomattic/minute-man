@@ -102,7 +102,7 @@ export async function render(el, eid) {
       el.innerHTML = `<div class="vb"><h1>Ballot</h1><div class="panel empty">
         ${icon('ballot', 'empty-ico')}<h2>No elections coming up</h2>
         <p>${state.me?.jurisdictionId ? 'Nothing is scheduled where you live yet. Follow people you trust now, so your ballot is ready when one is.' : 'Set your home area so we can find your elections.'}</p>
-        <a class="btn go" href="${state.me?.jurisdictionId ? '#/leaders' : '#/me'}">${state.me?.jurisdictionId ? 'Find people to follow' : 'Set home area'}</a></div></div>`;
+        <a class="btn go" href="${state.me?.jurisdictionId ? '#/leaders' : '#/me/profile'}">${state.me?.jurisdictionId ? 'Find people to follow' : 'Set home area'}</a></div></div>`;
       return;
     }
     eid = els[0].id;

@@ -61,7 +61,7 @@ async function idDel() {
 }
 
 // ---------- you ----------
-export async function render(el) {
+export async function render(el, arg) {
   const [rec, jur, binds, mine, reg] = await Promise.all([
     api('/recognition'), api('/jurisdictions').catch(() => []), api('/bindings').catch(() => []),
     api('/leaders/mine').catch(() => []), api('/registration').catch(() => ({ status: 'unknown' })),
@@ -143,6 +143,8 @@ export async function render(el) {
     toast('Saved ballot rule');
   })));
   $$('[data-open=profile]', el).forEach((b) => (b.onclick = () => profileSheet(jur, binds)));
+  // #/me/profile deep link (from "Set home area" buttons) opens the form directly.
+  if (arg === 'profile') { history.replaceState(null, '', '#/me'); profileSheet(jur, binds); }
   $('[data-open=newLeader]', el).onclick = newLeaderSheet;
   $('#export', el).onclick = guard(async () => {
     const data = await api('/me/export');
@@ -234,12 +236,12 @@ export async function renderLeaders(el) {
   const endorsed = new Set(ends.map((e) => e.leaderId));
   const find = leaders.filter((l) => !bound.has(l.id));
 
-  el.innerHTML = `<div class="vb page two">
+  el.innerHTML = `<div class="vb page narrow">
     <div class="main">
       <div><h1>Who you follow</h1>
         <p class="muted">Their picks fill in your sample ballot. Whoever is first on your list goes first.</p>
         ${binds.length ? '<a class="btn go block" style="margin-top:12px" href="#/ballot">See your ballot</a>' : ''}</div>
-      <section>
+      ${binds.length ? `<section>
         <div class="section-head"><h2>Your list</h2></div>
         <div class="panel flush">${binds.length ? `<ul class="list" id="binds">${binds.map((b, i) => `<li data-l="${b.leaderId}" class="${b.active ? '' : 'off'}">
           <span class="prio" style="background:${esc(b.brandColor || 'var(--brand)')}">${i + 1}</span>
@@ -247,12 +249,10 @@ export async function renderLeaders(el) {
           <button class="icon-btn up" data-up ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(b.name)} up">${icon('chevron')}</button>
           <label class="switch" title="On your ballot"><input type="checkbox" data-act ${b.active ? 'checked' : ''} aria-label="${esc(b.name)} on your ballot"><span></span></label>
           <button class="icon-btn" data-rm aria-label="Unfollow ${esc(b.name)}">${icon('close')}</button>
-        </li>`).join('')}</ul>` : '<div class="empty"><p>You aren\'t following anyone yet. Pick someone below to fill in your ballot.</p></div>'}</div>
-      </section>
-    </div>
-    <aside class="side">
+        </li>`).join('')}</ul>` : ''}</div>
+      </section>` : ''}
       <section>
-        <div class="section-head"><h2>${find.length ? 'Find people to follow' : 'Endorse publicly'}</h2></div>
+        <div class="section-head"><h2>${!binds.length ? 'Pick someone to start' : find.length ? 'Find people to follow' : 'Endorse publicly'}</h2></div>
         <div class="panel flush"><ul class="list">${leaders.map((l) => `<li class="lead-row">
           <span class="prio" style="background:${esc(l.brandColor || 'var(--brand)')}">${esc(l.name[0])}</span>
           <span class="grow"><span class="title">${esc(l.name)}</span>
@@ -263,7 +263,7 @@ export async function renderLeaders(el) {
         </li>`).join('') || '<li class="empty">No one has published picks yet.</li>'}</ul></div>
         <p class="legal" style="margin-top:10px">An endorsement is a public statement of support, like a yard sign. It is never tied to your ballot.</p>
       </section>
-    </aside>
+    </div>
   </div>`;
 
   const order = () => $$('#binds [data-l]', el).map((r) => ({ leaderId: Number(r.dataset.l), active: $('[data-act]', r).checked }));

@@ -32,6 +32,7 @@ function applyTheme() {
 }
 
 function shell(active) {
+  root.className = 'shell';
   const t = state.today;
   const streak = t?.streak;
   const navLinks = TABS.map(([id, ic, label]) =>
@@ -83,10 +84,11 @@ window.cvasSignOut = signOut;
 
 function renderWelcome() {
   root.dataset.tab = '';
-  root.innerHTML = `<main class="content" style="max-width:460px;margin:0 auto;padding-top:calc(env(safe-area-inset-top) + 40px)">
-    <div class="wordmark" style="margin-bottom:28px"><span class="oval"></span>CVAS</div>
-    <h1 style="font-size:56px">Show up.<br>Every time.</h1>
-    <p class="muted" style="font-size:18px;margin-bottom:28px">Your ballot, filled in by people you trust. Plus the meetings, doors and calls that move your town.</p>
+  root.className = 'welcome';
+  root.innerHTML = `<main class="content">
+    <div class="wordmark"><span class="oval"></span>CVAS</div>
+    <h1>Show up.<br>Every time.</h1>
+    <p class="muted lede">Your ballot, filled in by people you trust. Plus the meetings, doors and calls that move your town.</p>
     <div class="seg" role="tablist" style="margin-bottom:12px"><button class="on" data-m="signup" role="tab">Create account</button><button data-m="login" role="tab">Sign in</button></div>
     <form id="auth">
       <div id="nameRow"><label class="field" for="n">Name</label><input id="n" name="name" autocomplete="name" required></div>
@@ -130,6 +132,7 @@ async function route() {
     if (!state.me) [state.me, state.meta, state.leaders] = await Promise.all([api('/me'), api('/meta'), api('/leaders')]);
   } catch (e) {
     if (!state.token) return;
+    root.className = 'welcome';
     root.innerHTML = `<main class="content"><div class="empty"><h2>Can't reach CVAS</h2><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Try again</button></div></main>`;
     return;
   }

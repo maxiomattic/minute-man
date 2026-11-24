@@ -15,6 +15,7 @@
   --line: #d3dad4;
   --brand: #0e6b4e;          /* overridden by leader branding */
   --on-brand: #ffffff;
+  --brand-text: var(--brand);  /* brand color for text/icons; lightened in dark mode */
   --marker: #f6c445;         /* rewards, XP, the one loud color */
   --on-marker: #2a2205;
   --flame: #e0662c;          /* streak only */
@@ -33,6 +34,7 @@
   :root {
     --paper: #111714; --surface: #1a221e; --sunk: #141b18; --ink: #e5ebe7; --muted: #9aa8a1; --line: #2b3631;
     --good: #4fbf86; --danger: #ef6b62; color-scheme: dark;
+    --brand-text: color-mix(in srgb, var(--brand) 45%, #ffffff);
   }
 }
 
@@ -44,7 +46,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
-a { color: var(--brand); }
+a { color: var(--brand-text); }
 :focus-visible { outline: 3px solid var(--marker); outline-offset: 2px; border-radius: 4px; }
 [hidden] { display: none !important; }
 
@@ -98,10 +100,17 @@ p { margin: 0 0 8px; }
   color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 600; position: relative;
 }
 .tabbar a svg { width: 24px; height: 24px; }
-.tabbar a.on { color: var(--brand); }
+.tabbar a.on { color: var(--brand-text); }
 .tabbar a.on::before { content: ""; position: absolute; top: 0; left: 30%; right: 30%; height: 3px; border-radius: 0 0 3px 3px; background: var(--brand); }
 .tabbar .dot { position: absolute; top: 10px; left: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%; background: var(--flame); border: 2px solid var(--surface); }
 .sidebar { display: none; }
+
+/* Signed-out screens: one centered column at every width */
+.welcome { min-height: 100dvh; display: grid; place-items: center; padding: calc(env(safe-area-inset-top) + 24px) 0 calc(env(safe-area-inset-bottom) + 24px); }
+.welcome > .content { width: 100%; max-width: 440px; margin: 0 auto; padding: 0 16px; }
+.welcome .wordmark { margin-bottom: 28px; }
+.welcome h1 { font-size: clamp(48px, 12vw, 64px); line-height: .95; margin-bottom: 14px; }
+.welcome .lede { font-size: 18px; margin-bottom: 28px; }
 
 /* Desktop: sidebar + two-column pages */
 @media (min-width: 960px) {
@@ -120,12 +129,14 @@ p { margin: 0 0 8px; }
   }
   .sidebar nav a svg { width: 22px; height: 22px; color: var(--muted); }
   .sidebar nav a:hover { background: var(--sunk); }
-  .sidebar nav a.on { background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand); }
-  .sidebar nav a.on svg { color: var(--brand); }
+  .sidebar nav a.on { background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand-text); }
+  .sidebar nav a.on svg { color: var(--brand-text); }
   .sidebar .foot { margin-top: auto; font-size: 13px; color: var(--muted); padding: 0 8px; }
-  .content { max-width: 1080px; padding: 8px 32px 48px; margin: 0; }
+  .content { max-width: 1080px; padding: 8px 32px 48px; margin: 0 auto; width: 100%; }
+  .topbar { padding-inline: max(32px, calc((100% - 1080px) / 2 + 32px)); }
   .page.two { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; gap: 28px; }
   .page.two > .side { position: sticky; top: 76px; }
+  .page.narrow { max-width: 720px; margin-inline: auto; }
   h1, .h1 { font-size: 48px; }
 }
 
@@ -185,7 +196,7 @@ p { margin: 0 0 8px; }
   font: 800 15px/1 var(--display); letter-spacing: .02em; background: var(--marker); color: var(--on-marker); white-space: nowrap;
 }
 .btn.go .xp { background: color-mix(in srgb, var(--on-marker) 14%, transparent); }
-.link-btn { background: none; border: 0; padding: 6px 0; font: 600 15px var(--text); color: var(--brand); cursor: pointer; }
+.link-btn { background: none; border: 0; padding: 6px 0; font: 600 15px var(--text); color: var(--brand-text); cursor: pointer; }
 
 /* ---------- ballot oval: the signature control ---------- */
 .oval {
@@ -210,7 +221,7 @@ p { margin: 0 0 8px; }
 .contest .desc { padding: 10px 14px 0; font-size: 14.5px; color: var(--muted); }
 .contest label.choice { display: flex; align-items: center; gap: 14px; padding: 14px; border-top: 1px solid var(--line); cursor: pointer; min-height: 56px; }
 .contest label.choice:first-of-type { border-top: 0; }
-.contest .pick { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--brand); text-align: right; }
+.contest .pick { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--brand-text); text-align: right; }
 .contest .note { padding: 10px 14px 12px; font-size: 14px; background: var(--sunk); border-top: 1px solid var(--line); }
 .contest .warn { color: var(--flame); }
 
@@ -246,7 +257,7 @@ p { margin: 0 0 8px; }
 .tag { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: var(--sunk); color: var(--muted); white-space: nowrap; }
 .tag.good { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
 .tag.hot { background: color-mix(in srgb, var(--flame) 16%, transparent); color: var(--flame); }
-.tag.brand { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); }
+.tag.brand { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand-text); }
 .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 14px; }
 .badge { text-align: center; font-size: 12.5px; font-weight: 600; }
 .badge .seal { width: 60px; height: 60px; margin: 0 auto 6px; border-radius: 50%; display: grid; place-items: center; background: var(--marker); color: var(--on-marker); box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--on-marker) 14%, transparent); }
@@ -266,7 +277,7 @@ input:not([type=checkbox]):not([type=radio]):not(.oval), select, textarea {
 }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand); }
 label.check { display: flex; align-items: center; gap: 12px; padding: 10px 0; font-size: 16px; cursor: pointer; }
-label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
+label.check input { width: 22px; height: 22px; accent-color: var(--brand-text); }
 
 /* ---------- overlays ---------- */
 .sheet-backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(10, 16, 13, .45); display: flex; align-items: flex-end; justify-content: center; animation: fade .18s; }
@@ -326,7 +337,7 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 .election-line {
   display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-size: 15px; padding: 2px 2px 0;
 }
-.election-line svg { width: 20px; height: 20px; color: var(--brand); flex: none; }
+.election-line svg { width: 20px; height: 20px; color: var(--brand-text); flex: none; }
 .today .section-head { margin-bottom: 8px; }
 .today .section-head .h3 { font-family: var(--text); }
 .today .main > section, .today .side > section { min-width: 0; }
@@ -345,7 +356,7 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 .streak .streak-line.risk { color: var(--flame); font-weight: 600; }
 
 .standing { display: flex; align-items: center; gap: 14px; color: var(--ink); text-decoration: none; }
-.standing-n { font-size: 44px; line-height: .9; color: var(--brand); }
+.standing-n { font-size: 44px; line-height: .9; color: var(--brand-text); }
 .standing-ic { width: 32px; height: 32px; color: var(--muted); flex: none; }
 .proof { display: flex; align-items: center; gap: 10px; margin: 0; padding: 0 4px; color: var(--muted); }
 .proof svg { width: 20px; height: 20px; color: var(--good); flex: none; }
@@ -403,7 +414,7 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 /* Everything is scoped under .vb (view root, and sheet content) so it can't leak into other views. */
 .vb.page > *, .vb .page > *, .vb .main > *, .vb .side > * { min-width: 0; }
 .vb nav.seg a { white-space: normal; line-height: 1.25; display: flex; align-items: center; justify-content: center; }
-.vb .kick { font-size: 14px; font-weight: 600; color: var(--brand); margin: 0 0 4px; }
+.vb .kick { font-size: 14px; font-weight: 600; color: var(--brand-text); margin: 0 0 4px; }
 .vb .center { text-align: center; }
 .vb .wide-only { display: none; }
 @media (min-width: 960px) { .vb .wide-only { display: block; } .vb .narrow-only { display: none; } }
@@ -438,8 +449,8 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 .vb .stack > * + * { margin-top: 16px; }
 .vb .opts { display: grid; gap: 10px; }
 .vb .opt { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1.5px solid var(--line); border-radius: var(--r-md); cursor: pointer; background: var(--surface); transition: border-color .15s, background-color .15s; }
-.vb .opt input { width: 20px; height: 20px; accent-color: var(--brand); flex: none; margin: 0; }
-.vb .opt svg { width: 28px; height: 28px; color: var(--brand); flex: none; }
+.vb .opt input { width: 20px; height: 20px; accent-color: var(--brand-text); flex: none; margin: 0; }
+.vb .opt svg { width: 28px; height: 28px; color: var(--brand-text); flex: none; }
 .vb .opt .title { display: block; font-weight: 700; }
 .vb .opt .sub { display: block; font-size: 13.5px; color: var(--muted); }
 .vb .opt.big { min-height: 68px; }
@@ -448,13 +459,13 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 .vb .btn.huge .xp { font-size: 18px; height: 30px; }
 .vb .steps { margin: 6px 0 0; padding-left: 22px; }
 .vb .steps li { padding: 5px 0; }
-.vb .steps li::marker { font-family: var(--display); font-weight: 800; color: var(--brand); }
+.vb .steps li::marker { font-family: var(--display); font-weight: 800; color: var(--brand-text); }
 .vb .done-state { text-align: center; padding: 28px 20px; }
 .vb .stamp { width: 120px; height: 70px; border-radius: 50%; margin: 0 auto 16px; display: grid; place-items: center; background: var(--marker); color: var(--on-marker); transform: rotate(-4deg); }
 .vb .stamp svg { width: 36px; height: 36px; stroke-width: 2.6; }
 
 /* rows, icons, list buttons */
-.vb .ico { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand); }
+.vb .ico { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand-text); }
 .vb .ico svg { width: 24px; height: 24px; }
 .vb .ico.sm { width: 34px; height: 34px; }
 .vb .ico.sm svg { width: 18px; height: 18px; }
@@ -492,7 +503,7 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 .vb .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; margin-top: 12px; }
 .vb .tile { position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; padding: 14px 8px 12px; text-align: center; border: 1.5px solid var(--line); border-radius: var(--r-md); cursor: pointer; font-size: 13.5px; font-weight: 600; line-height: 1.2; }
 .vb .tile input { position: absolute; opacity: 0; pointer-events: none; }
-.vb .tile svg { width: 30px; height: 30px; color: var(--brand); }
+.vb .tile svg { width: 30px; height: 30px; color: var(--brand-text); }
 .vb .tile .xp { height: 20px; font-size: 13px; padding: 0 7px; }
 .vb .tile:has(input:checked) { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, var(--surface)); box-shadow: inset 0 0 0 1px var(--brand); }
 .vb .tile:has(input:focus-visible) { outline: 3px solid var(--marker); outline-offset: 2px; }
