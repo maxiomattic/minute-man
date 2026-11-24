@@ -604,6 +604,19 @@ label.check input { width: 22px; height: 22px; flex: none; accent-color: var(--b
 .reg-step .after { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
 .reg-step .after p { margin: 0; }
 .aside-box { margin: 16px 0; padding: 12px 14px; border-radius: var(--r-md); background: var(--sunk); }
+.reg-step .step-of { margin: 0 0 4px; font: 700 12px/1.2 var(--text); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.addr-row { display: grid; grid-template-columns: 96px 1fr; gap: 0 12px; }
+.addr-card { margin: 4px 0 10px; padding: 14px 16px; border-radius: var(--r-md); background: var(--sunk); border-left: 4px solid var(--marker); font-size: 17px; line-height: 1.4; }
+.form-err { margin-top: 14px; padding: 12px 14px; border-radius: var(--r-md); border: 1.5px solid var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+.form-err p { margin: 0 0 4px; font-size: 14.5px; }
+.reg-details { margin: 4px 0 16px; padding: 12px 14px; border-radius: var(--r-md); background: var(--sunk); }
+.reg-details ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.reg-details li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.reg-details li:first-child { border-top: 0; }
+.reg-details .grow { flex: 1; min-width: 0; }
+.reg-details .grow > span { display: block; }
+.reg-details .val { font-weight: 600; overflow-wrap: anywhere; }
+.reg-details .btn.sm { flex: none; }
 .aside-box p { margin: 0 0 10px; }
 
 /* ---------- your path (the ladder) ---------- */

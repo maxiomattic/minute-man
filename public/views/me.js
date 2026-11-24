@@ -36,6 +36,40 @@ async function idDel() {
   } catch {}
 }
 
+// Home street address, same on-device store. The server keeps only the city and districts; the street
+// is sent once to the Census lookup and otherwise stays here, ready for the registration form.
+const addrKey = () => `addr:${state.me.id}`;
+async function addrGet() {
+  try {
+    const db = await idDb();
+    return await new Promise((res) => { const q = db.transaction('kv').objectStore('kv').get(addrKey()); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); });
+  } catch { return null; }
+}
+async function addrPut(v) {
+  try {
+    const db = await idDb();
+    await new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, addrKey()); t.oncomplete = res; t.onerror = () => rej(t.error); });
+  } catch {}
+}
+async function addrDel() {
+  try {
+    const db = await idDb();
+    await new Promise((res) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete(addrKey()); t.oncomplete = res; t.onerror = res; });
+  } catch {}
+}
+// "401 S ROGERS ST, WAXAHACHIE, TX, 75165" -> { street: '401 S Rogers St', city: 'Waxahachie', state: 'TX', zip: '75165' }
+const KEEP_UPPER = /^(N|S|E|W|NE|NW|SE|SW|FM|CR|RR|US|SH|PO|HC|II|III|IV)$/;
+const titleCase = (s) => String(s || '').toLowerCase().split(/\s+/).map((w) => (KEEP_UPPER.test(w.toUpperCase()) ? w.toUpperCase() : w.replace(/^[a-z]/, (c) => c.toUpperCase()))).join(' ');
+function parseMatched(line) {
+  const [street, city, st, zip] = String(line || '').split(/\s*,\s*/);
+  return { street: titleCase(street), city: titleCase(city), state: (st || '').toUpperCase(), zip: zip || '' };
+}
+/** Save what the Census lookup matched, for the registration step to reuse. */
+async function addrRemember(typed, res) {
+  const m = parseMatched(res.matchedAddress);
+  await addrPut({ ...typed, matched: res.matchedAddress ? { ...m, county: res.districts?.county || null, districts: res.districts || null } : null, confirmed: false, at: Date.now() });
+}
+
 // ---------- you ----------
 export async function render(el, arg) {
   const [jur, reg] = await Promise.all([
@@ -93,6 +127,7 @@ export async function render(el, arg) {
     $('#yes', s).onclick = guard(async () => {
       await api('/me', { method: 'DELETE' });
       await idDel();
+      await addrDel();
       try { localStorage.clear(); } catch {}
       close();
       toast('Deleted your account');
@@ -119,6 +154,7 @@ function profileSheet(jur) {
     const fd = Object.fromEntries(new FormData(e.target));
     const { address, ...rest } = fd;
     const moved = address.trim() ? await api('/me/address', { method: 'POST', body: { address } }) : null;
+    if (moved) await addrRemember({ street: address.trim().split(',')[0] }, moved);
     state.me = await api('/me', { method: 'PATCH', body: { ...rest, birthDate: rest.birthDate || null } });
     toast(moved ? `Home set to ${moved.homeLabel}` : 'Saved profile');
     close();
@@ -138,9 +174,85 @@ function shareLink(title, text, url) {
   return navigator.clipboard?.writeText(`${text}\n${url}`).then(() => toast('Copied the link and steps'), () => toast("Couldn't copy"));
 }
 
+// Registration-address step state, kept across re-renders of the step (not saved anywhere).
+const regAddr = { editing: false, error: null, mailing: false };
+const oneLine = (a) => [[a.street, a.unit].filter(Boolean).join(' '), a.city, [a.state, a.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+const resAddr = (a) => (a.matched ? { ...a.matched, unit: a.unit } : a);
+function copyText(text, what) {
+  const ok = () => toast(`Copied ${what}`);
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text).then(ok, () => toast("Couldn't copy"));
+  const t = Object.assign(document.createElement('textarea'), { value: text });
+  document.body.append(t); t.select();
+  try { document.execCommand('copy'); ok(); } catch { toast("Couldn't copy"); }
+  t.remove();
+}
+
+/** Step 1 of registering: type your home address, check it against the Census lookup, confirm it. */
+function addressStep(addr, states) {
+  const me = state.me;
+  const a = addr || {};
+  const m = a.matched;
+  if (m && !regAddr.editing) {
+    const d = m.districts || {};
+    const bits = [d.congress && `Congress ${d.congress}`, d.stateSenate && `State Senate ${d.stateSenate}`, d.stateHouse && `State House ${d.stateHouse}`].filter(Boolean);
+    return `<p class="step-of">Step 1 of 2</p>
+      <h2>Is this where you live?</h2>
+      <div class="addr-card"><div>${esc([m.street, a.unit].filter(Boolean).join(' '))}</div><div>${esc(m.city)}, ${esc(m.state)} ${esc(m.zip)}</div></div>
+      <p class="small muted">${m.county ? `${esc(m.county)}. ` : ''}${bits.length ? `Your ballot is set for ${esc(bits.join(', '))}.` : 'Your ballot is set for this address.'}</p>
+      ${a.mailing ? `<p class="small"><b>Mail goes to:</b> ${esc(a.mailing)}</p>` : ''}
+      <button class="btn go block" id="addr-yes">Yes, that's my address</button>
+      <button class="btn quiet block" id="addr-edit" style="margin-top:10px">Change it</button>`;
+  }
+  const homeCity = !a.city && me.homeLabel ? me.homeLabel.split(', ')[0] : '';
+  const st = a.state || (me.homeLabel?.split(', ').pop()) || (me.jurisdictionId || 'tx').slice(0, 2).toUpperCase();
+  const stCodes = states.length ? states : [{ id: 'tx', name: 'Texas' }];
+  const err = regAddr.error;
+  return `<p class="step-of">Step 1 of 2</p>
+    <h2>Your home address</h2>
+    <p class="muted">Where you live now. It goes on your application, and it sets the races on your ballot.</p>
+    <form id="addr-form" novalidate>
+      <label class="field" for="ra-street">Street address</label>
+      <input id="ra-street" name="street" autocomplete="address-line1" enterkeyhint="next" autocapitalize="words" placeholder="401 S Rogers St" value="${esc(a.street || '')}" required>
+      <label class="field" for="ra-unit">Apt, suite or unit <span class="muted">(optional)</span></label>
+      <input id="ra-unit" name="unit" autocomplete="address-line2" enterkeyhint="next" autocapitalize="characters" value="${esc(a.unit || '')}">
+      <label class="field" for="ra-city">City</label>
+      <input id="ra-city" name="city" autocomplete="address-level2" enterkeyhint="next" autocapitalize="words" value="${esc(a.city || homeCity)}" required>
+      <div class="addr-row">
+        <div><label class="field" for="ra-state">State</label>
+          <select id="ra-state" name="state" autocomplete="address-level1">${stCodes.map((j) => `<option value="${esc(j.id.toUpperCase())}"${j.id.toUpperCase() === st ? ' selected' : ''}>${esc(j.id.toUpperCase())}</option>`).join('')}</select></div>
+        <div><label class="field" for="ra-zip">ZIP code</label>
+          <input id="ra-zip" name="zip" autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}" maxlength="10" enterkeyhint="done" value="${esc(a.zip || '')}" required></div>
+      </div>
+      <label class="check" style="margin-top:8px"><input type="checkbox" id="ra-mail-on"${a.mailing || regAddr.mailing ? ' checked' : ''}>My mail goes to a different address</label>
+      <div id="ra-mail-box"${a.mailing || regAddr.mailing ? '' : ' hidden'}>
+        <label class="field" for="ra-mail" style="margin-top:0">Mailing address</label>
+        <textarea id="ra-mail" name="mailing" rows="2" autocomplete="section-mailing street-address" placeholder="PO Box 123, Waxahachie, TX 75168">${esc(a.mailing || '')}</textarea>
+      </div>
+      ${err ? `<div class="form-err" role="alert"><p>${esc(err)}</p><button type="button" class="link-btn" id="addr-skip">Continue with this address anyway</button></div>` : ''}
+      <button class="btn go block" style="margin-top:16px">Check address</button>
+      <p class="tiny muted" style="margin:10px 0 0">Your street address stays on this phone. We send it once to the U.S. Census address lookup to find your districts, and keep only your city.</p>
+    </form>`;
+}
+
+/** The details the state form asks for, ready to copy. */
+function detailsBox(addr) {
+  const r = resAddr(addr);
+  const res = oneLine(r);
+  const row = (label, value, what) => `<li><div class="grow"><span class="tiny muted">${label}</span><span class="val">${esc(value)}</span></div>
+    <button type="button" class="btn line sm" data-copy="${esc(value)}" data-what="${esc(what)}" aria-label="Copy ${esc(what)}">Copy</button></li>`;
+  return `<div class="reg-details">
+    <div class="row between"><h3 style="margin:0">For the form</h3><button type="button" class="link-btn small" id="addr-change">Change address</button></div>
+    <ul>${row('Residence address', res, 'residence address')}
+    ${addr.mailing ? row('Mailing address', addr.mailing, 'mailing address') : '<li><div class="grow"><span class="tiny muted">Mailing address</span><span class="val">Same as residence</span></div></li>'}
+    ${r.county ? row('County', r.county.replace(/ County$/, ''), 'county') : ''}</ul>
+    ${addr.matched ? '' : '<p class="tiny muted" style="margin:8px 0 0">The Census lookup couldn\'t match this address. Check it carefully on the form.</p>'}
+  </div>`;
+}
+
 export async function renderRegister(el) {
-  const [reg, elig] = await Promise.all([api('/registration'), api('/eligibility')]);
+  const [reg, elig, addr, jur] = await Promise.all([api('/registration'), api('/eligibility'), addrGet(), api('/jurisdictions').catch(() => [])]);
   idDel().catch(() => {}); // older versions kept an ID photo on the device; clear it
+  const states = jur.filter((j) => /^[a-z]{2}$/.test(j.id)).sort((x, y) => x.id.localeCompare(y.id));
   const rules = elig.rules || {};
   const guide = rules.registration || {};
   const stateName = state.me.homeLabel?.split(', ').pop() === 'TX' ? 'Texas' : 'your state';
@@ -167,16 +279,19 @@ export async function renderRegister(el) {
       <div class="after"><p class="small"><b>Back from the lookup?</b> What did it say?</p>
       ${answer([['confirmed', "I'm registered"], ['not_registered', "It couldn't find me"]])}</div>
       ${status === 'submitted' ? home : ''}`;
+  } else if (status === 'not_registered' && (!addr?.confirmed || regAddr.editing)) {
+    step = addressStep(addr, states);
   } else if (status === 'not_registered') {
     const g = guide.apply;
-    step = g ? `<h2>Register to vote</h2>
+    step = g ? `<p class="step-of">Step 2 of 2</p><h2>Register to vote</h2>
       <p class="muted">${esc(g.intro)}</p>
+      ${detailsBox(addr)}
       <a class="btn go block" href="${esc(g.url)}" target="_blank" rel="noopener">Start the application</a>
       ${more(`How it works (${g.steps.length} steps)`, `<ol class="steps">${g.steps.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>${leaveNote(g)}`)}
       ${g.mobile === 'print' ? more('No printer?', `<p class="small">${esc(g.noPrinter || '')}</p><button class="btn line sm" id="later">Send the steps to myself</button>`) : ''}
       ${g.update ? more('Already registered and just moved?', `<p class="small">${esc(g.update.text)} <a href="${esc(g.update.url)}" target="_blank" rel="noopener">Update it on Texas.gov</a>.</p>`) : ''}
       <div class="after"><p class="small"><b>Mailed it?</b></p>${answer([['submitted', 'I mailed my application']])}</div>`
-      : `<h2>Register to vote</h2>${rules.onlineRegistrationUrl ? `<a class="btn go block" href="${esc(rules.onlineRegistrationUrl)}" target="_blank" rel="noopener">Open your state's registration site</a>` : '<p>Contact your county elections office.</p>'}
+      : `<p class="step-of">Step 2 of 2</p><h2>Register to vote</h2>${detailsBox(addr)}${rules.onlineRegistrationUrl ? `<a class="btn go block" href="${esc(rules.onlineRegistrationUrl)}" target="_blank" rel="noopener">Open your state's registration site</a>` : '<p>Contact your county elections office.</p>'}
       <div class="after">${answer([['submitted', "I've applied"]])}</div>`;
   } else {
     step = `<h2>You're registered</h2>
@@ -207,6 +322,8 @@ export async function renderRegister(el) {
   $$('[data-status]', el).forEach((b) => (b.onclick = guard(async () => {
     const to = b.dataset.status;
     await api('/registration', { method: 'PUT', body: { status: to } });
+    // Starting an application: confirm the saved address again (people move).
+    if (to === 'not_registered' && addr?.confirmed) await addrPut({ ...addr, confirmed: false });
     if (to === 'confirmed' && reg.status !== 'confirmed') { xpFly(50, b); confetti(24); toast("You're registered. +50 XP"); }
     else if (to === 'submitted') toast('Saved. We\'ll remind you to check on it.');
     await refreshStats();
@@ -222,5 +339,67 @@ export async function renderRegister(el) {
     await api('/registration', { method: 'PUT', body: Object.fromEntries(new FormData(ev.target)) });
     toast('Saved party');
   }));
+
+  // ---- address step ----
+  const again = () => { renderRegister(el); window.scrollTo(0, 0); };
+  $('#addr-yes', el)?.addEventListener('click', guard(async () => {
+    await addrPut({ ...addr, confirmed: true, at: Date.now() });
+    regAddr.editing = false;
+    again();
+  }));
+  $('#addr-edit', el)?.addEventListener('click', () => {
+    regAddr.editing = true;
+    regAddr.error = null;
+    // Start the form from the matched address, keeping the unit and mailing address they typed.
+    if (addr?.matched) Object.assign(addr, { street: addr.matched.street, city: addr.matched.city, state: addr.matched.state, zip: addr.matched.zip });
+    addrPut({ ...addr }).then(again);
+  });
+  $('#addr-change', el)?.addEventListener('click', () => { regAddr.editing = true; regAddr.error = null; again(); });
+  $$('[data-copy]', el).forEach((b) => (b.onclick = () => copyText(b.dataset.copy, b.dataset.what)));
+  const form = $('#addr-form', el);
+  if (form) {
+    const mailOn = $('#ra-mail-on', form);
+    mailOn.onchange = () => { regAddr.mailing = mailOn.checked; $('#ra-mail-box', form).hidden = !mailOn.checked; if (mailOn.checked) $('#ra-mail', form).focus(); };
+    const read = () => {
+      const f = Object.fromEntries(new FormData(form));
+      const typed = { street: f.street.trim(), unit: f.unit.trim(), city: f.city.trim(), state: f.state, zip: f.zip.trim(), mailing: mailOn.checked ? (f.mailing || '').trim() : '' };
+      return typed;
+    };
+    const missing = (t) => (!t.street ? ['ra-street', 'Enter your street address.'] : !t.city ? ['ra-city', 'Enter your city.'] : !/^\d{5}(-?\d{4})?$/.test(t.zip) ? ['ra-zip', 'Enter a 5-digit ZIP code.'] : null);
+    $('#addr-skip', form)?.addEventListener('click', guard(async () => {
+      const t = read();
+      const miss = missing(t);
+      if (miss) { toast(miss[1]); $('#' + miss[0], form).focus(); return; }
+      await addrPut({ ...t, matched: null, confirmed: true, at: Date.now() });
+      regAddr.editing = false; regAddr.error = null;
+      again();
+    }));
+    form.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const t = read();
+      const miss = missing(t);
+      if (miss) { toast(miss[1]); $('#' + miss[0], form).focus(); return; }
+      const btn = form.querySelector('button.go');
+      btn.disabled = true; btn.textContent = 'Checking…';
+      let res;
+      try {
+        res = await api('/me/address', { method: 'POST', body: { address: `${t.street}, ${t.city}, ${t.state} ${t.zip}` } });
+      } catch (e) {
+        // Keep what they typed; show why and let them go on without a match.
+        await addrPut({ ...t, matched: null, confirmed: false, at: Date.now() });
+        regAddr.error = /couldn't find/i.test(e.message)
+          ? "We couldn't match that address. Check the street number, spelling and ZIP code. If it's right (new homes and rural routes can be missing), you can go on with it."
+          : `${e.message.replace(/\.+$/, '.')} You can try again, or go on without the check.`;
+        again();
+        return;
+      }
+      const { districts, matchedAddress, ...me } = res;
+      state.me = { ...state.me, ...me };
+      await addrRemember(t, { districts, matchedAddress });
+      regAddr.editing = false; regAddr.error = null;
+      refreshStats().catch(() => {});
+      again();
+    };
+  }
 }
 

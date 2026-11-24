@@ -159,8 +159,11 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode, media
     const jid = matchJurisdiction(db, geo);
     if (!jid) throw bad("We don't cover that area yet.");
     const label = [geo.place, geo.state].filter(Boolean).join(', ');
-    db.prepare('UPDATE users SET jurisdiction_id=?, home_label=?, precinct=NULL WHERE id=?').run(jid, label, user.id);
+    // The precinct can't be looked up, so it's cleared only when the area changes.
+    db.prepare('UPDATE users SET precinct=CASE WHEN jurisdiction_id IS ? THEN precinct END, jurisdiction_id=?, home_label=? WHERE id=?').run(jid, jid, label, user.id);
     return { ...userPublic(db.prepare('SELECT * FROM users WHERE id=?').get(user.id)),
+      // The matched address comes back once so the app can show it for confirmation; it isn't stored.
+      matchedAddress: geo.matchedAddress || null,
       districts: { congress: geo.cd, stateSenate: geo.sldu, stateHouse: geo.sldl, county: geo.county } };
   });
 
