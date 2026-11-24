@@ -12,7 +12,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] Closed-primary rule for unaffiliated voters
 - [x] Capacitor Android + iOS projects, icons, splash, NixOS Android toolchain (`scripts/android.sh`)
 - [x] 19 tests pass; screens checked at Pixel 7 and 1280x800
-- [ ] Android app installed and verified on the Pixel 6
+- [x] Android app installed and verified on the Pixel 6 (rebuild: `scripts/android.sh <phone-ip:port>`)
 
 ## Left / ideas
 - [ ] iOS build needs a Mac with Xcode (or a CI runner): `npx cap open ios`
