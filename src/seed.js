@@ -1,13 +1,8 @@
 // Demo data. All places, people and organizations are fictional.
-import { randomBytes, scryptSync } from 'node:crypto';
-import { ingest } from './app.js';
+import { ingest, hashPw } from './app.js';
 
 const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
 const at = (offset, hour) => `${day(offset)} ${String(hour).padStart(2, '0')}:00:00`;
-const pw = (p) => {
-  const s = randomBytes(16);
-  return s.toString('hex') + ':' + scryptSync(p, s, 32).toString('hex');
-};
 
 export function demoData() {
   return {
@@ -74,9 +69,15 @@ export function demoData() {
   };
 }
 
-export function seed(db) {
+/** Seed demo data. With force, refresh election and event dates so the demo stays current. */
+export async function seed(db, { force = false } = {}) {
   ingest(db, demoData());
-  if (db.prepare('SELECT COUNT(*) n FROM users').get().n) return;
+  if (db.prepare('SELECT COUNT(*) n FROM users').get().n) {
+    if (force) refreshEventDates(db);
+    return;
+  }
+  const hashed = await hashPw('demo-password');
+  const pw = () => hashed;
 
   const user = (email, name, extra = {}) =>
     Number(
@@ -164,4 +165,13 @@ export function seed(db) {
     db.prepare(`INSERT INTO participation (user_id, election_id, kind) VALUES (?, NULL, 'registered')`).run(u);
   db.prepare(`INSERT INTO registrations (user_id, status, party) VALUES (?, 'submitted', 'Independent')`).run(demo);
   db.prepare(`INSERT INTO nudges (from_id, to_id, election_id) VALUES (?,?, 'el-local')`).run(friends[0], demo);
+}
+
+function refreshEventDates(db) {
+  const rows = db.prepare(`SELECT id FROM actions WHERE created_by = (SELECT id FROM users WHERE email='org1@example.org') ORDER BY id`).all();
+  const plan = [[2, 18], [4, 10], [3, 18], [9, 8], [6, 19], [5, 17], [12, 9], [0, 9]];
+  rows.forEach((r, i) => {
+    const [d, h] = plan[i % plan.length];
+    db.prepare('UPDATE actions SET starts_at=?, ends_at=? WHERE id=?').run(at(d, h), at(d, h + 2), r.id);
+  });
 }

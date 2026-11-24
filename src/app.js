@@ -1,7 +1,4 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
-import { tx } from './db.js';
+import { engagementRoutes, luckyBonus, pointsSince, weekStart } from './engine/engage.js';
 import { aggregate, listStrategies } from './engine/recommend.js';
 import { ACTIVITY, PARTICIPATION, activityPoints, rankFor, scorecard } from './engine/recognition.js';
 import { eligibility, jurisdictionChain, rulesFor } from './rules.js';
@@ -14,28 +11,40 @@ class HttpError extends Error {
 }
 const bad = (msg) => new HttpError(400, msg);
 const today = () => new Date().toISOString().slice(0, 10);
-const code = (n = 6) => randomBytes(n).toString('base64url').slice(0, n).toUpperCase();
+const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const rand = (n) => crypto.getRandomValues(new Uint8Array(n));
+const code = (n = 6) => [...rand(n)].map((b) => ALPHA[b % ALPHA.length]).join('');
+const hex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
+const unhex = (h) => new Uint8Array(h.match(/../g).map((x) => parseInt(x, 16)));
+const b64url = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-function hashPw(pw) {
-  const salt = randomBytes(16);
-  return salt.toString('hex') + ':' + scryptSync(pw, salt, 32).toString('hex');
+// PBKDF2-SHA256 via WebCrypto: works identically on Node and Cloudflare Workers.
+const PBKDF2_ITER = 100000;
+async function derive(pw, salt, iter) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, key, 256));
 }
-function checkPw(pw, stored) {
-  const [salt, hash] = stored.split(':');
-  const got = scryptSync(pw, Buffer.from(salt, 'hex'), 32);
-  return timingSafeEqual(got, Buffer.from(hash, 'hex'));
+export async function hashPw(pw) {
+  const salt = rand(16);
+  return `pbkdf2$${PBKDF2_ITER}$${hex(salt)}$${hex(await derive(pw, salt, PBKDF2_ITER))}`;
+}
+async function checkPw(pw, stored) {
+  const [, iter, salt, hash] = stored.split('$');
+  const got = await derive(pw, unhex(salt), Number(iter));
+  const want = unhex(hash);
+  let diff = got.length ^ want.length;
+  for (let i = 0; i < got.length; i++) diff |= got[i] ^ want[i];
+  return diff === 0;
 }
 
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json',
-  '.webmanifest': 'application/manifest+json',
-  '.svg': 'image/svg+xml',
+const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+  'access-control-allow-headers': 'authorization, content-type',
+  'access-control-max-age': '86400',
 };
 
-export function createApp(db, { publicDir, adminToken } = {}) {
+export function createApp(db, { adminToken, seed } = {}) {
   const routes = [];
   const route = (method, pattern, handler, opts = {}) => {
     const keys = [];
@@ -53,7 +62,7 @@ export function createApp(db, { publicDir, adminToken } = {}) {
   });
 
   function issueSession(userId) {
-    const token = randomBytes(24).toString('base64url');
+    const token = b64url(rand(24));
     const exp = new Date(Date.now() + 30 * 86400000).toISOString();
     db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?,?,?)').run(token, userId, exp);
     return token;
@@ -91,7 +100,7 @@ export function createApp(db, { publicDir, adminToken } = {}) {
   }
 
   // ---------- auth ----------
-  route('POST', '/api/signup', ({ body }) => {
+  route('POST', '/api/signup', async ({ body }) => {
     const { email, name, password } = body;
     if (!email || !/^\S+@\S+$/.test(email)) throw bad('valid email required');
     if (!name) throw bad('name required');
@@ -100,14 +109,14 @@ export function createApp(db, { publicDir, adminToken } = {}) {
       throw new HttpError(409, 'email already registered');
     const r = db
       .prepare('INSERT INTO users (email, name, pw_hash) VALUES (?,?,?)')
-      .run(email.toLowerCase(), name, hashPw(password));
+      .run(email.toLowerCase(), name, await hashPw(password));
     const id = Number(r.lastInsertRowid);
     return { token: issueSession(id), user: userPublic(db.prepare('SELECT * FROM users WHERE id=?').get(id)) };
   }, { auth: false });
 
-  route('POST', '/api/login', ({ body }) => {
+  route('POST', '/api/login', async ({ body }) => {
     const u = db.prepare('SELECT * FROM users WHERE email=?').get(String(body.email || '').toLowerCase());
-    if (!u || !checkPw(String(body.password || ''), u.pw_hash)) throw new HttpError(401, 'wrong email or password');
+    if (!u || !(await checkPw(String(body.password || ''), u.pw_hash))) throw new HttpError(401, 'wrong email or password');
     return { token: issueSession(u.id), user: userPublic(u) };
   }, { auth: false });
 
@@ -270,7 +279,7 @@ export function createApp(db, { publicDir, adminToken } = {}) {
   route('PUT', '/api/leaders/:id/recommendations', ({ user, params, body }) => {
     const l = ownLeader(user, params.id);
     const items = Array.isArray(body) ? body : [body];
-    tx(db, () => {
+    db.tx(() => {
       for (const it of items) {
         const c = db.prepare('SELECT * FROM contests WHERE id=?').get(it.contestId);
         if (!c) throw bad(`unknown contest ${it.contestId}`);
@@ -317,7 +326,7 @@ export function createApp(db, { publicDir, adminToken } = {}) {
   // Reorder / toggle: body = [{leaderId, active}] in priority order.
   route('PUT', '/api/bindings', ({ user, body }) => {
     if (!Array.isArray(body)) throw bad('array expected');
-    tx(db, () => {
+    db.tx(() => {
       body.forEach((b, i) => {
         db.prepare('UPDATE bindings SET priority=?, active=? WHERE user_id=? AND leader_id=?')
           .run(i + 1, b.active === false ? 0 : 1, user.id, Number(b.leaderId));
@@ -438,9 +447,10 @@ export function createApp(db, { publicDir, adminToken } = {}) {
     const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=date('now')`).get(user.id, a.kind).q;
     const perUnit = ACTIVITY[a.kind].perUnit || 0;
     const pts = activityPoints(a.kind, qty, verified, already * perUnit);
-    db.prepare('INSERT INTO activity (user_id, action_id, kind, quantity, verified, points) VALUES (?,?,?,?,?,?)')
+    const ins = db.prepare('INSERT INTO activity (user_id, action_id, kind, quantity, verified, points) VALUES (?,?,?,?,?,?)')
       .run(user.id, a.id, a.kind, qty, verified ? 1 : 0, pts);
-    return { ok: true, points: pts, verified };
+    const lucky = verified ? luckyBonus(db, user.id, ins.lastInsertRowid) : 0;
+    return { ok: true, points: pts, verified, lucky };
   });
 
   // Self-logged activism with no event (e.g., posted on social media, knocked doors solo).
@@ -485,6 +495,7 @@ export function createApp(db, { publicDir, adminToken } = {}) {
 
   route('GET', '/api/leaderboard', ({ user, query }) => {
     const scope = query.get('scope') || 'friends';
+    const week = query.get('period') === 'week';
     let ids;
     let title;
     if (scope === 'friends') {
@@ -510,11 +521,12 @@ export function createApp(db, { publicDir, adminToken } = {}) {
       .filter((u) => u && (u.on_leaderboards || u.id === user.id))
       .map((u) => {
         const s = scorecard(db, u.id);
-        return { userId: u.id, name: u.name, points: s.points, rank: rankFor(s.points).name, badges: s.badges.length, me: u.id === user.id };
+        const points = week ? pointsSince(db, u.id, weekStart()) : s.points;
+        return { userId: u.id, name: u.name, points, total: s.points, rank: rankFor(s.points).name, badges: s.badges.length, me: u.id === user.id };
       })
       .sort((a, b) => b.points - a.points);
     rows.forEach((r, i) => (r.place = i + 1));
-    return { title, rows };
+    return { title, period: week ? 'week' : 'all', rows };
   });
 
   // ---------- groups ----------
@@ -638,21 +650,32 @@ export function createApp(db, { publicDir, adminToken } = {}) {
   route('POST', '/api/admin/ingest', ({ body }) => ({ ok: true, ...ingest(db, body) }), { auth: 'admin' });
 
   route('POST', '/api/admin/results', ({ body }) => {
-    tx(db, () => {
+    db.tx(() => {
       for (const r of body)
         db.prepare('INSERT OR REPLACE INTO results (contest_id, winner_ids) VALUES (?,?)').run(r.contestId, JSON.stringify(r.winnerIds));
     });
     return { ok: true };
   }, { auth: 'admin' });
 
-  // ---------- dispatcher ----------
-  async function handle(req, res) {
-    const url = new URL(req.url, 'http://x');
-    const send = (status, obj, headers = {}) => {
-      res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers });
-      res.end(JSON.stringify(obj));
-    };
-    if (!url.pathname.startsWith('/api/')) return serveStatic(url.pathname, res);
+  engagementRoutes(route, { db, HttpError, bad, upcomingElections, today });
+
+  if (seed) {
+    route('POST', '/api/admin/reseed', async () => {
+      await seed(db, { force: true });
+      return { ok: true };
+    }, { auth: 'admin' });
+  }
+
+  // ---------- dispatcher: Request -> Response ----------
+  const json = (status, obj) =>
+    new Response(JSON.stringify(obj), {
+      status,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...CORS },
+    });
+
+  return async function handle(req) {
+    const url = new URL(req.url);
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     try {
       const r = routes.find((x) => x.method === req.method && x.re.test(url.pathname));
       if (!r) throw new HttpError(404, 'not found');
@@ -660,21 +683,15 @@ export function createApp(db, { publicDir, adminToken } = {}) {
       const params = Object.fromEntries(r.keys.map((k, i) => [k, decodeURIComponent(m[i + 1])]));
       let body = {};
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-        const chunks = [];
-        let size = 0;
-        for await (const c of req) {
-          size += c.length;
-          if (size > 2e6) throw new HttpError(413, 'body too large');
-          chunks.push(c);
-        }
-        const raw = Buffer.concat(chunks).toString();
+        const raw = await req.text();
+        if (raw.length > 2e6) throw new HttpError(413, 'body too large');
         try {
           body = raw ? JSON.parse(raw) : {};
         } catch {
           throw bad('invalid JSON');
         }
       }
-      const token = (req.headers.authorization || '').replace(/^Bearer /, '');
+      const token = (req.headers.get('authorization') || '').replace(/^Bearer /, '');
       let user = null;
       if (r.auth === 'admin') {
         if (!adminToken || token !== adminToken) throw new HttpError(401, 'admin token required');
@@ -684,45 +701,20 @@ export function createApp(db, { publicDir, adminToken } = {}) {
         ).get(token, new Date().toISOString());
         if (!user) throw new HttpError(401, 'sign in required');
       }
-      send(200, await r.handler({ req, user, token, params, body, query: url.searchParams }));
+      return json(200, await r.handler({ req, user, token, params, body, query: url.searchParams }));
     } catch (e) {
-      if (e instanceof HttpError) send(e.status, { error: e.message });
-      else if (String(e.message).includes('constraint')) send(400, { error: e.message });
-      else {
-        console.error(e);
-        send(500, { error: 'server error' });
-      }
+      if (e instanceof HttpError) return json(e.status, { error: e.message });
+      if (String(e.message).includes('constraint')) return json(400, { error: e.message });
+      console.error(e);
+      return json(500, { error: 'server error' });
     }
-  }
-
-  async function serveStatic(pathname, res) {
-    if (!publicDir) {
-      res.writeHead(404).end();
-      return;
-    }
-    let p = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, '');
-    if (p === '/' || !extname(p)) p = '/index.html'; // SPA fallback
-    try {
-      const data = await readFile(join(publicDir, p));
-      res.writeHead(200, {
-        'content-type': MIME[extname(p)] || 'application/octet-stream',
-        'cache-control': p === '/sw.js' ? 'no-cache' : 'public, max-age=300',
-        'x-content-type-options': 'nosniff',
-        'referrer-policy': 'no-referrer',
-      });
-      res.end(data);
-    } catch {
-      res.writeHead(404).end('not found');
-    }
-  }
-
-  return handle;
+  };
 }
 
 /** Load jurisdictions, polling places, elections, contests, choices. Idempotent upsert. */
 export function ingest(db, data) {
   const n = { jurisdictions: 0, pollingPlaces: 0, elections: 0, contests: 0, choices: 0 };
-  tx(db, () => {
+  db.tx(() => {
     for (const j of data.jurisdictions || []) {
       db.prepare(
         `INSERT INTO jurisdictions (id, name, parent_id, rules) VALUES (?,?,?,?)

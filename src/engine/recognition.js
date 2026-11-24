@@ -109,7 +109,8 @@ export function scorecard(db, userId) {
   }
   const groupWins = winContests.size * WIN_POINTS;
 
-  const points = turnout + activism + endorse * ENDORSE_POINTS + groupWins;
+  const bonus = db.prepare('SELECT COALESCE(SUM(points),0) p FROM bonuses WHERE user_id=?').get(userId).p;
+  const points = turnout + activism + endorse * ENDORSE_POINTS + groupWins + bonus;
 
   const voted = part.filter((p) => p.kind === 'voted');
   const badges = [];
@@ -132,7 +133,7 @@ export function scorecard(db, userId) {
 
   return {
     points,
-    breakdown: { turnout, activism, endorsements: endorse * ENDORSE_POINTS, groupWins },
+    breakdown: { turnout, activism, endorsements: endorse * ENDORSE_POINTS, groupWins, bonus },
     badges,
     activity: byKind,
     electionsVoted: voted.length,

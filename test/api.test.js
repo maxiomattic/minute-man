@@ -1,32 +1,28 @@
-import { test, before, after } from 'node:test';
+import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
-import { openDb } from '../src/db.js';
+import { openNodeDb } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { seed } from '../src/seed.js';
 import { aggregate } from '../src/engine/recommend.js';
 import { activityPoints, rankFor } from '../src/engine/recognition.js';
 import { eligibility, ageOn } from '../src/rules.js';
 
-let server;
-let base;
+let handle;
+const base = 'http://t/api';
 const ADMIN = 'test-admin';
 
 before(async () => {
-  const db = openDb(':memory:');
-  seed(db);
-  server = createServer(createApp(db, { adminToken: ADMIN }));
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  base = `http://127.0.0.1:${server.address().port}/api`;
+  const db = await openNodeDb(':memory:');
+  await seed(db);
+  handle = createApp(db, { adminToken: ADMIN });
 });
-after(() => server.close());
 
 async function call(path, { method = 'GET', body, token } = {}) {
-  const r = await fetch(base + path, {
+  const r = await handle(new Request(base + path, {
     method,
     headers: { 'content-type': 'application/json', ...(token ? { authorization: 'Bearer ' + token } : {}) },
     body: body ? JSON.stringify(body) : undefined,
-  });
+  }));
   return { status: r.status, data: await r.json() };
 }
 const login = async (email) => (await call('/login', { method: 'POST', body: { email, password: 'demo-password' } })).data.token;
@@ -173,6 +169,7 @@ test('activism: check-in codes verify, double check-in rejected, self-logging ca
   assert.equal((await call(`/actions/${council.id}/checkin`, { method: 'POST', body: { code: 'WRONG' }, token: t })).status, 400);
   const ok = await call(`/actions/${council.id}/checkin`, { method: 'POST', body: { code: 'council1' }, token: t });
   assert.equal(ok.data.points, 30);
+  assert.ok([0, 5, 15, 50].includes(ok.data.lucky));
   assert.equal(ok.data.verified, true);
   assert.equal((await call(`/actions/${council.id}/checkin`, { method: 'POST', body: { code: 'COUNCIL1' }, token: t })).status, 409);
   const a = await call('/activity', { method: 'POST', body: { kind: 'social', quantity: 4 }, token: t });
@@ -259,4 +256,43 @@ test('account deletion removes user', async () => {
   const s = (await call('/signup', { method: 'POST', body: { email: 'bye@x.org', name: 'Bye', password: 'longenough' } })).data;
   assert.equal((await call('/me', { method: 'DELETE', token: s.token })).status, 200);
   assert.equal((await call('/me', { token: s.token })).status, 401);
+});
+
+test('today: next action, quests, streak, claims', async () => {
+  const s = (await call('/signup', { method: 'POST', body: { email: 'fresh@x.org', name: 'Fresh', password: 'longenough' } })).data;
+  let t = (await call('/today', { token: s.token })).data;
+  assert.equal(t.next.kind, 'profile');
+  await call('/me', { method: 'PATCH', body: { jurisdictionId: 'city-maple', birthDate: '1990-01-01' }, token: s.token });
+  t = (await call('/today', { token: s.token })).data;
+  assert.equal(t.next.kind, 'follow');
+  await call('/bindings', { method: 'POST', body: { leaderId: 1 }, token: s.token });
+  t = (await call('/today', { token: s.token })).data;
+  assert.equal(t.next.kind, 'register'); // deadline is tomorrow in demo data
+  assert.equal(t.quests.quests.length, 3);
+  assert.equal(t.streak.weeks, 0);
+  // Do the ballot quest if offered, then claim it
+  await call('/events', { method: 'POST', body: { kind: 'ballot_viewed:el-local' }, token: s.token });
+  await call('/events', { method: 'POST', body: { kind: 'events_viewed' }, token: s.token });
+  await call('/activity', { method: 'POST', body: { kind: 'social', quantity: 1 }, token: s.token });
+  t = (await call('/today', { token: s.token })).data;
+  const done = t.quests.quests.filter((q) => q.done);
+  assert.ok(done.length >= 1);
+  const c = await call(`/quests/${done[0].id}/claim`, { method: 'POST', token: s.token });
+  assert.equal(c.status, 200);
+  assert.equal((await call(`/quests/${done[0].id}/claim`, { method: 'POST', token: s.token })).status, 409);
+  t = (await call('/today', { token: s.token })).data;
+  assert.equal(t.streak.weeks, 1);
+  assert.ok(t.streak.activeThisWeek);
+  assert.ok(t.week.points >= done[0].xp);
+});
+
+test('feed shows crew actions and cheers work', async () => {
+  const t = await login('demo@example.org');
+  const f = (await call('/feed', { token: t })).data;
+  assert.ok(f.length > 0);
+  const item = f.find((x) => x.userId !== undefined);
+  const r = await call('/cheers', { method: 'POST', body: { item: item.key, ownerId: item.userId }, token: t });
+  assert.equal(r.data.cheers, item.cheers + 1);
+  const lb = (await call('/leaderboard?scope=friends&period=week', { token: t })).data;
+  assert.equal(lb.period, 'week');
 });
