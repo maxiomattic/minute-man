@@ -115,7 +115,8 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     const verb = { canvass: 'knocked', phonebank: 'made', social: 'shared' }[r.kind];
     push(p, {
       key: `a:${r.id}`, at: r.at, icon: r.kind, points: r.points, verified: !!r.verified,
-      text: verb ? `${verb} ${qty}${r.title ? ` at ${r.title}` : ''}` : r.title ? `went to ${r.title}` : `worked a ${k?.label.toLowerCase() || r.kind}`,
+      text: r.kind === 'reminded' ? `reminded ${r.quantity === 1 ? 'someone' : `${r.quantity} people`} to vote`
+        : verb ? `${verb} ${qty}${r.title ? ` at ${r.title}` : ''}` : r.title ? `went to ${r.title}` : `worked a ${k?.label.toLowerCase() || r.kind}`,
     });
   }
   for (const r of db.prepare(`SELECT user_id, source, points, at FROM bonuses WHERE at > ? AND (source LIKE 'rung:%' OR source LIKE 'learn:%')`).all(since)) {
@@ -272,7 +273,7 @@ export function standing(db, user) {
     totals: {
       doors: act(['canvass']), calls: act(['phonebank']), posts: act(['social']),
       meetings: act(['council_meeting', 'party_meeting']), shifts: act(['volunteer', 'gotv', 'election_work']),
-      reminded: db.prepare('SELECT COUNT(DISTINCT to_id) n FROM nudges WHERE from_id=?').get(user.id).n,
+      reminded: act(['reminded']),
       recruits: db.prepare('SELECT COUNT(*) n FROM users WHERE referred_by=?').get(user.id).n,
       elections: sc.electionsVoted,
     },

@@ -36,19 +36,18 @@ export function pointsSince(db, uid, since, until = null) {
   const te = until ? utcAt(until) : '9999-12-31';
   const W = 'user_id=? AND at>=? AND at<?';
   const act = db.prepare(`SELECT COALESCE(SUM(points),0) p FROM activity WHERE ${W}`).get(uid, ts, te).p;
-  const part = db.prepare(`SELECT kind FROM participation WHERE ${W} AND kind!='reminded'`).all(uid, ts, te)
+  const part = db.prepare(`SELECT kind FROM participation WHERE ${W}`).all(uid, ts, te)
     .reduce((s, r) => s + (PARTICIPATION[r.kind] || 0), 0);
-  const nudges = Math.min(10, db.prepare('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND at>=? AND at<?').get(uid, ts, te).n) * PARTICIPATION.reminded;
   const bonus = db.prepare(`SELECT COALESCE(SUM(points),0) p FROM bonuses WHERE ${W}`).get(uid, ts, te).p;
   const ends = db.prepare(`SELECT COUNT(*) n FROM endorsements WHERE ${W}`).get(uid, ts, te).n * 20;
-  return act + part + nudges + bonus + ends;
+  return act + part + bonus + ends;
 }
 
 function activeDays(db, uid, since) {
   const ts = utcAt(since);
   const shift = sqlShift();
   // Separate queries: Cloudflare's SQLite caps the number of terms in a compound SELECT.
-  const sources = [['activity', 'user_id'], ['participation', 'user_id'], ['nudges', 'from_id'], ['bonuses', 'user_id'], ['endorsements', 'user_id'], ['cheers', 'user_id']];
+  const sources = [['activity', 'user_id'], ['participation', 'user_id'], ['bonuses', 'user_id'], ['endorsements', 'user_id'], ['cheers', 'user_id']];
   const rows = sources.flatMap(([t, col]) => db.prepare(`SELECT DISTINCT date(at, ?) d FROM ${t} WHERE ${col}=? AND at>=?`).all(shift, uid, ts));
   return new Set(rows.map((r) => r.d));
 }
@@ -96,7 +95,8 @@ const QUESTS = {
     need: (c) => `Review all ${c.ballot.total} races`,
     href: (c) => `#/ballot/${c.election.id}`,
   },
-  remind: { title: 'Remind a friend to vote', xp: 20, when: (c) => c.election && c.friends > 0, progress: (c) => ({ have: c.count('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND date(at, ?)=?'), goal: 1 }), href: () => '#/board/friends' },
+  // A reminder sent from your phone to someone not on Minute Man (the 'reminded' share activity).
+  remind: { title: 'Remind someone to vote', xp: 20, when: (c) => c.election, progress: (c) => ({ have: c.count(`SELECT COUNT(*) n FROM activity WHERE user_id=? AND kind='reminded' AND day=?`), goal: 1 }), need: () => "Text a reminder to someone who isn't on Minute Man", href: () => '#/act/remind' },
   cheer: { title: 'Cheer someone in your feed', xp: 10, when: () => true, progress: (c) => ({ have: c.count('SELECT COUNT(*) n FROM cheers WHERE user_id=? AND date(at, ?)=?'), goal: 1 }), href: () => '#/feed' },
   post: { title: 'Share a post', xp: 15, progress: (c) => ({ goal: 1, have: c.count(`SELECT COUNT(*) n FROM activity WHERE user_id=? AND kind='social' AND day=?`) }), href: () => '#/act/share' },
   events: {
@@ -193,16 +193,9 @@ function nextActions(db, user, ctx) {
     const br = ctx.review;
     if (!parts.includes('voted') && br.total > 0 && br.have < br.total)
       add({ kind: 'ballot', title: 'Review your ballot', progress: `${br.have} of ${br.total} races reviewed`, body: `${br.total} races, already filled in from your endorsements. Check each one and tap Looks good.`, cta: br.have ? 'Keep reviewing' : 'See my picks', href: `#/ballot/${e.id}`, xp: 15 });
-    if (d <= 14) {
-      const f = db.prepare(
-        `SELECT u.id, u.name FROM friendships fr JOIN users u ON u.id = CASE WHEN fr.a=?1 THEN fr.b ELSE fr.a END
-         WHERE fr.status='accepted' AND (fr.a=?1 OR fr.b=?1) AND u.share_status=1
-           AND NOT EXISTS (SELECT 1 FROM participation p WHERE p.user_id=u.id AND p.election_id=?2 AND p.kind='voted')
-           AND NOT EXISTS (SELECT 1 FROM nudges n WHERE n.from_id=?1 AND n.to_id=u.id AND n.at > datetime('now','-1 day'))
-         LIMIT 1`,
-      ).get(user.id, e.id);
-      if (f) add({ kind: 'nudge', title: `Remind ${f.name.split(' ')[0]} to vote`, body: `${f.name} hasn't voted yet. A quick reminder helps.`, cta: 'Send reminder', action: { type: 'nudge', userId: f.id, electionId: e.id }, xp: 5 });
-    }
+    // Last two weeks: remind someone who isn't on Minute Man (app users get the app's own reminders).
+    if (d <= 14 && !db.prepare(`SELECT 1 FROM activity WHERE user_id=? AND kind='reminded' AND day=?`).get(user.id, day))
+      add({ kind: 'remind', title: 'Remind someone to vote', body: `${e.name} is ${d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`}. Text a quick reminder to someone who isn't on Minute Man.`, cta: 'Write a reminder', href: '#/act/remind', xp: 5 });
   }
   const ev = db.prepare(
     `SELECT a.id, a.title, a.starts_at, a.kind FROM actions a
@@ -216,7 +209,7 @@ function nextActions(db, user, ctx) {
   // Then the open actions on your skill tree, each a specific task.
   const skip = new Set(['address', 'registered', 'plan', 'vote']); // covered above
   for (const s of (ctx.ladder?.rungs || []).flatMap((r) => r.steps))
-    if (!s.done && !s.locked && !s.opensOn && !skip.has(s.id) && !s.action)
+    if (!s.done && !s.locked && !s.opensOn && !skip.has(s.id) && !s.action && !(s.id === 'remind' && out.some((x) => x.kind === 'remind')))
       add({ kind: `step:${s.id}`, title: s.label, progress: s.goal > 1 ? `${s.have} of ${s.goal} done` : null, body: s.goal > 1 ? `${s.have} of ${s.goal} done. ${s.how}` : s.how, cta: s.cta, href: s.href, xpText: s.xp });
   return out;
 }

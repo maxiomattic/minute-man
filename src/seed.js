@@ -181,7 +181,7 @@ export async function seed(db, { force = false } = {}) {
   for (const u of [friends[0], friends[2]]) part(u, 'tx-2026-runoff', 'voted', -128);
   part(friends[1], 'tx-2026-general', 'planned', -1);
   for (const u of [friends[0], friends[1], friends[2]]) part(u, null, 'registered', -300);
-  db.prepare(`INSERT INTO nudges (from_id, to_id, election_id, at) VALUES (?,?, 'tx-2026-general', ?)`).run(friends[0], demo, at(-1, 19));
+  log(friends[0], 'reminded', 1, 0, 5, -1); // a voting reminder sent to someone not on the app
   seedNeighbors(db, hashed);
 }
 

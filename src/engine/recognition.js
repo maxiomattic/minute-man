@@ -2,8 +2,8 @@
 // redeem them for anything (see README "Legal design").
 //
 // Points come from three sources, none of which depend on how anyone voted:
-//   1. participation (registered, voted, planned, reminded)  -- turnout, self-reported
-//   2. activity (meetings, canvassing, phone banking, ...)    -- activism
+//   1. participation (registered, voted, planned)            -- turnout, self-reported
+//   2. activity (meetings, canvassing, phone banking, shared posts and voting reminders, ...) -- activism
 //   3. wins: contests where a pick on the shared ballot won  -- public results, same for everyone
 
 export const ACTIVITY = {
@@ -14,6 +14,9 @@ export const ACTIVITY = {
   canvass: { label: 'Door knocking', perUnit: 1, dailyCap: 100, verifiedBonus: 20, unit: 'door' },
   phonebank: { label: 'Phone banking', perUnit: 1, dailyCap: 100, verifiedBonus: 20, unit: 'call' },
   social: { label: 'Shared post', perUnit: 3, dailyCap: 15, unit: 'post' },
+  // A reminder to vote, sent from the voter's own phone to someone not on Minute Man (app users get the
+  // app's own reminders). Recorded only when the share sheet finishes; never logged by hand.
+  reminded: { label: 'Voting reminder', perUnit: 5, dailyCap: 25, unit: 'reminder', shareOnly: true },
   election_work: { label: 'Poll watcher or election worker', verified: 60, self: 40, unit: 'shift' },
 };
 
@@ -21,9 +24,9 @@ export const PARTICIPATION = {
   registered: 50, // once ever (election_id null)
   planned: 10,
   voted: 100,
-  reminded: 5, // per friend nudged, capped below
 };
-export const REMIND_CAP = 10; // reminders that score, per election
+/** Reminders you can record in one day (points stop earlier, at ACTIVITY.reminded.dailyCap). */
+export const REMIND_DAILY_LIMIT = 20;
 export const ENDORSE_POINTS = 20;
 export const WIN_POINTS = 25;
 
@@ -48,15 +51,7 @@ export function scorecard(db, userId) {
     )
     .all(userId);
   let turnout = 0;
-  for (const p of part) if (p.kind !== 'reminded') turnout += PARTICIPATION[p.kind] || 0;
-
-  const reminders = db
-    .prepare(
-      `SELECT election_id, MIN(COUNT(*), ?) AS n FROM nudges WHERE from_id = ? GROUP BY election_id`,
-    )
-    .all(REMIND_CAP, userId);
-  const remindCount = reminders.reduce((s, r) => s + r.n, 0);
-  turnout += remindCount * PARTICIPATION.reminded;
+  for (const p of part) turnout += PARTICIPATION[p.kind] || 0;
 
   const act = db
     .prepare(
@@ -97,7 +92,7 @@ export function scorecard(db, userId) {
   if (voted.some((v) => v.ekind === 'local' || v.ekind === 'special')) add('local', 'Local Voter', 'Voted in a local or special election');
   if (voted.length >= 3) add('streak3', 'Habit', 'Voted in 3 elections');
   if (voted.length >= 10) add('streak10', 'Fixture', 'Voted in 10 elections');
-  if (remindCount >= 5) add('reminder', 'Reminder', 'Nudged 5 friends to vote');
+  if ((byKind.reminded?.qty || 0) >= 5) add('reminder', 'Reminder', 'Reminded 5 people to vote');
   if (byKind.council_meeting) add('council', 'In the Room', 'Attended a city council meeting');
   if (byKind.party_meeting) add('party', 'Party Regular', 'Attended a local party meeting');
   if ((byKind.canvass?.qty || 0) >= 100) add('doors100', 'Shoe Leather', 'Knocked 100 doors');

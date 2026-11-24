@@ -1,9 +1,9 @@
 import { engagementRoutes, luckyBonus } from './engine/engage.js';
 import { areasFor, leaderboard, standing, together } from './engine/community.js';
 import { aggregate } from './engine/recommend.js';
-import { ACTIVITY, PARTICIPATION, activityPoints, scorecard } from './engine/recognition.js';
+import { ACTIVITY, PARTICIPATION, REMIND_DAILY_LIMIT, activityPoints, scorecard } from './engine/recognition.js';
 import { LADDER, LESSONS, LESSON_POINTS, ladderFor, recruitsOf, inviteCode } from './engine/ladder.js';
-import { PUBLIC_URL, buildPosts } from './engine/posts.js';
+import { PUBLIC_URL, buildPosts, buildReminders } from './engine/posts.js';
 import { eligibility, jurisdictionChain, rulesFor } from './rules.js';
 
 class HttpError extends Error {
@@ -73,13 +73,6 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?,?,?)').run(token, userId, exp);
     return token;
   }
-
-  const isFriend = (a, b) =>
-    !!db
-      .prepare(
-        `SELECT 1 FROM friendships WHERE status='accepted' AND ((a=? AND b=?) OR (a=? AND b=?))`,
-      )
-      .get(a, b, b, a);
 
   const ownLeader = (user, id) => {
     const l = db.prepare('SELECT * FROM leaders WHERE id = ?').get(Number(id));
@@ -211,7 +204,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   route('GET', '/api/clock', () => ({ ...clockConfig(), date: clockConfig().demoDate, now: new Date().toISOString() }), { auth: false });
 
   route('GET', '/api/meta', () => ({
-    activityKinds: Object.entries(ACTIVITY).map(([k, v]) => ({ kind: k, ...v })),
+    activityKinds: Object.entries(ACTIVITY).filter(([, v]) => !v.shareOnly).map(([k, v]) => ({ kind: k, ...v })),
     participationPoints: PARTICIPATION,
   }), { auth: false });
 
@@ -431,7 +424,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   });
 
   route('POST', '/api/actions', ({ user, body }) => {
-    if (!ACTIVITY[body.kind]) throw bad('unknown kind');
+    if (!ACTIVITY[body.kind] || ACTIVITY[body.kind].shareOnly) throw bad('unknown kind');
     if (!body.title || !body.startsAt) throw bad('title and startsAt required');
     if (body.leaderId) ownLeader(user, body.leaderId);
     if (body.groupId && !db.prepare('SELECT 1 FROM group_members WHERE group_id=? AND user_id=?').get(Number(body.groupId), user.id))
@@ -483,6 +476,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   route('POST', '/api/activity', ({ user, body }) => {
     if (!ACTIVITY[body.kind]) throw bad('unknown kind');
     if (body.kind === 'social') throw bad('Posts count when you share one from Minute Man.');
+    if (body.kind === 'reminded') throw bad('Reminders count when you send one from Minute Man.');
     const qty = Math.max(1, Math.min(1000, Number(body.quantity) || 1));
     const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=?`).get(user.id, body.kind, today()).q;
     const perUnit = ACTIVITY[body.kind].perUnit || 0;
@@ -526,6 +520,35 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     db.prepare(`INSERT INTO activity (user_id, action_id, kind, quantity, note, points, day, at) VALUES (?,?,'social',1,?,?,?, datetime('now'))`)
       .run(user.id, actionId, post.text.split('\n')[0].slice(0, 280), pts, today());
     return { ok: true, points: pts, sharedToday: sharedToday(user.id) };
+  });
+
+  // ---------- reminders to vote ----------
+  // For people who aren't on Minute Man (app users already get the app's reminders). The voter sends a
+  // ready-made message from their own phone; finishing the share records it. Nothing is sent automatically.
+  const remindersFor = (user) => {
+    const election = upcomingElections(user)[0] || null;
+    const stateId = (user.jurisdiction_id || '').split('-')[0];
+    const stateName = stateId ? db.prepare('SELECT name FROM jurisdictions WHERE id=?').get(stateId)?.name || null : null;
+    return buildReminders({ election, stateName, today: today() });
+  };
+  const remindedToday = (uid) => db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind='reminded' AND day=?`).get(uid, today()).q;
+
+  route('GET', '/api/reminders', ({ user }) => {
+    const k = ACTIVITY.reminded;
+    const sent = remindedToday(user.id);
+    return { reminders: remindersFor(user), url: `${PUBLIC_URL}/#/join/${inviteCode(db, user)}`, perReminder: k.perUnit, dailyCap: k.dailyCap,
+      sentToday: sent, pointsLeftToday: Math.max(0, k.dailyCap - sent * k.perUnit), limitLeftToday: Math.max(0, REMIND_DAILY_LIMIT - sent) };
+  });
+
+  route('POST', '/api/reminders/share', ({ user, body }) => {
+    const r = remindersFor(user).find((x) => x.id === String(body.reminderId || ''));
+    if (!r) throw bad('Pick a reminder to send');
+    const sent = remindedToday(user.id);
+    if (sent >= REMIND_DAILY_LIMIT) throw new HttpError(429, `That's ${REMIND_DAILY_LIMIT} reminders today. Thanks! Pick it up again tomorrow.`);
+    const pts = activityPoints('reminded', 1, false, sent * ACTIVITY.reminded.perUnit);
+    db.prepare(`INSERT INTO activity (user_id, kind, quantity, points, day, at) VALUES (?,'reminded',1,?,?, datetime('now'))`)
+      .run(user.id, pts, today());
+    return { ok: true, points: pts, sentToday: sent + 1 };
   });
 
   route('GET', '/api/activity', ({ user }) =>
@@ -611,14 +634,15 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     return { ok: true };
   });
 
-  // ---------- friends & nudges ----------
+  // ---------- friends ----------
+  // No in-app reminders between friends: they're on Minute Man, so the app reminds them itself.
   route('GET', '/api/friends', ({ user }) => {
     const rows = db.prepare('SELECT * FROM friendships WHERE a=?1 OR b=?1').all(user.id);
     const els = upcomingElections(user);
     const next = els[0];
     return rows.map((f) => {
       const other = f.a === user.id ? f.b : f.a;
-      const u = db.prepare('SELECT id, name, share_status FROM users WHERE id=?').get(other);
+      const u = db.prepare('SELECT id, name, share_status, rung FROM users WHERE id=?').get(other);
       let status;
       if (f.status === 'accepted' && u.share_status && next) {
         const p = db.prepare('SELECT kind FROM participation WHERE user_id=? AND election_id=?').all(u.id, next.id).map((r) => r.kind);
@@ -628,7 +652,8 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
         userId: u.id, name: u.name,
         state: f.status === 'accepted' ? 'friends' : f.a === user.id ? 'requested' : 'incoming',
         status, electionId: next?.id,
-        remindedToday: !!(next && db.prepare(`SELECT 1 FROM nudges WHERE from_id=? AND to_id=? AND election_id=? AND at > datetime('now','-1 day')`).get(user.id, u.id, next.id)),
+        // Their Ladder rank, under the same rule as the feed: friends who share their status.
+        rank: f.status === 'accepted' && u.share_status ? LADDER[(u.rung || 1) - 1]?.name || null : null,
       };
     });
   });
@@ -655,17 +680,6 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     return { ok: true };
   });
 
-  route('POST', '/api/friends/:id/nudge', ({ user, params, body }) => {
-    const o = Number(params.id);
-    if (!isFriend(user.id, o)) throw new HttpError(403, 'not friends');
-    const e = db.prepare('SELECT id FROM elections WHERE id=?').get(body.electionId);
-    if (!e) throw new HttpError(404, 'no such election');
-    const recent = db.prepare(`SELECT 1 FROM nudges WHERE from_id=? AND to_id=? AND election_id=? AND at > datetime('now','-1 day')`).get(user.id, o, e.id);
-    if (recent) throw new HttpError(429, 'you already nudged them today');
-    db.prepare(`INSERT INTO nudges (from_id, to_id, election_id, at) VALUES (?,?,?, datetime('now'))`).run(user.id, o, e.id);
-    return { ok: true };
-  });
-
   // ---------- notifications (computed; app is dormant otherwise) ----------
   route('GET', '/api/notifications', ({ user }) => {
     const out = [];
@@ -681,12 +695,6 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     }
     const reg = getReg(user.id);
     if (reg.status !== 'confirmed') out.push({ kind: 'registration', urgent: false, text: 'Confirm your voter registration.' });
-    const nudges = db.prepare(
-      `SELECT n.id, u.name, e.name AS election FROM nudges n JOIN users u ON u.id=n.from_id
-       JOIN elections e ON e.id=n.election_id WHERE n.to_id=? AND n.seen=0`,
-    ).all(user.id);
-    for (const nu of nudges) out.push({ kind: 'nudge', id: nu.id, text: `${nu.name} reminded you to vote in ${nu.election}` });
-    db.prepare('UPDATE nudges SET seen=1 WHERE to_id=?').run(user.id);
     const pending = db.prepare(`SELECT COUNT(*) n FROM friendships WHERE b=? AND status='pending'`).get(user.id).n;
     if (pending) out.push({ kind: 'friend', text: `${pending} friend request${pending > 1 ? 's' : ''}` });
     const soon = db.prepare(

@@ -792,3 +792,11 @@ h1 + #together:empty { display: none; }
 .feed-rank .insignia { width: 12px; height: 12px; margin-right: 3px; vertical-align: -1.5px; }
 .commission .insignia { width: 20px; height: 20px; color: var(--brand-text); }
 .skt-rduty { flex-basis: 100%; font-size: 13px; color: var(--muted); }
+/* Remind someone to vote: pick a message (pills), edit it, send it from your phone. */
+.remind-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+.remind-pick button { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 7px 12px; font: 600 13.5px var(--text); cursor: pointer; }
+.remind-pick button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.remind-text { display: block; width: 100%; border: 0; padding: 0; background: none; font: inherit; color: inherit; resize: vertical; min-height: 5.6em; }
+.remind-text:focus { outline: none; }
+.post-card:focus-within { border-color: var(--brand-text); }
+.friend-meta { gap: 6px; flex-wrap: wrap; margin-top: 3px; align-items: center; }

@@ -2,6 +2,7 @@
 // Guardrails: never show how anyone voted; "Not yet" appears only in your own friend list and only
 // for friends who chose to share their status (the API filters this). Points are honorific.
 import { $, $$, api, esc, guard, haptic, icon, insignia, ACTIVITY_ICON, ago, initials, plural, refreshStats, sheet, state, store, toast, xpFly } from '../core.js';
+import { openRemind } from './remind.js';
 
 const first = (name) => String(name || '').split(' ')[0];
 
@@ -73,12 +74,9 @@ export async function renderFriends(body) {
       meta = '<span class="sub">Request sent</span>';
       actions = `<button class="link-btn" data-del="${f.userId}" data-verb="Cancel">Cancel</button>`;
     } else {
+      // Friends are on Minute Man, so the app reminds them itself. Show their rank and, if they share it, whether they voted.
       const s = STATUS[f.status];
-      meta = s ? `<span class="tag ${s[0]}">${s[1]}</span>` : '<span class="sub">Keeps voting status private</span>';
-      if (f.status !== 'voted' && f.electionId && f.remindedToday)
-        actions = `<button class="btn sm quiet" disabled>${icon('check')}Reminded</button>`;
-      else if (f.status !== 'voted' && f.electionId)
-        actions = `<button class="btn sm quiet" data-nudge="${f.userId}" data-e="${esc(f.electionId)}" data-name="${esc(first(f.name))}">Remind <span class="xp">+5</span></button>`;
+      meta = `<span class="row friend-meta">${f.rank ? `<span class="feed-rank">${esc(f.rank)}</span>` : ''}${s ? `<span class="tag ${s[0]}">${s[1]}</span>` : '<span class="sub">Keeps voting status private</span>'}</span>`;
     }
     return `<li><span class="avatar" aria-hidden="true">${esc(initials(f.name))}</span>
       <div class="grow"><div class="title">${esc(f.name)}</div>${meta}</div>
@@ -86,10 +84,18 @@ export async function renderFriends(body) {
   };
   body.innerHTML = `
     ${fr.length ? `<ul class="list panel flush">${fr.map(row).join('')}</ul>`
-      : `<div class="panel empty"><h2>Bring your people</h2><p>Friends can cheer each other on and send a reminder before election day.</p></div>`}
+      : `<div class="panel empty"><h2>Bring your people</h2><p>Friends on Minute Man can cheer each other on and see each other's rank.</p></div>`}
+    <div class="panel crew-form">
+      <h3>Know someone who isn't on Minute Man?</h3>
+      <p class="small muted">Text them a reminder to vote with your sample ballot link, or invite them to join.</p>
+      <div class="row inline-form">
+        <button class="btn go" type="button" id="remindSomeone">Remind someone to vote</button>
+        <a class="btn line" href="#/path/invite">Invite a friend</a>
+      </div>
+    </div>
     <form id="addFriend" class="panel crew-form">
-      <h3>Add a friend</h3>
-      <p class="small muted">They need a Minute Man account. We'll send a request they can accept.</p>
+      <h3>Add a friend who's on Minute Man</h3>
+      <p class="small muted">We'll send a request they can accept.</p>
       <div class="row inline-form">
         <label class="sr-only" for="fEmail">Friend's email</label>
         <input id="fEmail" name="email" type="email" placeholder="friend@example.org" autocomplete="off" required>
@@ -109,19 +115,7 @@ export async function renderFriends(body) {
     toast(b.dataset.verb === 'Decline' ? 'Request declined' : 'Request canceled');
     renderFriends(body);
   })));
-  $$('[data-nudge]', body).forEach((b) => (b.onclick = guard(async () => {
-    b.disabled = true;
-    try {
-      await api(`/friends/${b.dataset.nudge}/nudge`, { method: 'POST', body: { electionId: b.dataset.e } });
-    } catch (e) {
-      if (!/already/i.test(e.message)) b.disabled = false;
-      throw e;
-    }
-    xpFly(5, b);
-    b.innerHTML = `${icon('check')}Reminded`;
-    toast(`Reminder sent to ${b.dataset.name}`);
-    refreshStats();
-  })));
+  $('#remindSomeone', body).onclick = guard(() => openRemind());
   $('#addFriend', body).onsubmit = guard(async (e) => {
     e.preventDefault();
     const email = e.target.email.value.trim();

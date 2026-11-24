@@ -6,7 +6,7 @@ import { render as renderEvents } from './act.js';
 import { pathCard } from './path.js';
 
 const QUEST_HREF = {
-  ballot: '#/ballot', remind: '#/board/friends', cheer: '#/feed', post: '#/act/share',
+  ballot: '#/ballot', remind: '#/act/remind', cheer: '#/feed', post: '#/act/share',
   events: '#/act', doors: '#/act/log/canvass', calls: '#/act/log/phonebank',
 };
 const BADGE_ICON = {
@@ -124,18 +124,6 @@ export async function render(el, arg, fromAct = false, sub = null) {
     </div>`;
 
   // ----- wiring -----
-
-  $$('[data-act]', el).forEach((b) => (b.onclick = guard(async () => {
-    const a = actions[Number(b.dataset.act)];
-    if (a?.action?.type !== 'nudge') return;
-    b.disabled = true;
-    try {
-      await api(`/friends/${a.action.userId}/nudge`, { method: 'POST', body: { electionId: a.action.electionId } });
-    } catch (err) { b.disabled = false; throw err; }
-    xpFly(a.xp, b);
-    toast(`Reminder sent to ${a.title.replace(/^Remind (\S+).*/, '$1')}`);
-    await render(el);
-  })));
 
   await renderEvents($('#events-slot', el), arg, { embedded: true, sub, onChange: () => render(el) });
   if (fromAct && !arg) $('#events', el)?.scrollIntoView({ block: 'start' });

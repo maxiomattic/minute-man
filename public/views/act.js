@@ -1,5 +1,6 @@
 // Act: local volunteer events, check-ins, and self-logged civic work.
 import { $, $$, ACTIVITY_ICON, ago, api, confetti, esc, fmtWhen, guard, haptic, icon, more, refreshStats, sheet, state, toast, xpFly } from '../core.js';
+import { openRemind } from './remind.js';
 
 const kindOf = (k) => state.meta?.activityKinds?.find((x) => x.kind === k) || { kind: k, label: k, self: 0, verified: 0 };
 const localDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -316,6 +317,7 @@ export async function render(el, arg, { embedded = false, sub = null, onChange =
   if (arg) history.replaceState(null, '', embedded ? '#/today' : '#/act');
   if (arg === 'log') openLog(rerender, sub);
   else if (arg === 'share') openShare(rerender);
+  else if (arg === 'remind') openRemind(rerender);
   else if (arg && /^\d+$/.test(arg)) {
     const a = actions.find((x) => x.id === Number(arg));
     if (a) openEvent(a, rerender); else toast("That event isn't on your list anymore.");

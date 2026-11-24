@@ -11,7 +11,7 @@ export const BADGES = [
   ['local', 'Local Voter', 'hall', 'Vote in a local or special election'],
   ['streak3', 'Habit', 'flame', 'Vote in 3 elections'],
   ['streak10', 'Fixture', 'trophy', 'Vote in 10 elections'],
-  ['reminder', 'Reminder', 'chat', 'Remind 5 friends to vote'],
+  ['reminder', 'Reminder', 'chat', 'Remind 5 people to vote'],
   ['council', 'In the Room', 'hall', 'Go to a city council meeting'],
   ['party', 'Party Regular', 'hand', 'Go to a local party meeting'],
   ['doors100', 'Shoe Leather', 'door', 'Knock 100 doors'],
@@ -89,7 +89,7 @@ export async function render(el, sub) {
           <p class="small muted" id="badgeHow" aria-live="polite" style="margin:10px 0 0"></p></div>
       </section>
       <div class="panel flush"><ul class="list">
-        <li><a class="rowbtn" href="#/board/friends"><span class="ico">${icon('crew')}</span><span class="grow"><span class="title">Friends</span><span class="sub">Add friends and remind them to vote</span></span><span class="chev">${icon('chevron')}</span></a></li>
+        <li><a class="rowbtn" href="#/board/friends"><span class="ico">${icon('crew')}</span><span class="grow"><span class="title">Friends</span><span class="sub">See how your friends are doing, or invite someone</span></span><span class="chev">${icon('chevron')}</span></a></li>
         <li><a class="rowbtn" href="#/board/groups"><span class="ico">${icon('hand')}</span><span class="grow"><span class="title">Groups</span><span class="sub">${groups.length ? plural(groups.length, 'group') : 'Join or start one'}</span></span><span class="chev">${icon('chevron')}</span></a></li>
       </ul></div>
       <p class="legal">Points and honors are for recognition only. They can't be traded for anything.</p>

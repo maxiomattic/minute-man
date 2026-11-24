@@ -293,7 +293,7 @@ export async function renderVote(el, eid) {
         <div class="stamp">${icon('check')}</div>
         <h1>You voted</h1>
         <p class="muted">Thanks for showing up in the ${esc(e.name)}. The next best thing is bringing someone with you.</p>
-        <button class="btn go block" id="remindBtn">${icon('chat')}Remind someone to vote</button></div>`;
+        <button class="btn go block" id="remindBtn">Remind someone to vote</button></div>`;
     } else if (!planned || editing) {
       const how = plan?.how || '';
       const shown = placesFor(how);

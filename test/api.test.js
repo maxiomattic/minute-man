@@ -214,9 +214,14 @@ test('leaderboards honor opt-out; groups and friends work', async () => {
   const fr = (await call('/friends', { token: t })).data;
   const k = fr.find((x) => x.state === 'incoming');
   await call(`/friends/${k.userId}/accept`, { method: 'POST', token: t });
-  assert.equal((await call(`/friends/${k.userId}/nudge`, { method: 'POST', body: { electionId: 'tx-2026-general' }, token: t })).status, 200);
-  assert.equal((await call(`/friends/${k.userId}/nudge`, { method: 'POST', body: { electionId: 'tx-2026-general' }, token: t })).status, 429);
-  assert.ok((await call('/notifications', { token: f4 })).data.some((x) => x.kind === 'nudge'));
+  // No in-app nudges between friends: they're on Minute Man, so the app already reminds them.
+  assert.equal((await call(`/friends/${k.userId}/nudge`, { method: 'POST', body: { electionId: 'tx-2026-general' }, token: t })).status, 404);
+  assert.ok(!(await call('/notifications', { token: f4 })).data.some((x) => x.kind === 'nudge'));
+  const after = (await call('/friends', { token: t })).data;
+  assert.ok(after.every((x) => !('remindedToday' in x)));
+  // Accepted friends who share their status show their Ladder rank.
+  assert.ok(after.some((x) => x.state === 'friends' && x.rank));
+  assert.ok(after.filter((x) => x.state !== 'friends').every((x) => !x.rank));
 });
 
 test('friends only see participation status when shared', async () => {
@@ -538,7 +543,7 @@ test('quests: cheer, share, remind, doors and calls complete only from the real 
       return call('/cheers', { method: 'POST', body: { item: item.key, ownerId: item.userId }, token });
     },
     post: async (token) => call('/posts/share', { method: 'POST', body: { postId: (await call('/posts', { token })).data.posts[0].id }, token }),
-    remind: (token) => call(`/friends/${demoId}/nudge`, { method: 'POST', body: { electionId: 'tx-2026-general' }, token }),
+    remind: async (token) => call('/reminders/share', { method: 'POST', body: { reminderId: (await call('/reminders', { token })).data.reminders[0].id }, token }),
     doors: async (token) => {
       await call('/activity', { method: 'POST', body: { kind: 'canvass', quantity: 6 }, token });
       const q = await quest(token, 'doors');
@@ -554,4 +559,55 @@ test('quests: cheer, share, remind, doors and calls complete only from the real 
     assert.equal((await act(token)).status, 200, `${id} action`);
     assert.equal((await claim(token, id)).status, 200, `${id} after`);
   }
+});
+
+// ---- reminders to vote go to people not on Minute Man, from the voter's own phone ----
+test('reminders: ready-made messages, share records it, daily cap, Reminder badge counts shares', async () => {
+  const s = (await call('/signup', { method: 'POST', body: { email: 'remind1@x.org', name: 'Rita Reminder', password: 'longenough' } })).data;
+  const token = s.token;
+  await call('/me', { method: 'PATCH', body: { jurisdictionId: 'tx-ellis-wax', birthDate: '1990-01-01' }, token });
+  const d = (await call('/reminders', { token })).data;
+  assert.match(d.url, /^https:\/\/cvas\.careride\.workers\.dev\/#\/join\/[A-Z0-9]{6}$/);
+  const reg = d.reminders.find((r) => r.id === 'register');
+  assert.equal(reg.text, "Hey, Texas voter registration closes Mon, Oct 5 and Election Day is Tue, Nov 3. Here's my sample ballot and voting plan helper:");
+  for (const id of ['early', 'mail', 'election', 'general']) assert.ok(d.reminders.some((r) => r.id === id), id);
+  assert.ok(d.reminders.every((r) => r.text.length <= 260 && r.label));
+  assert.deepEqual([d.perReminder, d.dailyCap, d.sentToday, d.pointsLeftToday], [5, 25, 0, 25]);
+
+  // Never logged by hand, never as an event, and an unknown message is rejected.
+  assert.equal((await call('/activity', { method: 'POST', body: { kind: 'reminded', quantity: 5 }, token })).status, 400);
+  assert.equal((await call('/reminders/share', { method: 'POST', body: { reminderId: 'nope' }, token })).status, 400);
+  assert.ok(!(await call('/meta', { token })).data.activityKinds.some((k) => k.kind === 'reminded'));
+
+  // Cancelling the share sheet sends nothing, so nothing is recorded until a share finishes.
+  const before = (await call('/recognition', { token })).data.points;
+  const pts = [];
+  for (let i = 0; i < 6; i++) pts.push((await call('/reminders/share', { method: 'POST', body: { reminderId: d.reminders[i % d.reminders.length].id }, token })).data.points);
+  assert.deepEqual(pts, [5, 5, 5, 5, 5, 0]); // points stop at 25 a day
+  const rec = (await call('/recognition', { token })).data;
+  assert.equal(rec.points, before + 25);
+  const badge = rec.badges.find((b) => b.id === 'reminder');
+  assert.ok(badge, 'Reminder badge after 5 shares');
+  assert.equal(badge.desc, 'Reminded 5 people to vote');
+  assert.equal((await call('/standing', { token })).data.totals.reminded, 6);
+  assert.equal((await call('/reminders', { token })).data.pointsLeftToday, 0);
+  // Recording stops at 20 a day.
+  let status = 200;
+  let n = 6;
+  while (status === 200 && n < 40) { status = (await call('/reminders/share', { method: 'POST', body: { reminderId: 'general' }, token })).status; n++; }
+  assert.equal(status, 429);
+  assert.equal(n - 1, 20);
+  assert.equal((await call('/reminders', { token })).data.limitLeftToday, 0);
+
+  // A reminded person who joins through the link counts as a recruit.
+  const code = d.url.split('/').pop();
+  const pre = (await call('/recognition', { token })).data.points;
+  const joined = await call('/signup', { method: 'POST', body: { email: 'reminded1@x.org', name: 'Reggie Reminded', password: 'longenough', ref: code } });
+  assert.equal(joined.status, 200);
+  const l = (await call('/ladder', { token })).data;
+  assert.equal(l.recruits.length, 1);
+  assert.equal(l.recruits[0].name, 'Reggie');
+  assert.equal(l.recruits[0].earned, 25);
+  assert.equal((await call('/recognition', { token })).data.points, pre + 25);
+  assert.equal((await call('/standing', { token })).data.totals.recruits, 1);
 });

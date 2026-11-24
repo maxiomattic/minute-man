@@ -4,7 +4,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 
 ## Done
 - [x] Schema, recommendation engine (priority/consensus), recognition (points, 15 badges)
-- [x] API: auth, profile, export/delete, ballots, polling places, leaders, bindings, registration and eligibility, participation, events and check-in, self-logging, leaderboards (weekly and all-time), groups, friends and nudges, notifications, admin ingestion and results
+- [x] API: auth, profile, export/delete, ballots, polling places, leaders, bindings, registration and eligibility, participation, events and check-in, self-logging, leaderboards (weekly and all-time), groups, friends, notifications, admin ingestion and results
 - [x] Engagement engine: next-action ladder, 3 daily quests + bonus chest, weekly streaks, weekly crew standing, crew feed with cheers, lucky bonus on verified check-ins (never on voting)
 - [x] Redesign ("civic print"): Today, Ballot + vote flow, Act, Crew, You, Leaders, Register, leader console; one primary action per screen; phone and desktop layouts
 - [x] Deployed to Cloudflare (web + API); demo data reseeds with `POST /api/admin/reseed`
@@ -36,6 +36,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] No catch-all logging: Today's "Your tasks" lists your open skill-tree actions, and each one logs only its own kind of work (posts, doors, calls, shifts)
 - [x] Invite links: recruits join your crew; you earn a bonus each time a recruit reaches a new rank
 - [x] Share a post: the app writes the post (endorsed races on your ballot, each attributed to AFI or Trump; deadlines; Election Day countdown) with your invite link. "Share this post" opens the phone's share sheet (or copies); a finished share records the post (+3, 15/day cap). No logging or counting posts by hand
+- [x] Remind someone to vote: for people not on Minute Man (app users get the app's own reminders, so friend nudges and the nudge route are gone). The app writes a short personal text from the calendar (registration deadline, early voting, mail-ballot deadline, Election Day, or anytime) with your invite link; you can edit it, and the phone's share sheet sends it (or it's copied). A finished share records a 'reminded' activity (+5, 25/day points, 20/day max); cancelling records nothing. Counts for the remind quest, the "Remind 3 people" step, the Reminder badge (5 people) and your totals. Friends list shows each friend's rank and, if shared, whether they voted
 - [x] Daily quests need the real action, checked by the server: review every race on your ballot ("Looks good" or change a pick; the server stores the race, never the pick), RSVP "I'm going" to an event this week, cheer, share, remind, log 10 doors or calls. Opening a page no longer counts. Each quest shows what's left ("Review all 11 races. 3 of 11 done") and taps through to where you do it; Claim appears only when done
 - [x] 28 tests pass; screens checked at Pixel 7 and 1280x800
 - [x] New logo: a front-view tricorn (crown behind two cocked flaps, cockade) in brass, for the header mark, web icon, Android launcher (adaptive, safe zone) and splash; `scripts/icons.sh` now uses coat navy

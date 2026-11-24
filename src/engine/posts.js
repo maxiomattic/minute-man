@@ -74,3 +74,41 @@ export function buildPosts({ election, stateName, endorsed = [], today }) {
   add('join', 'invite', "I'm using Minute Man to keep up with deadlines and get a sample ballot from America First endorsements. Join me:");
   return posts;
 }
+
+/**
+ * Short, personal reminders to vote, for someone who isn't on Minute Man (app users already get the
+ * app's reminders). One per upcoming date on the calendar; the voter's invite link goes after the text.
+ * Sent only through the voter's own share sheet.
+ * @param {object} o
+ * @param {object|null} o.election  next election row
+ * @param {string|null} o.stateName "Texas"
+ * @param {string} o.today          YYYY-MM-DD
+ * @returns {Array<{id:string, label:string, text:string}>}
+ */
+export function buildReminders({ election, stateName, today }) {
+  const out = [];
+  const add = (id, label, text) => { if (text.length <= MAX) out.push({ id, label, text }); };
+  const helper = "Here's my sample ballot and voting plan helper:";
+  const st = stateName ? `${stateName} ` : '';
+  if (election && election.date >= today) {
+    const day = fmtDay(election.date);
+    const until = daysBetween(today, election.date);
+    const when = (d) => { const n = daysBetween(today, d); return n === 0 ? 'today' : n === 1 ? 'tomorrow' : fmtDay(d); };
+    const reg = election.registration_deadline;
+    if (reg && reg >= today)
+      add('register', 'Registration', `Hey, ${st}voter registration closes ${when(reg)} and Election Day is ${day}. ${helper}`);
+    const early = election.early_voting_start;
+    if (early && early > today)
+      add('early', 'Early voting', `Hey, early voting ${stateName ? `in ${stateName} ` : ''}starts ${when(early)}, before Election Day on ${day}. Want to go early with me? ${helper}`);
+    else if (early && early <= today && until > 0)
+      add('early', 'Early voting', `Hey, early voting is open now${stateName ? ` in ${stateName}` : ''}, and Election Day is ${day}. Have you voted yet? ${helper}`);
+    const mail = election.mail_ballot_deadline;
+    if (mail && mail >= today)
+      add('mail', 'Mail ballot', `Hey, if you're voting by mail, your ${st}ballot application has to arrive by ${when(mail)}. Election Day is ${day}. ${helper}`);
+    add('election', 'Election Day', until === 0
+      ? `Hey, today is Election Day! Have you voted yet? ${helper}`
+      : `Hey, Election Day is ${until === 1 ? `tomorrow, ${day}` : `${day}, ${until} days from now`}. Do you have a plan to vote? ${helper}`);
+  }
+  add('general', 'Anytime', `Hey, don't forget to vote this year! I'm using Minute Man to keep track of deadlines. ${helper}`);
+  return out;
+}
