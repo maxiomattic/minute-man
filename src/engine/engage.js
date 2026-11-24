@@ -41,14 +41,9 @@ export function pointsSince(db, uid, since) {
 
 function activeDays(db, uid, since) {
   const ts = since + ' 00:00:00';
-  const rows = db.prepare(
-    `SELECT date(at) d FROM activity WHERE user_id=?1 AND at>=?2
-     UNION SELECT date(at) FROM participation WHERE user_id=?1 AND at>=?2
-     UNION SELECT date(at) FROM nudges WHERE from_id=?1 AND at>=?2
-     UNION SELECT date(at) FROM bonuses WHERE user_id=?1 AND at>=?2
-     UNION SELECT date(at) FROM endorsements WHERE user_id=?1 AND at>=?2
-     UNION SELECT date(at) FROM cheers WHERE user_id=?1 AND at>=?2`,
-  ).all(uid, ts);
+  // Separate queries: Cloudflare's SQLite caps the number of terms in a compound SELECT.
+  const sources = [['activity', 'user_id'], ['participation', 'user_id'], ['nudges', 'from_id'], ['bonuses', 'user_id'], ['endorsements', 'user_id'], ['cheers', 'user_id']];
+  const rows = sources.flatMap(([t, col]) => db.prepare(`SELECT DISTINCT date(at) d FROM ${t} WHERE ${col}=? AND at>=?`).all(uid, ts));
   return new Set(rows.map((r) => r.d));
 }
 
