@@ -135,7 +135,7 @@ export async function seed(db, { force = false } = {}) {
   const src = await loadSources(db);
   if (!fresh) {
     if (force) refreshEventDates(db);
-    seedNeighbors(db, await hashPw('demo-password'));
+    if (!db.prepare(`SELECT 1 FROM users WHERE email='neighbor1@example.org'`).get()) seedNeighbors(db, await hashPw('demo-password'));
     return;
   }
   const hashed = await hashPw('demo-password');
