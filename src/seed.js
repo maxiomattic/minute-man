@@ -172,7 +172,7 @@ export async function seed(db, { force = false } = {}) {
 
 function refreshEventDates(db) {
   const rows = db.prepare(`SELECT id FROM actions WHERE created_by = (SELECT id FROM users WHERE email='org1@example.org') ORDER BY id`).all();
-  const plan = [[2, 18], [4, 10], [3, 18], [9, 8], [6, 19], [5, 17], [12, 9], [0, 9]];
+  const plan = [[2, 18], [untilSat(), 10], [3, 18], [9, 8], [6, 19], [5, 17], [12, 9], [0, 9]];
   rows.forEach((r, i) => {
     const [d, h] = plan[i % plan.length];
     db.prepare('UPDATE actions SET starts_at=?, ends_at=? WHERE id=?').run(at(d, h), at(d, h + 2), r.id);
