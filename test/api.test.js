@@ -5,7 +5,7 @@ import { createApp } from '../src/app.js';
 import { seed } from '../src/seed.js';
 import { configureClock } from '../src/time.js';
 import { aggregate } from '../src/engine/recommend.js';
-import { activityPoints, rankFor } from '../src/engine/recognition.js';
+import { activityPoints } from '../src/engine/recognition.js';
 import { eligibility, ageOn } from '../src/rules.js';
 
 let handle;
@@ -77,12 +77,6 @@ test('activity points respect daily caps and verification', () => {
   assert.equal(activityPoints('canvass', 50, false, 0), 50);
   assert.equal(activityPoints('canvass', 50, false, 80), 20);
   assert.equal(activityPoints('canvass', 50, true, 100), 20); // bonus only
-});
-
-test('ranks and custom rank names', () => {
-  assert.equal(rankFor(0).name, 'Newcomer');
-  assert.equal(rankFor(350).name, 'Regular');
-  assert.equal(rankFor(350, ['a', 'b', 'c']).name, 'c');
 });
 
 test('eligibility: underage, deadlines, closed primary party change', () => {
@@ -308,4 +302,68 @@ test('feed shows crew actions and cheers work', async () => {
   assert.equal(r.data.cheers, item.cheers + 1);
   const lb = (await call('/leaderboard?scope=friends&period=week', { token: t })).data;
   assert.equal(lb.period, 'week');
+});
+
+test('ladder: ranks follow the steps in order and coach the next one', async () => {
+  const su = await call('/signup', { method: 'POST', body: { email: 'climber@example.com', name: 'Casey Climber', password: 'climb-the-ladder' } });
+  const t = su.data.token;
+  let l = (await call('/ladder', { token: t })).data;
+  assert.equal(l.level, 1);
+  assert.equal(l.name, 'Newcomer');
+  assert.equal(l.coach.step.id, 'address');
+  // Doing a later rung's step first doesn't skip the basics.
+  await call('/activity', { method: 'POST', token: t, body: { kind: 'social', quantity: 5 } });
+  assert.equal((await call('/ladder', { token: t })).data.level, 1);
+  await call('/me/address', { method: 'POST', token: t, body: { address: '401 S Rogers St, Waxahachie, TX' } });
+  await call('/registration', { method: 'PUT', token: t, body: { status: 'confirmed' } });
+  await call('/participation', { method: 'POST', token: t, body: { electionId: 'tx-2026-general', kind: 'planned' } });
+  l = (await call('/ladder', { token: t })).data;
+  assert.equal(l.level, 2);
+  assert.equal(l.name, 'Registered');
+  // Voting isn't open on Oct 1, so the coach waits on it and suggests the next rung meanwhile.
+  assert.equal(l.coach.step.id, 'vote');
+  assert.match(l.coach.step.opensLabel, /Opens Oct 19/);
+  assert.equal(l.coach.meanwhile.rung, 'Messenger');
+  assert.ok(l.rungs[3].steps.find((s) => s.id === 'posts').done);
+  const rec = (await call('/recognition', { token: t })).data;
+  assert.equal(rec.rank.name, 'Registered');
+  assert.ok(rec.breakdown.bonus >= 50);
+  assert.equal((await call('/today', { token: t })).data.rank.name, 'Registered');
+});
+
+test('invites: recruiter earns a bonus as recruits climb, sees rank only if shared', async () => {
+  const demo = await login('demo@example.org');
+  const before = (await call('/recognition', { token: demo })).data.points;
+  const { invite } = (await call('/ladder', { token: demo })).data;
+  assert.match(invite.code, /^[A-Z2-9]{6}$/);
+  assert.equal((await call('/ladder', { token: demo })).data.invite.code, invite.code); // stable
+  assert.equal((await call(`/invite/${invite.code.toLowerCase()}`)).data.name, 'Demo');
+  assert.equal((await call('/invite/NOPE00')).status, 404);
+
+  const r = (await call('/signup', { method: 'POST', body: { email: 'recruit@example.com', name: 'Riley Recruit', password: 'recruit-pass', ref: invite.code } })).data.token;
+  let d = (await call('/ladder', { token: demo })).data;
+  assert.equal(d.recruits.length, 1);
+  assert.equal(d.recruits[0].name, 'Riley');
+  assert.equal(d.recruits[0].rank, null); // not sharing
+  assert.equal(d.recruits[0].earned, 25);
+  assert.ok((await call('/friends', { token: r })).data.some((f) => f.name === 'Demo Voter' && f.state === 'friends'));
+
+  await call('/me/address', { method: 'POST', token: r, body: { address: '401 S Rogers St, Waxahachie, TX' } });
+  await call('/registration', { method: 'PUT', token: r, body: { status: 'confirmed' } });
+  await call('/participation', { method: 'POST', token: r, body: { electionId: 'tx-2026-general', kind: 'planned' } });
+  await call('/me', { method: 'PATCH', token: r, body: { shareStatus: true } });
+  d = (await call('/ladder', { token: demo })).data;
+  assert.equal(d.recruits[0].rank, 'Registered');
+  assert.equal(d.recruits[0].earned, 75);
+  assert.equal((await call('/recognition', { token: demo })).data.points - before >= 75, true);
+  assert.ok(d.rungs[3].steps.find((s) => s.id === 'recruit1').done);
+});
+
+test('precinct chair is a self-reported claim that can be undone', async () => {
+  const t = await login('friend1@example.org');
+  let l = (await call('/ladder/claim', { method: 'POST', token: t, body: { id: 'precinct_chair' } })).data;
+  assert.ok(l.rungs[7].steps.find((s) => s.id === 'chair').done);
+  l = (await call('/ladder/claim', { method: 'POST', token: t, body: { id: 'precinct_chair', remove: true } })).data;
+  assert.ok(!l.rungs[7].steps.find((s) => s.id === 'chair').done);
+  assert.equal((await call('/ladder/claim', { method: 'POST', token: t, body: { id: 'mayor' } })).status, 400);
 });

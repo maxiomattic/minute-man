@@ -220,4 +220,12 @@ CREATE TABLE IF NOT EXISTS cheers (
 `;
 
 // Columns added after launch. Each runs once; 'duplicate column' errors are ignored.
-export const MIGRATIONS = ['ALTER TABLE users ADD COLUMN home_label TEXT'];
+export const MIGRATIONS = [
+  'ALTER TABLE users ADD COLUMN home_label TEXT',
+  // The Ladder (src/engine/ladder.js): invite code, who invited you, and your current rung.
+  'ALTER TABLE users ADD COLUMN ref_code TEXT',
+  'ALTER TABLE users ADD COLUMN referred_by INTEGER REFERENCES users(id) ON DELETE SET NULL',
+  'ALTER TABLE users ADD COLUMN rung INTEGER NOT NULL DEFAULT 1',
+  'CREATE UNIQUE INDEX IF NOT EXISTS users_ref_code ON users(ref_code)',
+  'CREATE INDEX IF NOT EXISTS users_referred_by ON users(referred_by)',
+];

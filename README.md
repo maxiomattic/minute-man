@@ -9,7 +9,9 @@ A web app and Android/iOS app (shared code, installable, works offline) that hel
 - **Registration help**: eligibility checks (age, deadlines, party changes for closed primaries), reminders and a pre-filled summary. Your ID photo and details are stored only on your device (IndexedDB) and never uploaded.
 - **Grassroots activism**: city council and local party meetings, campaign volunteering, door knocking, phone banking, get-out-the-vote shifts and social media posts. Organizers post events with a check-in code, which earns attendees verified points. You can also log things yourself for fewer points, with daily caps.
 - **Engagement**: a single clear next step on the Today screen, 3 daily quests plus a bonus, weekly streaks, weekly crew standings, a crew feed with cheers, and an occasional lucky bonus for verified event check-ins (never for voting).
-- **Gamification**: points, 7 ranks (a leader can rename them for their own branding), 15 badges, and leaderboards for friends, groups and leaders.
+- **The Ladder**: 8 ranks you earn by doing each step of political engagement in order, from registering and voting early to door knocking and running for precinct chair. The app coaches the next step. A leader can rename the ranks for their own branding.
+- **Invites**: everyone has an invite link. You earn a bonus each time someone you brought in reaches a new rank. Recruit ranks are visible only when the recruit shares their status.
+- **Gamification**: points, 15 badges, and leaderboards for friends, groups and leaders.
 - **Social**: friends, groups with invite codes, reminders to vote, and an opt-in view of whether friends have voted.
 - **Leader console**: publish recommendations, create events, set brand color and rank names. Leaders only ever see follower totals.
 - **Branding**: a neutral mode, or a theme in the color of a leader you follow.
@@ -67,7 +69,8 @@ One request handler (`createApp(db)` in `src/app.js`, Fetch API) runs in two pla
 | `src/engine/engage.js` | Today screen, quests, streaks, feed, cheers |
 | `src/app.js` | Router, all API endpoints, election-data import |
 | `src/engine/recommend.js` | Pluggable rules for combining recommendations (`register(name, fn)`) |
-| `src/engine/recognition.js` | Points table, ranks, badges, scorecard |
+| `src/engine/recognition.js` | Points table, badges, scorecard |
+| `src/engine/ladder.js` | The Ladder: rank steps, coaching, rank and recruit bonuses, invite codes |
 | `src/rules.js` | Per-jurisdiction rules (inherited from parent areas) and eligibility |
 | `src/seed.js` | Showcase data: Texas ballot, sources, sample voters and events |
 | `src/sources.js` | The two default endorsement sources |

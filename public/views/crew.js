@@ -137,7 +137,7 @@ async function renderBoard(body) {
       <ul class="list board panel flush">${rows.map((r) => `<li class="${r.me ? 'me' : ''}">
         <span class="place">${r.place}</span>
         <span class="avatar" aria-hidden="true">${esc(initials(r.name))}</span>
-        <div class="grow"><div class="title">${esc(r.name)}${r.me ? ' <span class="tiny muted">(you)</span>' : ''}</div><div class="sub">${esc(r.rank)}</div></div>
+        <div class="grow"><div class="title">${esc(r.name)}${r.me ? ' <span class="tiny muted">(you)</span>' : ''}</div><div class="sub">${esc(r.rank || '')}</div></div>
         <div class="board-pts"><span class="pts">${r.points}</span><span class="tiny muted">pts</span></div>
       </li>`).join('')}</ul>
       <p class="tiny muted" style="margin-top:10px">Only people who chose to appear on leaderboards are listed. Points are just for fun.</p>`;

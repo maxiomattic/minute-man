@@ -2,6 +2,7 @@
 // Every number shown comes from the API. Nothing here reveals how anyone voted.
 import { $, $$, api, checkLevelUp, confetti, esc, guard, icon, plural, refreshStats, state, toast, xpFly, fmtDate, fmtWhen } from '../core.js';
 import { bindCheers, feedItemHtml } from './crew.js';
+import { pathCard } from './path.js';
 
 const QUEST_HREF = {
   ballot: '#/ballot', remind: '#/crew/friends', cheer: '#/crew/feed', post: '#/act/log',
@@ -127,7 +128,7 @@ export async function render(el) {
     </section>`;
 
   el.innerHTML = `<div class="page two today">
-      <div class="main">${electionLine}${hero}${upNext}${quests}</div>
+      <div class="main">${electionLine}${hero}${pathCard(t.rank)}${upNext}${quests}</div>
       <div class="side">${streak}${standing}${proof}${feedPrev}${badges}</div>
     </div>`;
 

@@ -14,6 +14,7 @@ export const ACTIVITY = {
   canvass: { label: 'Door knocking', perUnit: 1, dailyCap: 100, verifiedBonus: 20, unit: 'door' },
   phonebank: { label: 'Phone banking', perUnit: 1, dailyCap: 100, verifiedBonus: 20, unit: 'call' },
   social: { label: 'Social media post', perUnit: 3, dailyCap: 15, unit: 'post' },
+  election_work: { label: 'Poll watcher or election worker', verified: 60, self: 40, unit: 'shift' },
 };
 
 export const PARTICIPATION = {
@@ -26,16 +27,6 @@ export const REMIND_CAP = 10; // reminders that score, per election
 export const ENDORSE_POINTS = 20;
 export const WIN_POINTS = 25;
 
-export const DEFAULT_RANKS = [
-  [0, 'Newcomer'],
-  [100, 'Voter'],
-  [300, 'Regular'],
-  [700, 'Organizer'],
-  [1500, 'Captain'],
-  [3000, 'Precinct Leader'],
-  [6000, 'Movement Builder'],
-];
-
 /** Points for one activity log entry, given what the user already logged that day. */
 export function activityPoints(kind, quantity, verified, alreadyToday = 0) {
   const a = ACTIVITY[kind];
@@ -46,21 +37,6 @@ export function activityPoints(kind, quantity, verified, alreadyToday = 0) {
     return base + (verified && a.verifiedBonus ? a.verifiedBonus : 0);
   }
   return verified ? a.verified : a.self;
-}
-
-export function rankFor(points, customNames) {
-  let idx = 0;
-  DEFAULT_RANKS.forEach(([min], i) => {
-    if (points >= min) idx = i;
-  });
-  const next = DEFAULT_RANKS[idx + 1];
-  const name = (customNames && customNames[idx]) || DEFAULT_RANKS[idx][1];
-  return {
-    level: idx + 1,
-    name,
-    nextAt: next ? next[0] : null,
-    nextName: next ? (customNames && customNames[idx + 1]) || next[1] : null,
-  };
 }
 
 /** Full scorecard for a user. */

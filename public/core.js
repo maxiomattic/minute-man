@@ -83,7 +83,7 @@ const P = {
 };
 export const icon = (name, cls = '') =>
   `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.star}</svg>`;
-export const ACTIVITY_ICON = { council_meeting: 'hall', party_meeting: 'hand', volunteer: 'hand', gotv: 'megaphone', canvass: 'door', phonebank: 'phone', social: 'chat', voted: 'ballot', planned: 'calendar', endorse: 'megaphone' };
+export const ACTIVITY_ICON = { council_meeting: 'hall', party_meeting: 'hand', volunteer: 'hand', gotv: 'megaphone', canvass: 'door', phonebank: 'phone', social: 'chat', election_work: 'check', voted: 'ballot', planned: 'calendar', endorse: 'megaphone' };
 
 // ---------- feedback ----------
 export function haptic(kind = 'light') {

@@ -1,7 +1,8 @@
 // Engagement: next action, daily quests, weekly streak, weekly points, friend feed, cheers.
 // Ground rules (see README "Legal design"): everything here is honorific; nothing touches vote
 // choice; feed shows only positive actions by people who opted in; no fabricated urgency.
-import { ACTIVITY, PARTICIPATION, scorecard, rankFor } from './recognition.js';
+import { ACTIVITY, PARTICIPATION, scorecard } from './recognition.js';
+import { ladderFor, rankNamesFor } from './ladder.js';
 import { localDay, utcAt, sqlShift } from '../time.js';
 
 const DAY = 86400000;
@@ -215,12 +216,8 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     const contests = election ? db.prepare('SELECT COUNT(*) n FROM contests WHERE election_id=?').get(election.id).n : 0;
     const bindings = db.prepare('SELECT COUNT(*) n FROM bindings WHERE user_id=? AND active=1').get(user.id).n;
     const actions = nextActions(db, user, { election, contests, bindings });
+    const ladder = ladderFor(db, user, rankNamesFor(db, user)); // awards rung bonuses before we total points
     const sc = scorecard(db, user.id);
-    let names = null;
-    if (user.theme?.startsWith('leader:')) {
-      const l = db.prepare('SELECT rank_names FROM leaders WHERE id=?').get(Number(user.theme.slice(7)));
-      names = l?.rank_names ? JSON.parse(l.rank_names) : null;
-    }
     const crew = crewIds(db, user.id);
     let proof = null;
     if (election && crew.length) {
@@ -237,7 +234,7 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
       quests: dailyQuests(db, user, election),
       streak: streak(db, user.id),
       points: sc.points,
-      rank: rankFor(sc.points, names),
+      rank: { level: ladder.level, name: ladder.name, nextName: ladder.nextName, progress: ladder.progress, coach: ladder.coach, of: ladder.rungs.length },
       badges: sc.badges,
       week: { points: week, place, of: weekBoard.length },
       election: election && { ...election, daysLeft: daysBetween(today(), election.date), contests },

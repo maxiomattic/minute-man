@@ -1,6 +1,7 @@
 import { engagementRoutes, luckyBonus, pointsSince, weekStart } from './engine/engage.js';
 import { aggregate, listStrategies } from './engine/recommend.js';
-import { ACTIVITY, PARTICIPATION, activityPoints, rankFor, scorecard } from './engine/recognition.js';
+import { ACTIVITY, PARTICIPATION, activityPoints, scorecard } from './engine/recognition.js';
+import { LADDER, ladderFor, recruitsOf, inviteCode, rankNamesFor } from './engine/ladder.js';
 import { eligibility, jurisdictionChain, rulesFor } from './rules.js';
 
 class HttpError extends Error {
@@ -116,7 +117,21 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
       .run(email.toLowerCase(), name, await hashPw(password));
     const id = Number(r.lastInsertRowid);
     bindDefaults(db, id);
+    // Joined through someone's invite link: they become your recruiter and your friend.
+    const ref = body.ref && db.prepare('SELECT id FROM users WHERE ref_code=?').get(String(body.ref).trim().toUpperCase());
+    if (ref) {
+      db.prepare('UPDATE users SET referred_by=? WHERE id=?').run(ref.id, id);
+      db.prepare(`INSERT OR IGNORE INTO friendships (a, b, status) VALUES (?,?,'accepted')`).run(ref.id, id);
+      ladderFor(db, db.prepare('SELECT * FROM users WHERE id=?').get(id));
+    }
     return { token: issueSession(id), user: userPublic(db.prepare('SELECT * FROM users WHERE id=?').get(id)) };
+  }, { auth: false });
+
+  // Public: who sent this invite (first name only), for the welcome screen.
+  route('GET', '/api/invite/:code', ({ params }) => {
+    const u = db.prepare('SELECT name FROM users WHERE ref_code=?').get(String(params.code).toUpperCase());
+    if (!u) throw new HttpError(404, 'invite not found');
+    return { name: u.name.split(/\s+/)[0] };
   }, { auth: false });
 
   route('POST', '/api/login', async ({ body }) => {
@@ -532,13 +547,23 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
 
   // ---------- recognition ----------
   route('GET', '/api/recognition', ({ user }) => {
-    const s = scorecard(db, user.id);
-    let names = null;
-    if (user.theme?.startsWith('leader:')) {
-      const l = db.prepare('SELECT rank_names FROM leaders WHERE id=?').get(Number(user.theme.slice(7)));
-      names = l?.rank_names ? JSON.parse(l.rank_names) : null;
-    }
-    return { ...s, rank: rankFor(s.points, names) };
+    const rank = ladderFor(db, user, rankNamesFor(db, user));
+    return { ...scorecard(db, user.id), rank };
+  });
+
+  // ---------- the ladder ----------
+  route('GET', '/api/ladder', ({ user }) => {
+    const names = rankNamesFor(db, user);
+    const recruits = recruitsOf(db, user, names);
+    const ladder = ladderFor(db, user, names);
+    return { ...ladder, invite: { code: inviteCode(db, user) }, recruits };
+  });
+
+  route('POST', '/api/ladder/claim', ({ user, body }) => {
+    if (body.id !== 'precinct_chair') throw bad('unknown claim');
+    if (body.remove) db.prepare(`DELETE FROM bonuses WHERE user_id=? AND source='claim:precinct_chair'`).run(user.id);
+    else db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?, 'claim:precinct_chair', 100, datetime('now'))`).run(user.id);
+    return ladderFor(db, db.prepare('SELECT * FROM users WHERE id=?').get(user.id), rankNamesFor(db, user));
   });
 
   route('GET', '/api/leaderboard', ({ user, query }) => {
@@ -565,12 +590,12 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     } else throw bad('bad scope');
     // Only people who opted in appear (you always see yourself).
     const rows = [...new Set(ids)]
-      .map((id) => db.prepare('SELECT id, name, on_leaderboards FROM users WHERE id=?').get(id))
+      .map((id) => db.prepare('SELECT id, name, on_leaderboards, share_status, rung FROM users WHERE id=?').get(id))
       .filter((u) => u && (u.on_leaderboards || u.id === user.id))
       .map((u) => {
         const s = scorecard(db, u.id);
         const points = week ? pointsSince(db, u.id, weekStart()) : s.points;
-        return { userId: u.id, name: u.name, points, total: s.points, rank: rankFor(s.points).name, badges: s.badges.length, me: u.id === user.id };
+        return { userId: u.id, name: u.name, points, total: s.points, rank: u.share_status || u.id === user.id ? LADDER[(u.rung || 1) - 1].name : null, badges: s.badges.length, me: u.id === user.id };
       })
       .sort((a, b) => b.points - a.points);
     rows.forEach((r, i) => (r.place = i + 1));

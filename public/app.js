@@ -21,6 +21,7 @@ const ROUTES = {
   leaders: ['me', null],           // renderLeaders
   register: ['me', null],          // renderRegister
   lead: ['me', null],              // renderLead
+  path: ['path', 'today'],
 };
 const RENDER = { endorsements: 'renderEndorsements', vote: 'renderVote', leaders: 'renderLeaders', register: 'renderRegister', lead: 'renderLead' };
 
@@ -91,6 +92,7 @@ function renderWelcome() {
     <div class="wordmark"><span class="oval"></span>CVAS</div>
     <h1>Vote America First.<br>Every race.</h1>
     <p class="muted lede">Your sample ballot, filled in from America First Insight's endorsements, with President Trump's as the fallback where they haven't picked. Plus the doors, calls and rides that win Texas.</p>
+    <p class="invited" id="invited" hidden></p>
     <div class="seg" role="tablist" style="margin-bottom:12px"><button class="on" data-m="signup" role="tab">Create account</button><button data-m="login" role="tab">Sign in</button></div>
     <form id="auth">
       <div id="nameRow"><label class="field" for="n">Name</label><input id="n" name="name" autocomplete="name" required></div>
@@ -101,6 +103,14 @@ function renderWelcome() {
     <p class="tiny muted" style="margin-top:16px">Want to look around first? Sign in as demo@example.org with the password demo-password.</p>
   </main>`;
   let mode = 'signup';
+  // Arrived from someone's invite link (#/join/CODE): remember the code until they sign up.
+  const join = location.hash.match(/^#\/join\/([A-Za-z0-9]{4,12})/);
+  if (join) store.set('ref', join[1].toUpperCase());
+  const ref = store.get('ref');
+  if (ref) api(`/invite/${ref}`).then((r) => {
+    $('#invited').textContent = `${r.name} invited you. Create an account to join their crew.`;
+    $('#invited').hidden = false;
+  }).catch(() => store.set('ref', null));
   $$('.seg button').forEach((b) => (b.onclick = () => {
     mode = b.dataset.m;
     $$('.seg button').forEach((x) => x.classList.toggle('on', x === b));
@@ -112,7 +122,9 @@ function renderWelcome() {
   $('#auth').onsubmit = guard(async (e) => {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target));
+    if (mode === 'signup' && store.get('ref')) fd.ref = store.get('ref');
     const r = await api(mode === 'login' ? '/login' : '/signup', { method: 'POST', body: fd });
+    store.set('ref', null);
     state.token = r.token; state.me = r.user;
     store.set('token', r.token);
     location.hash = '#/today';

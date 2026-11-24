@@ -24,8 +24,7 @@ const STRATEGY = {
   priority: ['Top priority wins', 'The first person on your list with a pick fills each contest.'],
   consensus: ['Consensus', 'Everyone you follow votes, weighted by priority.'],
 };
-const DEFAULT_RANKS = ['Newcomer', 'Voter', 'Regular', 'Organizer', 'Captain', 'Precinct Leader', 'Movement Builder'];
-const RANK_AT = [0, 100, 300, 700, 1500, 3000, 6000];
+const DEFAULT_RANKS = ['Newcomer', 'Registered', 'Voter', 'Messenger', 'Regular', 'Volunteer', 'Block Captain', 'Precinct Chair'];
 
 const chev = () => `<span class="chev">${icon('chevron')}</span>`;
 const download = (name, data) => {
@@ -68,28 +67,23 @@ export async function render(el, arg) {
   ]);
   const me = state.me;
   const r = rec.rank;
-  const floor = RANK_AT[r.level - 1] ?? 0;
-  const pct = r.nextAt ? Math.round(((rec.points - floor) / (r.nextAt - floor)) * 100) : 100;
+  const pct = r.progress ? Math.round((r.progress.done / r.progress.of) * 100) : 100;
   const earned = new Set(rec.badges.map((b) => b.id));
   const home = jur.find((j) => j.id === me.jurisdictionId);
 
-  // One next step for this screen, most basic first.
-  const next = !me.jurisdictionId ? ['Add your home address', null, 'profile']
-    : !binds.length ? ['Find people to follow', '#/leaders']
-      : reg.status !== 'confirmed' ? ['Check your registration', '#/register']
-        : null;
 
   el.innerHTML = `<div class="vb page two">
     <div class="main">
       <div class="me-head">
         <span class="avatar xl" aria-hidden="true">${esc((me.name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase())}</span>
         <div class="grow"><h1>${esc(me.name)}</h1>
-          <p class="muted" style="margin:0">Level ${r.level}: ${esc(r.name)}. <span class="num">${rec.points}</span> XP.</p></div>
+          <p class="muted" style="margin:0">Level ${r.level} of ${r.rungs.length}: ${esc(r.name)}. <span class="num">${rec.points}</span> XP.</p></div>
       </div>
       <div class="panel">
-        <div class="row between"><b>${r.nextAt ? `${r.nextAt - rec.points} XP to ${esc(r.nextName)}` : 'Top rank. Thank you.'}</b>${r.nextAt ? `<span class="muted small num">${rec.points} of ${r.nextAt} XP</span>` : ''}</div>
+        <div class="row between"><b>${r.nextName ? `Next rank: ${esc(r.nextName)}` : 'Top rank. Thank you.'}</b>${r.progress ? `<span class="muted small num">${r.progress.done} of ${r.progress.of} steps</span>` : ''}</div>
         <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div style="width:${Math.max(3, pct)}%"></div></div>
-        ${next ? (next[1] ? `<a class="btn go block" style="margin-top:14px" href="${next[1]}">${next[0]}</a>` : `<button class="btn go block" style="margin-top:14px" data-open="profile">${next[0]}</button>`) : ''}
+        ${r.coach ? `<p class="small" style="margin:10px 0 0">Next step: <strong>${esc(r.coach.step.label)}</strong></p>` : ''}
+        <a class="btn go block" style="margin-top:14px" href="#/path">See your path</a>
       </div>
       <section>
         <div class="section-head"><h2>Badges</h2><span class="muted small">${earned.size} of ${BADGES.length}</span></div>
