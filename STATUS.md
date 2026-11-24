@@ -49,6 +49,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] Replies on any feed item: words and one photo (same photo pipeline: resized on the phone, checked and stripped on the server, unguessable /api/media/ URL). Each item shows its reply count and the latest two; tapping opens the whole thread with a reply box. Repliers show with their rank; strangers see first name, last initial and town. Voting-status items take replies only from friends and group-mates. 50 replies a day, no points; replies nudge an item's ranking a little (people talking). Delete your own; Report hides it for you and flags it (`GET /api/admin/reports` lists replies with type 'reply'; `DELETE /api/admin/replies/:id`). Deleting a post or an account deletes its replies and their photos. Offline cache v17
 - [x] Rank insignia chips on the Friends list and Leaderboard rows too, so "Private" reads as a rank, not a privacy setting; ballot heading in sentence case ("Minute Man's picks"); offline cache v15 includes the compose and remind views
 - [x] Android app installed and verified on the Pixel 6 (rebuild: `scripts/android.sh <phone-ip:port>`)
+- [x] Debug APK published as GitHub pre-release `v0.1.0-debug` (asset `minute-man-debug.apk`, the build on the Pixel 6); README links it
 
 ## Left / ideas
 - [ ] iOS build needs a Mac with Xcode (or a CI runner): `npx cap open ios`

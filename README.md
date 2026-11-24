@@ -2,6 +2,8 @@
 
 Ready at a minute's notice. A web app and Android/iOS app (shared code, installable, works offline) that helps people vote and stay involved in civic life all year, with an America First focus.
 
+**Download (Android):** [minute-man-debug.apk](https://github.com/maxiomattic/minute-man/releases/download/v0.1.0-debug/minute-man-debug.apk), a debug build for testing ([release page](https://github.com/maxiomattic/minute-man/releases/tag/v0.1.0-debug)). Android will ask you to allow installing from unknown sources.
+
 Minute Man is free, open-source software under the MIT License (see `LICENSE`). It isn't run by or affiliated with any party, campaign or candidate. Its picks always come from the same fixed sources, so users can't swap them; anyone who wants different sources can fork it.
 
 - **Fixed sources, one endorser**: every pick is Minute Man's. Every candidate race gets one, filled in this order: America First Insight's endorsement; then Donald Trump's; then the only Republican running; then the only candidate (uncontested); with several Republicans, an incumbent Republican, otherwise the first listed; with no Republican, Libertarian, then Constitution and other right-of-center parties, then independents and no party, then other parties, and a Democrat only when nothing else is running; in a nonpartisan race, the incumbent if known, otherwise the first listed. Ballot measures get no pick. Picks are never labelled by source.
