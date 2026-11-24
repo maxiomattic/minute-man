@@ -3,11 +3,12 @@
 import { installClock } from './clock.js';
 import { $, $$, api, esc, guard, icon, initials, isNative, refreshStats, state, store, toast } from './core.js';
 
-// Two tabs: what you're doing (Today) and what other people are doing (Crew).
-// The ballot, events and your path all open from Today.
+// Three tabs: what you're doing (Today), what everyone is getting done (Feed), and where you
+// stand (Leaderboard). The ballot, events and your path all open from Today.
 const TABS = [
   ['today', 'today', 'Today'],
-  ['crew', 'crew', 'Crew'],
+  ['feed', 'feed', 'Feed'],
+  ['board', 'laurel', 'Leaderboard'],
 ];
 // route name -> [module, tab]
 const ROUTES = {
@@ -16,23 +17,17 @@ const ROUTES = {
   vote: ['ballot', 'today'],       // module exports renderVote
   endorsements: ['ballot', 'today'], // renderEndorsements
   act: ['today', 'today'],         // renderAct: Today, scrolled to events
-  crew: ['crew', 'crew'],
-  me: ['me', null],
-  leaders: ['me', null],           // renderLeaders
-  register: ['me', 'today'],       // renderRegister
-  lead: ['me', null],              // renderLead
   path: ['path', 'today'],
+  register: ['me', 'today'],       // renderRegister
+  feed: ['feed', 'feed'],
+  board: ['board', 'board'],       // #/board, #/board/friends, #/board/groups
+  me: ['me', null],
 };
-const RENDER = { act: 'renderAct', endorsements: 'renderEndorsements', vote: 'renderVote', leaders: 'renderLeaders', register: 'renderRegister', lead: 'renderLead' };
+const RENDER = { act: 'renderAct', endorsements: 'renderEndorsements', vote: 'renderVote', register: 'renderRegister' };
+// Old links from before the three tabs.
+const MOVED = { '#/crew': '#/feed', '#/crew/feed': '#/feed', '#/crew/board': '#/board', '#/crew/friends': '#/board/friends', '#/crew/groups': '#/board/groups', '#/leaders': '#/ballot' };
 
 const root = document.getElementById('app');
-
-function applyTheme() {
-  let color = null;
-  if (state.me?.theme?.startsWith('leader:')) color = state.leaders.find((l) => l.id === Number(state.me.theme.slice(7)))?.brandColor;
-  document.documentElement.style.setProperty('--brand', color || '#1c3f74');
-  $('meta[name=theme-color]').content = color || '#1c3f74';
-}
 
 function shell(active) {
   root.className = 'shell';
@@ -42,13 +37,13 @@ function shell(active) {
     `<a href="#/${id}" class="${active === id ? 'on' : ''}" ${active === id ? 'aria-current="page"' : ''}>${icon(ic)}<span>${label}</span>${id === 'today' && streak?.atRisk ? '<i class="dot" aria-label="Streak at risk"></i>' : ''}</a>`).join('');
   root.innerHTML = `
     <aside class="sidebar">
-      <a class="wordmark" href="#/today"><span class="oval"></span>CVAS</a>
+      <a class="wordmark" href="#/today">${icon('tricorn', 'mark')}Minute Man</a>
       <nav>${navLinks}<a href="#/me" class="${active === null ? 'on' : ''}">${icon('settings')}<span>You</span></a></nav>
       <div class="foot">Your vote is secret. Points can't be traded for anything.</div>
     </aside>
     <div class="col">
       <header class="topbar">
-        <a class="wordmark" href="#/today"><span class="oval"></span>CVAS</a>
+        <a class="wordmark" href="#/today">${icon('tricorn', 'mark')}Minute Man</a>
         <span id="stats"></span>
         <a class="avatar" href="#/me" aria-label="Your profile">${esc(initials(state.me?.name))}</a>
       </header>
@@ -66,7 +61,7 @@ function renderStats() {
   el.className = 'row';
   el.innerHTML = `
     <a class="chip-stat flame ${s.activeThisWeek ? '' : 'cold'}" href="#/today" title="${s.weeks}-week streak" aria-label="${s.weeks}-week streak">${icon('flame')}${s.weeks}</a>
-    <a class="chip-stat xp" href="#/crew/board" title="Your points" aria-label="${t.points} points">${icon('bolt')}${t.points}</a>`;
+    <a class="chip-stat xp" href="#/board" title="Your points" aria-label="${t.points} points">${icon('bolt')}${t.points}</a>`;
 }
 window.addEventListener('cvas:stats', () => {
   renderStats();
@@ -89,9 +84,9 @@ function renderWelcome() {
   root.dataset.tab = '';
   root.className = 'welcome';
   root.innerHTML = `<main class="content">
-    <div class="wordmark"><span class="oval"></span>CVAS</div>
-    <h1>Vote America First.<br>Every race.</h1>
-    <p class="muted lede">Your sample ballot, filled in from America First Insight's endorsements, with President Trump's as the fallback where they haven't picked. Plus the doors, calls and rides that win Texas.</p>
+    <div class="wordmark">${icon('tricorn', 'mark')}Minute Man</div>
+    <h1>Ready at a minute's notice.</h1>
+    <p class="muted lede">Your sample ballot, filled in from America First Insight's endorsements, with President Trump's where they haven't picked. Then the doors, calls and meetings that win your town, with your neighbors cheering you on.</p>
     <p class="invited" id="invited" hidden></p>
     <div class="seg" role="tablist" style="margin-bottom:12px"><button class="on" data-m="signup" role="tab">Create account</button><button data-m="login" role="tab">Sign in</button></div>
     <form id="auth">
@@ -101,6 +96,7 @@ function renderWelcome() {
       <button class="btn go block" style="margin-top:20px" type="submit">Create account</button>
     </form>
     <p class="tiny muted" style="margin-top:16px">Want to look around first? Sign in as demo@example.org with the password demo-password.</p>
+    <p class="tiny muted">Minute Man is free, open-source software. It isn't run by or affiliated with any party, campaign or candidate.</p>
   </main>`;
   let mode = 'signup';
   // Arrived from someone's invite link (#/join/CODE): remember the code until they sign up.
@@ -141,16 +137,16 @@ let routing = 0;
 async function route() {
   const ticket = ++routing;
   const [, name = 'today', arg, sub] = location.hash.split('/');
+  if (MOVED[location.hash]) { location.replace(MOVED[location.hash]); return; }
   if (!state.token) return renderWelcome();
   try {
-    if (!state.me) [state.me, state.meta, state.leaders] = await Promise.all([api('/me'), api('/meta'), api('/leaders')]);
+    if (!state.me) [state.me, state.meta, state.leaders] = await Promise.all([api('/me'), api('/meta'), api('/sources')]);
   } catch (e) {
     if (!state.token) return;
     root.className = 'welcome';
-    root.innerHTML = `<main class="content"><div class="empty"><h2>Can't reach CVAS</h2><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Try again</button></div></main>`;
+    root.innerHTML = `<main class="content"><div class="empty"><h2>Can't reach Minute Man</h2><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Try again</button></div></main>`;
     return;
   }
-  applyTheme();
   const [mod, tab] = ROUTES[name] || ROUTES.today;
   if (!$('#view') || root.dataset.tab !== String(tab)) { shell(tab); root.dataset.tab = String(tab); }
   if (!state.today) refreshStats();

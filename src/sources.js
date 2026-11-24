@@ -3,11 +3,11 @@
 export const SOURCES = [
   {
     key: 'afi', email: 'afi@sources.cvas.app', name: 'America First Insight', kind: 'organization', color: '#1c3f74',
-    blurb: "America First Insight's published endorsements, imported from americafirstinsight.com. CVAS isn't affiliated with them.",
+    blurb: "America First Insight's published endorsements, imported from americafirstinsight.com. Minute Man isn't affiliated with them.",
   },
   {
     key: 'trump', email: 'trump@sources.cvas.app', name: 'Donald J. Trump', kind: 'individual', color: '#b22234',
-    blurb: "President Trump's endorsements, as tracked by Ballotpedia. CVAS isn't affiliated with the President or his campaign.",
+    blurb: "President Trump's endorsements, as tracked by Ballotpedia. Minute Man isn't affiliated with the President or his campaign.",
   },
 ];
 

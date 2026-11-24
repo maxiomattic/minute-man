@@ -1,4 +1,4 @@
-# CVAS status
+# Minute Man status (formerly CVAS)
 
 Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLite). Demo login: demo@example.org / demo-password.
 
@@ -20,7 +20,14 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] Screens lead with the action; detail sits in tap-to-open sections. Registration ends with "Next: make your voting plan" and "Back to Today"
 - [x] Android back button: closes sheets, then goes to the previous screen, then Today; only backgrounds the app from Today
 - [x] Races with no endorsement and exactly one Republican fill in that candidate, labelled "Only Republican" (never shown as an endorsement)
-- [x] Two tabs: Today (your stuff: next step, path, quests, events, logging, streak) and Crew (other people). Ballot opens from Today
+- [x] Renamed Minute Man: Continental navy and brass, IM Fell English headings, tricorn icon (appId org.cvas.app and the workers.dev URL kept)
+- [x] Three tabs: Today, Feed, Leaderboard. Ballot opens from Today; profile from the avatar
+- [x] Feed: endless, ranked by impact × closeness × freshness with a per-person variety penalty; county muster totals (3+ active people only); cheers for anyone opted in
+- [x] Leaderboard: precinct, districts, county, state, nationwide, friends and groups; week / 30 days / all time; your numbers, 8-week chart, 14 honors
+- [x] Sources fixed (AFI, then Trump, then only Republican); leader swapping, custom leaders, themes and leader console removed
+- [x] Group members can host events with a check-in code
+- [x] FOSS under AGPL-3.0 (`LICENSE`); "not affiliated" notice on welcome and profile
+- [x] 19 fictional neighbors seeded across Ellis County, Texas and 3 other states
 - [x] Streak: a week counts only with 50+ points
 - [x] Skill tree on Your path: 22 actions, each unlocks after the ones it needs; 5 short trainings (local government, county party, block walking, poll watching, precinct chair) linked to Texas GOP / Secretary of State sources, +15 each on the honor system
 - [x] No catch-all logging: Today's "Your tasks" lists your open skill-tree actions, and each one logs only its own kind of work (posts, doors, calls, shifts)
@@ -37,4 +44,5 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [ ] Turnout check against public voter-history files
 - [ ] Trainings are honor-system; swap in county party videos if one gives us a link
 - [ ] Precinct-chair claim is self-reported; could verify against county party rosters
+- [ ] Publish the source publicly (no remote yet)
 - [ ] Election lawyer review before public launch (see README "Legal design")

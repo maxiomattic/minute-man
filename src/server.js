@@ -50,5 +50,5 @@ createServer(async (req, res) => {
     res.writeHead(404).end('not found');
   }
 }).listen(Number(process.env.PORT || 8787), process.env.HOST || '127.0.0.1', function () {
-  console.log(`CVAS on http://${this.address().address}:${this.address().port}`);
+  console.log(`Minute Man on http://${this.address().address}:${this.address().port}`);
 });

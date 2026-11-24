@@ -1,6 +1,6 @@
 {
   "appId": "org.cvas.app",
-  "appName": "CVAS",
+  "appName": "Minute Man",
   "webDir": "public",
   "server": {
     "androidScheme": "https"

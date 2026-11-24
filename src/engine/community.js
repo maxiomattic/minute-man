@@ -142,6 +142,15 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     it.score = impact * near * fresh;
   }
   items.sort((a, b) => b.score - a.score || (a.key < b.key ? -1 : 1));
+  // Variety: each further item from the same person counts a little less, so one busy
+  // neighbor doesn't fill the top of the feed.
+  const seen = new Map();
+  for (const it of items) {
+    const k = seen.get(it.userId) || 0;
+    it.score *= 0.6 ** k;
+    seen.set(it.userId, k + 1);
+  }
+  items.sort((a, b) => b.score - a.score || (a.key < b.key ? -1 : 1));
   const page = items.slice(cursor, cursor + limit);
   const mine = db.prepare('SELECT 1 FROM cheers WHERE item=? AND user_id=?');
   for (const it of page) {
@@ -160,7 +169,8 @@ export function canCheer(db, user, ownerId) {
 }
 
 // ---------- leaderboards ----------
-const monthStart = () => `${localDay().slice(0, 8)}01`;
+// "Month" is the last 30 days, so it never resets to empty on the 1st.
+const monthStart = () => localDay(new Date(Date.now() - 29 * DAY));
 const periodStart = (period) => (period === 'week' ? weekStart() : period === 'month' ? monthStart() : null);
 
 /** Who belongs to a scope (ids), and its title. Throws a plain Error for bad scopes. */
@@ -214,6 +224,25 @@ export function leaderboard(db, user, { scope = 'area:all', period = 'week', top
   return { title, scope, period, count: rows.length, rows: out, you };
 }
 
+/** What everyone in your county (or nearest area) got done in the last 30 days, together. Totals only. */
+export function together(db, user) {
+  const areas = areasFor(db, user);
+  // The broadest local area that isn't nationwide: what everyone there did this month, together.
+  const local = areas.filter((a) => a.scope !== 'area:all' && a.scope !== 'area:precinct').at(-2) || areas.find((a) => a.scope !== 'area:all');
+  if (local) {
+    const { ids } = scopeMembers(db, user, local.scope);
+    const uniq = [...new Set(ids)];
+    const ph = uniq.map(() => '?').join(',');
+    const ts = utcAt(monthStart());
+    const sum = (kinds) => db.prepare(`SELECT COALESCE(SUM(quantity),0) n FROM activity WHERE at>=? AND kind IN (${kinds.map(() => '?').join(',')}) AND user_id IN (${ph})`).get(ts, ...kinds, ...uniq).n;
+    const active = db.prepare(`SELECT COUNT(DISTINCT user_id) n FROM activity WHERE at>=? AND user_id IN (${ph})`).get(ts, ...uniq).n;
+    // Totals only, and only when enough people are active that nobody can be picked out.
+    if (active >= 3)
+      return { label: local.label, active, doors: sum(['canvass']), calls: sum(['phonebank']), events: sum(['council_meeting', 'party_meeting', 'volunteer', 'gotv', 'election_work']), posts: sum(['social']) };
+  }
+  return null;
+}
+
 // ---------- your standing ----------
 export function standing(db, user) {
   const sc = scorecard(db, user.id);
@@ -230,20 +259,6 @@ export function standing(db, user) {
     const lb = leaderboard(db, user, { scope: a.scope, period: 'month', top: 0 });
     return { scope: a.scope, label: a.label, place: lb.you?.place || null, of: lb.count };
   });
-  // The broadest local area that isn't nationwide: what everyone there did this month, together.
-  const local = areas.filter((a) => a.scope !== 'area:all' && a.scope !== 'area:precinct').at(-2) || areas.find((a) => a.scope !== 'area:all');
-  let together = null;
-  if (local) {
-    const { ids } = scopeMembers(db, user, local.scope);
-    const uniq = [...new Set(ids)];
-    const ph = uniq.map(() => '?').join(',');
-    const ts = utcAt(monthStart());
-    const sum = (kinds) => db.prepare(`SELECT COALESCE(SUM(quantity),0) n FROM activity WHERE at>=? AND kind IN (${kinds.map(() => '?').join(',')}) AND user_id IN (${ph})`).get(ts, ...kinds, ...uniq).n;
-    const active = db.prepare(`SELECT COUNT(DISTINCT user_id) n FROM activity WHERE at>=? AND user_id IN (${ph})`).get(ts, ...uniq).n;
-    // Totals only, and only when enough people are active that nobody can be picked out.
-    if (active >= 3)
-      together = { label: local.label, active, doors: sum(['canvass']), calls: sum(['phonebank']), events: sum(['council_meeting', 'party_meeting', 'volunteer', 'gotv', 'election_work']), posts: sum(['social']) };
-  }
   const st = streak(db, user.id);
   return {
     points: { week: pointsSince(db, user.id, weekStart()), month: pointsSince(db, user.id, monthStart()), all: sc.points },
@@ -258,6 +273,6 @@ export function standing(db, user) {
     weeks,
     badges: sc.badges.map((b) => b.id),
     places,
-    together,
+    together: together(db, user),
   };
 }

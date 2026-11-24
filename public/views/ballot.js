@@ -43,7 +43,7 @@ export async function loadBallot(eid) {
   }
 }
 
-const leaderName = (id) => state.leaders.find((l) => l.id === id)?.name || 'Your leaders';
+const leaderName = (id) => state.leaders.find((l) => l.id === id)?.name || 'Endorsed';
 
 /** Current picks for a contest: your override if you made one, else the recommendation. */
 function picksFor(c, ov) {
@@ -72,12 +72,12 @@ function contestHtml(c, ov) {
   const sel = picksFor(c, ov);
   const isOv = Array.isArray(ov[c.id]) && !sameSet(ov[c.id], rec.choiceIds);
   const party = rec.basis === 'party';
-  const src = rec.choiceIds.length ? (party ? 'Only Republican' : rec.sourceLeaderId ? leaderName(rec.sourceLeaderId) : 'Your leaders') : null;
+  const src = rec.choiceIds.length ? (party ? 'Only Republican' : rec.sourceLeaderId ? leaderName(rec.sourceLeaderId) : 'Endorsed') : null;
   const type = c.voteFor > 1 ? 'checkbox' : 'radio';
   const notes = [];
   for (const n of c.notes || []) notes.push(more(`Why ${esc(n.leaderName)} endorses`, `<p>${esc(n.note)}</p>`));
   if (rec.conflicts?.length)
-    notes.push(`<p class="warn">Your leaders disagree here. ${rec.conflicts.map((x) => `${esc(x.leaderName)} picks ${esc(x.choiceIds.map((id) => labelOf(c, id)).join(' and ') || 'nobody')}.`).join(' ')}</p>`);
+    notes.push(`<p class="small muted">${rec.conflicts.map((x) => `${esc(x.leaderName)} picks ${esc(x.choiceIds.map((id) => labelOf(c, id)).join(' and ') || 'nobody')}.`).join(' ')}</p>`);
   if (party) notes.push('<p class="small">No endorsement in this race.</p>');
   else if (!rec.choiceIds.length) notes.push('<p>No endorsement in this race. It\'s your call.</p>');
   if (isOv) notes.push(`<p class="row between wrap"><span>You changed this pick.</span><button class="link-btn noprint" data-undo>${rec.choiceIds.length ? 'Use their pick' : 'Clear my pick'}</button></p>`);
@@ -87,7 +87,7 @@ function contestHtml(c, ov) {
     ${c.choices.map((ch) => {
       const on = sel.includes(ch.id);
       const recd = rec.choiceIds.includes(ch.id);
-      const tag = on && isOv ? '<span class="pick mine">Your pick</span>' : recd ? `<span class="pick${on ? '' : ' off'}">${esc(src)}${party ? '' : src === 'Your leaders' ? ' pick' : ' picks'}</span>` : '';
+      const tag = on && isOv ? '<span class="pick mine">Your pick</span>' : recd ? `<span class="pick${on ? '' : ' off'}">${esc(src)}${party || src === 'Endorsed' ? '' : ' picks'}</span>` : '';
       return `<label class="choice"><input class="oval" type="${type}" name="${esc(c.id)}" value="${esc(ch.id)}" ${on ? 'checked' : ''}>
         <span class="who">${esc(ch.label)}${ch.party ? ` <span class="muted small">${esc(ch.party)}</span>` : ''}</span>${tag}</label>`;
     }).join('')}
@@ -112,8 +112,8 @@ export async function render(el, eid) {
     els = store.get(kElections()) || [];
     loadElections().catch(() => {});
   }
-  const [{ b, offline }, binds] = await Promise.all([loadBallot(eid), api('/bindings').catch(() => [])]);
-  const names = binds.filter((x) => x.active).map((x) => x.name);
+  const { b, offline } = await loadBallot(eid);
+  const names = (state.leaders || []).map((x) => x.name);
   const srcLine = names.length > 1 ? `${names[0]}'s endorsements first, then ${names.slice(1).join(', then ')} where ${names[0].split(' ').map((w) => w[0]).join('')} hasn't picked`
     : names.length ? `${names[0]}'s endorsements` : 'your sources';
   if (!offline) api('/events', { method: 'POST', body: { kind: `ballot_viewed:${eid}` } }).then(refreshStats).catch(() => {});
@@ -136,11 +136,11 @@ export async function render(el, eid) {
         </div>
         <div class="ballot-info">
           ${changed ? `<button class="link-btn" id="reset">${changed > 1 ? `Undo all ${changed} changes` : 'Undo your change'}</button>` : ''}
-          ${more('Where these picks come from', `<p class="small">${b.strategy === 'consensus' ? 'Filled in from your sources, weighted by priority' : `Filled in from ${esc(srcLine)}`}. Where nobody endorsed and only one Republican is running, that candidate is filled in. Tap an oval to change a pick.</p>`)}
+          ${more('Where these picks come from', `<p class="small">Filled in from ${esc(srcLine)}. Where nobody endorsed and only one Republican is running, that candidate is filled in. Tap an oval to change a pick.</p>`)}
           ${state.me?.jurisdictionId && !state.me.jurisdictionId.includes('-') ? more('Some races are missing', `<p class="small">This shows statewide races only. Races for your congressional and legislative districts aren't loaded for your area yet. <a href="#/endorsements">See every endorsement in your state</a>.</p>`) : ''}
         </div>
         <div class="sheets">${b.contests.map((c) => contestHtml(c, ov)).join('') || '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>'}</div>
-        <p class="legal">Your picks stay on this device. CVAS never sees how you vote.</p>
+        <p class="legal">Your picks stay on this device. Minute Man never sees how you vote.</p>
       </div>
       <aside class="side">
         <div class="panel">
@@ -249,7 +249,7 @@ export async function renderVote(el, eid) {
         <div class="stamp">${icon('check')}</div>
         <h1>You voted</h1>
         <p class="muted">Thanks for showing up in the ${esc(e.name)}. The next best thing is bringing someone with you.</p>
-        <a class="btn go block" href="#/crew/friends">Remind my crew</a></div>`;
+        <a class="btn go block" href="#/board/friends">Remind your friends</a></div>`;
     } else if (!planned || editing) {
       const how = plan?.how || '';
       const shown = placesFor(how);
@@ -361,7 +361,7 @@ export async function renderVote(el, eid) {
       haptic('heavy');
       refreshStats();
       await celebrate({ big: '+100', title: 'You voted', body: 'Thanks for showing up. Now bring someone with you.', cta: 'Remind my crew' });
-      location.hash = '#/crew/friends';
+      location.hash = '#/board/friends';
     };
   };
   draw();

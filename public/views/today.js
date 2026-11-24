@@ -6,8 +6,8 @@ import { render as renderEvents } from './act.js';
 import { pathCard } from './path.js';
 
 const QUEST_HREF = {
-  ballot: '#/ballot', remind: '#/crew/friends', cheer: '#/crew/feed', post: '#/act/log/social',
-  events: '#/act', doors: '#/act/log/canvass', calls: '#/act/log/phonebank', follow: '#/leaders',
+  ballot: '#/ballot', remind: '#/board/friends', cheer: '#/feed', post: '#/act/log/social',
+  events: '#/act', doors: '#/act/log/canvass', calls: '#/act/log/phonebank',
 };
 const BADGE_ICON = {
   registered: 'check', voted: 'ballot', primary: 'ballot', local: 'hall', streak3: 'star', streak10: 'star',
@@ -108,7 +108,7 @@ export async function render(el, arg, fromAct = false, sub = null) {
     </section>`;
 
   const badges = `<section>
-      <div class="section-head"><h2 class="h3">Badges</h2><a href="#/me">See all</a></div>
+      <div class="section-head"><h2 class="h3">Badges</h2><a href="#/board">See all</a></div>
       ${t.badges.length ? `<div class="panel"><div class="badges">${t.badges.slice(0, 6).map((b) =>
         `<div class="badge" title="${esc(b.desc)}"><div class="seal">${icon(BADGE_ICON[b.id] || 'star')}</div>${esc(b.label)}</div>`).join('')}</div></div>`
         : '<div class="panel small muted">Vote, show up to a meeting or knock doors to earn your first badge.</div>'}

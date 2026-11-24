@@ -81,11 +81,18 @@ const P = {
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  // A broadside: the printed sheet nailed up in the town square.
+  feed: '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 10.5h6M9 14h6M9 17.5h3.5"/>',
+  // Laurel and a star: honors.
+  laurel: '<path d="M12 21c-4.5-1.5-7.5-5.5-7.5-10.5M12 21c4.5-1.5 7.5-5.5 7.5-10.5"/><path d="M5 14.5c1.8.2 3 1.2 3.5 2.6M4.3 10.8c1.7-.1 3 .7 3.8 2M19 14.5c-1.8.2-3 1.2-3.5 2.6M19.7 10.8c-1.7-.1-3 .7-3.8 2"/><path d="m12 4 1.4 2.9 3.1.4-2.3 2.2.6 3.1L12 11.1l-2.8 1.5.6-3.1-2.3-2.2 3.1-.4z" fill="currentColor" stroke="none"/>',
+  // The tricorn: the Minute Man mark.
+  tricorn: '<path d="M2.5 13.5c2.6 1 5.6 1.5 9.5 1.5s6.9-.5 9.5-1.5c-1.2-.9-2-2.2-2.4-3.9-.5-2.3-3.3-3.9-7.1-3.9S5.4 7.3 4.9 9.6c-.4 1.7-1.2 3-2.4 3.9z" fill="currentColor" stroke="none"/><path d="M5 16.5c2.2.7 4.4 1 7 1s4.8-.3 7-1" />',
+  book: '<path d="M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5V19c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5z"/><path d="M12 6v13.5"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
 };
 export const icon = (name, cls = '') =>
   `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.star}</svg>`;
-export const ACTIVITY_ICON = { council_meeting: 'hall', party_meeting: 'hand', volunteer: 'hand', gotv: 'megaphone', canvass: 'door', phonebank: 'phone', social: 'chat', election_work: 'check', voted: 'ballot', planned: 'calendar', endorse: 'megaphone' };
+export const ACTIVITY_ICON = { council_meeting: 'hall', party_meeting: 'hand', volunteer: 'hand', gotv: 'megaphone', canvass: 'door', phonebank: 'phone', social: 'chat', election_work: 'check', voted: 'ballot', planned: 'calendar', registered: 'check', rank: 'laurel', learn: 'book' };
 
 // ---------- feedback ----------
 export function haptic(kind = 'light') {

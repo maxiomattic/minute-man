@@ -139,8 +139,8 @@ export const LADDER = [
     name: 'Messenger', blurb: 'Spread the word.',
     steps: [
       { id: 'posts', needs: ['registered'], xp: '+3 per post', cta: 'Log a post', label: 'Share 5 posts', how: 'Repost your candidates and local news. Log each one so it counts.', href: '#/act/log/social', goal: 5, check: (f) => f.posts },
-      { id: 'remind', needs: ['plan'], xp: '+5 per friend', cta: 'Remind friends', label: 'Remind 3 friends to vote', how: 'A personal reminder works better than any ad.', href: '#/crew/friends', goal: 3, check: (f) => f.reminded },
-      { id: 'recruit1', needs: ['posts'], xp: '+25 each', cta: 'Share your invite', label: 'Bring 1 person to CVAS', how: 'Send your invite link. You earn a bonus every time they climb a rank.', href: '#/path/invite', check: (f) => f.recruits },
+      { id: 'remind', needs: ['plan'], xp: '+5 per friend', cta: 'Remind friends', label: 'Remind 3 friends to vote', how: 'A personal reminder works better than any ad.', href: '#/board/friends', goal: 3, check: (f) => f.reminded },
+      { id: 'recruit1', needs: ['posts'], xp: '+25 each', cta: 'Share your invite', label: 'Bring 1 person to Minute Man', how: 'Send your invite link. You earn a bonus every time they climb a rank.', href: '#/path/invite', check: (f) => f.recruits },
     ],
   },
   {
@@ -149,7 +149,7 @@ export const LADDER = [
       lesson('learn_local', 'Learn how local government works', ['plan']),
       lesson('learn_party', 'Learn how your county party works', ['learn_local']),
       { id: 'meetings', needs: ['learn_party'], log: 'party_meeting', xp: '+30 each', cta: 'Find a meeting', label: 'Go to 2 local meetings', how: 'Your county GOP meeting and a city council or commissioners court meeting. Check in with the event code for full points.', href: '#/act', goal: 2, check: (f) => f.meetings },
-      { id: 'group', needs: ['learn_party'], cta: 'Find a group', label: 'Join a local group', how: 'Ask the organizer at a meeting for their CVAS invite code.', href: '#/crew/groups', check: (f) => +f.inGroup },
+      { id: 'group', needs: ['learn_party'], cta: 'Find a group', label: 'Join a local group', how: 'Ask the organizer at a meeting for their Minute Man invite code.', href: '#/board/groups', check: (f) => +f.inGroup },
     ],
   },
   {
@@ -165,7 +165,7 @@ export const LADDER = [
     name: 'Block Captain', blurb: 'Organize your neighborhood.',
     steps: [
       { id: 'doors500', needs: ['doors'], log: 'canvass', xp: '+1 per door', cta: 'Find a block walk', label: 'Knock 500 doors', how: 'Own your block: know who lives there and who still needs to vote.', href: '#/act', goal: 500, check: (f) => f.doors },
-      { id: 'lead', needs: ['group'], cta: 'Start a group', label: 'Start a group with 5 members', how: 'Create a group for your block or church and share its invite code.', href: '#/crew/groups', goal: 5, check: (f) => f.ledGroup },
+      { id: 'lead', needs: ['group'], cta: 'Start a group', label: 'Start a group with 5 members', how: 'Create a group for your block or church and share its invite code.', href: '#/board/groups', goal: 5, check: (f) => f.ledGroup },
       lesson('learn_election', 'Take poll watcher training', ['shift']),
       { id: 'work', needs: ['learn_election'], xp: '+60', cta: 'Log a shift', label: 'Work an election', how: 'Serve as a poll watcher or election worker. Your county party chair appoints poll watchers and recommends election judges.', href: '#/act/log/election_work', check: (f) => f.electionWork },
     ],

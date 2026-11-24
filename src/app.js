@@ -1,5 +1,5 @@
 import { engagementRoutes, luckyBonus } from './engine/engage.js';
-import { areasFor, leaderboard, standing } from './engine/community.js';
+import { areasFor, leaderboard, standing, together } from './engine/community.js';
 import { aggregate } from './engine/recommend.js';
 import { ACTIVITY, PARTICIPATION, activityPoints, scorecard } from './engine/recognition.js';
 import { LADDER, LESSONS, LESSON_POINTS, ladderFor, recruitsOf, inviteCode } from './engine/ladder.js';
@@ -89,8 +89,8 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
 
   // The endorsement sources, in their fixed order: America First Insight, then Donald Trump.
   const sourceLeaders = () => SOURCES.map((s, i) => {
-    const l = db.prepare('SELECT l.id, l.name, l.kind, l.brand_color FROM leaders l JOIN users u ON u.id=l.owner_id WHERE u.email=?').get(s.email);
-    return l && { id: l.id, leaderId: l.id, name: l.name, kind: l.kind, brandColor: l.brand_color, priority: i + 1, active: true };
+    const l = db.prepare('SELECT l.id, l.name, l.kind, l.blurb, l.brand_color FROM leaders l JOIN users u ON u.id=l.owner_id WHERE u.email=?').get(s.email);
+    return l && { id: l.id, leaderId: l.id, name: l.name, kind: l.kind, blurb: l.blurb, brandColor: l.brand_color, priority: i + 1, active: true };
   }).filter(Boolean);
 
   const leaderOut = (l) => ({
@@ -499,6 +499,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
 
   route('GET', '/api/areas', ({ user }) => areasFor(db, user));
   route('GET', '/api/standing', ({ user }) => standing(db, user));
+  route('GET', '/api/together', ({ user }) => together(db, user));
 
   route('GET', '/api/groups', ({ user }) =>
     db.prepare(

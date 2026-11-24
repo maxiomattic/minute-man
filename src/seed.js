@@ -222,7 +222,7 @@ function seedNeighbors(db, hashed) {
     if (rung >= 7) db.prepare('INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,15,?)').run(id, 'learn:learn_chair', at(-2 - rnd(10), 20));
     const n = 2 + Math.floor(rung / 2) + rnd(3);
     for (let k = 0; k < n; k++) {
-      const d = -rnd(26);
+      const d = -1 - rnd(25);
       const pick = rnd(10);
       const verified = rnd(3) ? 1 : 0;
       let kind;

@@ -142,9 +142,9 @@ export async function render(el, arg, sub) {
 
   $('#share', el).onclick = guard(async () => {
     const url = inviteUrl(L.invite.code);
-    const text = 'I\'m using CVAS to vote America First in every race and get our neighborhood to the polls. Join me:';
+    const text = 'I\'m using Minute Man to vote America First in every race and get our neighborhood to the polls. Join me:';
     if (navigator.share) {
-      try { await navigator.share({ title: 'Join me on CVAS', text, url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+      try { await navigator.share({ title: 'Join me on Minute Man', text, url }); return; } catch (e) { if (e.name === 'AbortError') return; }
     }
     await navigator.clipboard.writeText(`${text} ${url}`);
     toast('Invite link copied');

@@ -1,9 +1,9 @@
 {
-  "name": "CVAS — Voting & Civic Action",
-  "short_name": "CVAS",
+  "name": "Minute Man",
+  "short_name": "Minute Man",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#eef1ec",
-  "theme_color": "#1c3f74",
+  "background_color": "#eee6d2",
+  "theme_color": "#1a2848",
   "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }

@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Coordinated Voting Assistance System: guided voting, delegation to chosen leaders, and gamified grassroots activism",
+  "description": "Minute Man: guided voting and gamified grassroots activism",
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test test/*.test.js"

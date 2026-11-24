@@ -4,7 +4,7 @@
 // Points come from three sources, none of which depend on how anyone voted:
 //   1. participation (registered, voted, planned, reminded)  -- turnout, self-reported
 //   2. activity (meetings, canvassing, phone banking, ...)    -- activism
-//   3. group wins: contests where a bound leader's slate won  -- public results, same for every follower
+//   3. wins: contests where a pick on the shared ballot won  -- public results, same for everyone
 
 export const ACTIVITY = {
   council_meeting: { label: 'City council meeting', verified: 30, self: 15, unit: 'meeting' },
@@ -105,7 +105,7 @@ export function scorecard(db, userId) {
   if ((byKind.phonebank?.qty || 0) >= 100) add('calls100', 'Dialer', 'Made 100 calls');
   if ((byKind.volunteer?.n || 0) + (byKind.gotv?.n || 0) >= 5) add('shifts5', 'Reliable', 'Worked 5 volunteer or GOTV shifts');
   if (endorse) add('endorser', 'On the Record', 'Publicly endorsed a slate');
-  if (winContests.size) add('win', 'Victory', 'A slate you follow won a contest');
+  if (winContests.size) add('win', 'Victory', 'A candidate on your ballot won');
 
   return {
     points,

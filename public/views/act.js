@@ -154,10 +154,10 @@ function openLog(rerender, kind) {
  */
 export async function render(el, arg, { embedded = false, viewed = true, sub = null } = {}) {
   if (viewed) api('/events', { method: 'POST', body: { kind: 'events_viewed' } }).then(refreshStats).catch(() => {});
-  const [actions, activity, mine] = await Promise.all([
+  const [actions, activity, myGroups] = await Promise.all([
     api('/actions'),
     api('/activity').catch(() => []),
-    api('/leaders/mine').catch(() => []),
+    api('/groups').catch(() => []),
   ]);
   const rerender = () => render(el, null, { embedded, viewed: false });
 
@@ -194,14 +194,13 @@ export async function render(el, arg, { embedded = false, viewed = true, sub = n
       ${actions.length ? order.filter((g) => groups[g]).map((g) => `<section>
         <div class="section-head"><h2>${g}</h2><span class="muted small">${groups[g].length}</span></div>
         <div class="panel flush"><ul class="list">${groups[g].map(row).join('')}</ul></div></section>`).join('')
-        : `<div class="panel empty">${icon('calendar', 'empty-ico')}<h2>No events yet</h2><p>Join a local group with its invite code. Its block walks and meetups show up here.</p><a class="btn line" href="#/crew">Join a group</a></div>`}
+        : `<div class="panel empty">${icon('calendar', 'empty-ico')}<h2>No events yet</h2><p>Join a local group with its invite code. Its block walks and meetups show up here.</p><a class="btn line" href="#/board/groups">Join a group</a></div>`}
     </div>
     <aside class="side">
       <section>
         <div class="section-head"><h2>Your record</h2></div>
         <div class="panel flush">${rec ? `<ul class="list compact">${rec}</ul>` : '<div class="empty"><p>Nothing logged yet. Your first check-in shows up here.</p></div>'}</div>
       </section>
-      ${mine.length ? `<p class="small"><a href="#/lead/${mine[0].id}">Host an event</a> <span class="muted">for ${esc(mine[0].name)}</span></p>` : ''}
       <p class="legal">Points are for fun. They can't be traded for anything.</p>
     </aside>
   </div>`;
@@ -211,11 +210,12 @@ export async function render(el, arg, { embedded = false, viewed = true, sub = n
     el.innerHTML = `<section id="events">
         <div class="section-head"><h2 class="h3">Events near you</h2>${actions.length ? `<span class="muted small">${actions.filter((a) => bucket(a) !== 'Recent').length}</span>` : ''}</div>
         ${upcoming.length ? `<div class="panel flush"><ul class="list">${upcoming.flatMap((g) => groups[g]).map(row).join('')}</ul></div>`
-          : `<div class="panel small muted">No events coming up. <a href="#/crew">Join a local group</a> and its block walks and meetups show up here.</div>`}
+          : `<div class="panel small muted">No events coming up. <a href="#/board/groups">Join a local group</a> and its block walks and meetups show up here.</div>`}
         ${rec ? more('Your record', `<div class="panel flush"><ul class="list compact">${rec}</ul></div>`) : ''}
-        ${mine.length ? `<p class="small"><a href="#/lead/${mine[0].id}">Host an event</a> <span class="muted">for ${esc(mine[0].name)}</span></p>` : ''}
+        ${myGroups.length ? `<p class="small"><button class="link-btn" id="host">${icon('plus')}Host an event</button> <span class="muted">for ${esc(myGroups.length === 1 ? myGroups[0].name : 'one of your groups')}</span></p>` : ''}
       </section>`;
   }
+  $('#host', el)?.addEventListener('click', () => hostEvent(myGroups, rerender));
   $$('[data-a]', el).forEach((b) => (b.onclick = () => openEvent(actions.find((a) => a.id === Number(b.dataset.a)), rerender)));
   // Deep links open a sheet once; drop the arg so a reload doesn't reopen it.
   if (arg) history.replaceState(null, '', embedded ? '#/today' : '#/act');
@@ -224,4 +224,34 @@ export async function render(el, arg, { embedded = false, viewed = true, sub = n
     const a = actions.find((x) => x.id === Number(arg));
     if (a) openEvent(a, rerender); else toast("That event isn't on your list anymore.");
   }
+}
+
+/** Create an event for one of your groups. Shows its check-in code after. */
+function hostEvent(groups, rerender) {
+  const local = (d) => { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:00`; };
+  const tomorrow = new Date(Date.now() + 86400000); tomorrow.setHours(18);
+  const { el: s, close } = sheet(`<div class="vb"><div class="row between"><h2 style="margin:0">Host an event</h2><button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
+    <form id="ev">
+      ${groups.length > 1 ? `<label class="field" for="eg">For</label><select id="eg" name="groupId">${groups.map((g) => `<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select>` : `<input type="hidden" name="groupId" value="${groups[0].id}">`}
+      <label class="field" for="ek">What kind?</label><select id="ek" name="kind">${(state.meta?.activityKinds || []).map((k) => `<option value="${esc(k.kind)}">${esc(k.label)}</option>`).join('')}</select>
+      <label class="field" for="et">Title</label><input id="et" name="title" required placeholder="Saturday block walk: Precinct 101">
+      <label class="field" for="eloc">Where</label><input id="eloc" name="location" placeholder="Address, or Online">
+      <label class="field" for="es">Starts</label><input id="es" name="startsAt" type="datetime-local" required value="${local(tomorrow)}">
+      <label class="field" for="ed">Details</label><textarea id="ed" name="description" rows="2"></textarea>
+      <button class="btn go block" style="margin-top:16px">Create event</button>
+    </form></div>`);
+  $('[data-close]', s).onclick = close;
+  $('#ev', s).onsubmit = guard(async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target));
+    fd.startsAt = new Date(fd.startsAt).toISOString().replace('T', ' ').slice(0, 19);
+    const a = await api('/actions', { method: 'POST', body: fd });
+    close();
+    haptic('success');
+    const { el: done, close: c2 } = sheet(`<div class="vb center"><h2>Created your event</h2>
+      <p class="muted">${esc(a.title)}</p>
+      <div class="code-card big"><span class="small">Check-in code</span><b class="num">${esc(a.checkin_code)}</b><span class="tiny muted">Show it at the event. People who enter it get full points.</span></div>
+      <button class="btn block" style="margin-top:16px" data-close>Done</button></div>`);
+    $('[data-close]', done).onclick = () => { c2(); rerender(); };
+  });
 }

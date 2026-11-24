@@ -1,9 +1,8 @@
-// Crew: friend feed, leaderboards, friends, groups.
+// People: feed items and cheers (used by the Feed tab), friends and groups (under Leaderboard).
 // Guardrails: never show how anyone voted; "Not yet" appears only in your own friend list and only
 // for friends who chose to share their status (the API filters this). Points are honorific.
 import { $, $$, api, esc, guard, haptic, icon, ACTIVITY_ICON, ago, initials, plural, refreshStats, sheet, state, store, toast, xpFly } from '../core.js';
 
-const SUBS = [['feed', 'Feed'], ['board', 'Leaderboard'], ['friends', 'Friends'], ['groups', 'Groups']];
 const first = (name) => String(name || '').split(' ')[0];
 
 // ---------- feed items (shared with Today) ----------
@@ -15,7 +14,7 @@ export function feedItemHtml(it) {
       <div><strong>${esc(it.name)}</strong> ${esc(it.text)}</div>
       <div class="row tiny muted feed-meta">
         <span class="feed-kind">${icon(ACTIVITY_ICON[it.icon] || 'star')}</span>
-        <span>${esc(ago(it.at))} ago</span>
+        <span>${esc(ago(it.at))} ago${it.place && !mine ? `, ${esc(it.place.replace(/, [A-Z]{2}$/, ''))}` : ''}</span>
         ${it.verified ? '<span class="tag good">Verified</span>' : ''}
       </div>
     </div>
@@ -57,100 +56,10 @@ export function bindCheers(root, onCheer) {
   });
 }
 
-// ---------- page ----------
-export async function render(el, sub = 'feed') {
-  if (!SUBS.some(([s]) => s === sub)) sub = 'feed';
-  el.innerHTML = `<div class="crew">
-    <h1>Crew</h1>
-    <nav class="seg crew-seg" aria-label="Crew sections">${SUBS.map(([s, l]) =>
-      `<a href="#/crew/${s}" class="${s === sub ? 'on' : ''}" ${s === sub ? 'aria-current="page"' : ''}>${l}</a>`).join('')}</nav>
-    <div id="crewBody"><div class="skeleton"></div></div>
-  </div>`;
-  const body = $('#crewBody', el);
-  await ({ feed: renderFeed, board: renderBoard, friends: renderFriends, groups: renderGroups })[sub](body);
-}
-
-// ---------- feed ----------
-async function renderFeed(body) {
-  const items = await api('/feed');
-  if (!items.length) {
-    body.innerHTML = `<div class="panel empty">
-      <h2>Your feed is quiet</h2>
-      <p>Add friends or join a group. When they vote, knock doors or show up to a meeting, you'll see it here and can cheer them on.</p>
-      <div class="row wrap" style="justify-content:center;margin-top:14px">
-        <a class="btn go" href="#/crew/friends">Add a friend</a>
-        <a class="btn line" href="#/crew/groups">Join a group</a>
-      </div></div>`;
-    return;
-  }
-  body.innerHTML = `<p class="small muted crew-lede">What your friends and group-mates did in the last two weeks.</p>
-    <div class="panel flush">${items.map(feedItemHtml).join('')}</div>`;
-  bindCheers(body);
-}
-
-// ---------- leaderboard ----------
-async function renderBoard(body) {
-  const [groups, binds] = await Promise.all([api('/groups'), api('/bindings')]);
-  const scopes = [['friends', 'Friends'], ...groups.map((g) => [`group:${g.id}`, g.name]), ...binds.filter((b) => b.active).map((b) => [`leader:${b.leaderId}`, `Followers of ${b.name}`])];
-  let scope = store.get('lbscope', 'friends');
-  if (!scopes.some(([s]) => s === scope)) scope = 'friends';
-  let period = store.get('lbperiod', 'week');
-
-  body.innerHTML = `<div class="board-controls">
-      <div class="seg" role="tablist" aria-label="Time period">
-        <button role="tab" data-p="week">This week</button><button role="tab" data-p="all">All time</button>
-      </div>
-      <label class="sr-only" for="lbScope">Leaderboard</label>
-      <select id="lbScope">${scopes.map(([s, l]) => `<option value="${esc(s)}" ${s === scope ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
-    </div>
-    <div id="boardOut"><div class="skeleton"></div></div>`;
-
-  const out = $('#boardOut', body);
-  const paint = guard(async () => {
-    $$('[data-p]', body).forEach((b) => { b.classList.toggle('on', b.dataset.p === period); b.setAttribute('aria-selected', b.dataset.p === period); });
-    const lb = await api(`/leaderboard?scope=${encodeURIComponent(scope)}&period=${period}`);
-    const rows = lb.rows;
-    const meIdx = rows.findIndex((r) => r.me);
-    const me = rows[meIdx];
-    let nudge = '';
-    if (rows.length > 1 && me) {
-      if (meIdx > 0) {
-        const above = rows[meIdx - 1];
-        const gap = above.points - me.points;
-        nudge = gap === 0 ? `You're tied with ${esc(first(above.name))}. One more action puts you ahead.`
-          : `You're ${plural(gap, 'point')} behind ${esc(first(above.name))}${period === 'week' ? ' this week' : ''}.`;
-      } else {
-        const next = rows[1];
-        const lead = me.points - next.points;
-        nudge = lead === 0 ? `You're tied for first with ${esc(first(next.name))}.` : `You're in first, ${plural(lead, 'point')} ahead of ${esc(first(next.name))}.`;
-      }
-    }
-    const hidden = state.me && !state.me.onLeaderboards
-      ? `<p class="small muted board-hidden">${icon('lock')}<span>Only you can see yourself here. Others can't see you on leaderboards. <a href="#/me">Change in your settings</a></span></p>` : '';
-    if (rows.length <= 1) {
-      out.innerHTML = `${hidden}<div class="panel empty"><h2>Just you so far</h2>
-        <p>${scope === 'friends' ? 'Add friends to see how your week stacks up.' : 'Invite people to this group to start a friendly race.'}</p>
-        <a class="btn go" href="#/crew/${scope === 'friends' ? 'friends' : 'groups'}">${scope === 'friends' ? 'Add a friend' : 'Share an invite'}</a></div>`;
-      return;
-    }
-    out.innerHTML = `${nudge ? `<p class="board-nudge">${nudge}</p>` : ''}${hidden}
-      <ul class="list board panel flush">${rows.map((r) => `<li class="${r.me ? 'me' : ''}">
-        <span class="place">${r.place}</span>
-        <span class="avatar" aria-hidden="true">${esc(initials(r.name))}</span>
-        <div class="grow"><div class="title">${esc(r.name)}${r.me ? ' <span class="tiny muted">(you)</span>' : ''}</div><div class="sub">${esc(r.rank || '')}</div></div>
-        <div class="board-pts"><span class="pts">${r.points}</span><span class="tiny muted">pts</span></div>
-      </li>`).join('')}</ul>
-      <p class="tiny muted" style="margin-top:10px">Only people who chose to appear on leaderboards are listed. Points are just for fun.</p>`;
-  });
-  $$('[data-p]', body).forEach((b) => (b.onclick = () => { period = b.dataset.p; store.set('lbperiod', period); paint(); }));
-  $('#lbScope', body).onchange = (e) => { scope = e.target.value; store.set('lbscope', scope); paint(); };
-  await paint();
-}
-
 // ---------- friends ----------
 const STATUS = { voted: ['good', 'Voted'], planned: ['brand', 'Has a plan'], not_yet: ['', 'Not yet'] };
 
-async function renderFriends(body) {
+export async function renderFriends(body) {
   const fr = await api('/friends');
   const order = { incoming: 0, friends: 1, requested: 2 };
   fr.sort((a, b) => order[a.state] - order[b.state] || a.name.localeCompare(b.name));
@@ -180,7 +89,7 @@ async function renderFriends(body) {
       : `<div class="panel empty"><h2>Bring your people</h2><p>Friends can cheer each other on and send a reminder before election day.</p></div>`}
     <form id="addFriend" class="panel crew-form">
       <h3>Add a friend</h3>
-      <p class="small muted">They need a CVAS account. We'll send a request they can accept.</p>
+      <p class="small muted">They need a Minute Man account. We'll send a request they can accept.</p>
       <div class="row inline-form">
         <label class="sr-only" for="fEmail">Friend's email</label>
         <input id="fEmail" name="email" type="email" placeholder="friend@example.org" autocomplete="off" required>
@@ -225,7 +134,7 @@ async function renderFriends(body) {
 // ---------- groups ----------
 const KIND = { team: 'Team', neighborhood: 'Neighborhood', chapter: 'Chapter' };
 
-async function renderGroups(body) {
+export async function renderGroups(body) {
   const groups = await api('/groups');
   body.innerHTML = `
     ${groups.length ? `<ul class="list panel flush">${groups.map((g) => `<li class="group-row">
@@ -263,7 +172,7 @@ async function renderGroups(body) {
   const byId = (id) => groups.find((g) => String(g.id) === String(id));
   $$('[data-share]', body).forEach((b) => (b.onclick = guard(async () => {
     const g = byId(b.dataset.share);
-    const text = `Join "${g.name}" on CVAS with invite code ${g.inviteCode}.`;
+    const text = `Join "${g.name}" on Minute Man with invite code ${g.inviteCode}.`;
     if (navigator.share) {
       try { await navigator.share({ title: g.name, text }); } catch { /* user closed the share sheet */ }
       return;
@@ -271,7 +180,7 @@ async function renderGroups(body) {
     await navigator.clipboard.writeText(g.inviteCode);
     toast(`Invite code ${g.inviteCode} copied`);
   })));
-  $$('[data-lb]', body).forEach((b) => (b.onclick = () => { store.set('lbscope', `group:${b.dataset.lb}`); location.hash = '#/crew/board'; }));
+  $$('[data-lb]', body).forEach((b) => (b.onclick = () => { store.set('lbscope', `group:${b.dataset.lb}`); location.hash = '#/board'; }));
   $$('[data-leave]', body).forEach((b) => (b.onclick = () => {
     const g = byId(b.dataset.leave);
     const s = sheet(`<h2>Leave ${esc(g.name)}?</h2>
@@ -281,7 +190,7 @@ async function renderGroups(body) {
     $('[data-ok]', s.el).onclick = guard(async () => {
       await api(`/groups/${g.id}/membership`, { method: 'DELETE' });
       s.close();
-      if (store.get('lbscope') === `group:${g.id}`) store.set('lbscope', 'friends');
+      if (store.get('lbscope') === `group:${g.id}`) store.del('lbscope');
       toast(`You left ${g.name}`);
       renderGroups(body);
     });
