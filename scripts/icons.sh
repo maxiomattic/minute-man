@@ -10,16 +10,27 @@ BG='#1a2848'
 RES=android/app/src/main/res
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 
-# Glyph only (tricorn, no rounded background), from public/icon.svg.
-glyph=$(sed -E 's#<rect width="64" height="64"[^>]*/>##; s#<svg [^>]*>##; s#</svg>##' public/icon.svg)
-# Adaptive foreground: 108dp canvas, hat spans ~61dp, inside the 66dp safe circle.
-printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -7 78 78">%s</svg>' "$glyph" > "$TMP/fg.svg"
+# The minuteman glyph (no tile), from public/icon.svg, plus a brass strip that runs the
+# coat off the bottom edge wherever the shape is masked (adaptive, round, splash).
+glyph=$(sed -nE 's#.*(<g id="minuteman">.*</g>).*#\1#p' public/icon.svg)
+coat='<path fill="#c8962f" d="M9.5 62H54.5C60 70 66 80 72 112H-8C-2 80 4 70 9.5 62Z"/>'
+# Badge: navy disc centered on (32,35), r 38, glyph and coat clipped to it.
+disc() { # extra-svg
+  printf '<defs><clipPath id="d"><circle cx="32" cy="35" r="38"/></clipPath></defs><circle cx="32" cy="35" r="38" fill="%s"/><g clip-path="url(#d)">%s%s</g>%s' "$BG" "$coat" "$glyph" "${1:-}"
+}
+# Adaptive foreground: 108dp canvas = 108 units, centered on (32,33). The hat stays in the
+# 66dp safe circle and the bayonet inside the 72dp visible circle; the coat runs off the edge.
+printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-22 -21 108 108">%s%s</svg>' "$coat" "$glyph" > "$TMP/fg.svg"
 # Full-bleed square (iOS icon, no alpha / no rounded corners; iOS masks it).
-printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="%s"/>%s</svg>' "$BG" "$glyph" > "$TMP/square.svg"
+printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="%s"/>%s%s</svg>' "$BG" "$coat" "$glyph" > "$TMP/square.svg"
 # Round legacy icon.
-printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="%s"/>%s</svg>' "$BG" "$glyph" > "$TMP/round.svg"
-# Splash glyph (smaller in frame).
-printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-48 -48 160 160">%s</svg>' "$glyph" > "$TMP/splash.svg"
+printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -3 76 76">%s</svg>' "$(disc)" > "$TMP/round.svg"
+# Splash: the badge with a brass ring, small in frame.
+printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-88 -85 240 240">%s</svg>' \
+  "$(disc '<circle cx="32" cy="35" r="38" fill="none" stroke="#c8962f" stroke-width="2.5"/>')" > "$TMP/splash.svg"
+# Web maskable icon: full-bleed navy, figure inside the 80% safe circle.
+printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16 -13 96 96"><rect x="-16" y="-13" width="96" height="96" fill="%s"/>%s%s</svg>\n' "$BG" "$coat" "$glyph" > public/icon-maskable.svg
+[[ -n "${ICON_PREVIEW:-}" ]] && { cp "$TMP"/*.svg "$ICON_PREVIEW"/; exit 0; }
 
 for d in mdpi:1 hdpi:1.5 xhdpi:2 xxhdpi:3 xxxhdpi:4; do
   name=${d%%:*}; s=${d##*:}
@@ -46,4 +57,8 @@ for f in "$RES"/drawable*/splash.png ios/App/App/Assets.xcassets/Splash.imageset
 
 rsvg-convert -w 1024 -h 1024 "$TMP/square.svg" | magick - -background "$BG" -alpha remove -alpha off \
   ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+# PNG web icons for the manifest and apple-touch-icon.
+for n in 192 512; do rsvg-convert -w $n -h $n public/icon.svg -o public/icon-$n.png; done
+rsvg-convert -w 512 -h 512 public/icon-maskable.svg -o public/icon-maskable-512.png
+rsvg-convert -w 180 -h 180 "$TMP/square.svg" -o public/apple-touch-icon.png
 echo "icons + splash regenerated"

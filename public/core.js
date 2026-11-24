@@ -85,11 +85,13 @@ const P = {
   feed: '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 10.5h6M9 14h6M9 17.5h3.5"/>',
   // Laurel and a star: honors.
   laurel: '<path d="M12 21c-4.5-1.5-7.5-5.5-7.5-10.5M12 21c4.5-1.5 7.5-5.5 7.5-10.5"/><path d="M5 14.5c1.8.2 3 1.2 3.5 2.6M4.3 10.8c1.7-.1 3 .7 3.8 2M19 14.5c-1.8.2-3 1.2-3.5 2.6M19.7 10.8c-1.7-.1-3 .7-3.8 2"/><path d="m12 4 1.4 2.9 3.1.4-2.3 2.2.6 3.1L12 11.1l-2.8 1.5.6-3.1-2.3-2.2 3.1-.4z" fill="currentColor" stroke="none"/>',
-  // The tricorn, seen from the front: crown behind two cocked flaps, a cockade on the left flap.
-  tricorn: '<g transform="translate(0 1.4)" fill="currentColor" stroke="none"><path d="M5.7 7.6C6.5 5.3 8.9 4 12 4s5.5 1.3 6.3 3.6c-2.3.6-4.3 1.6-6.3 2.9-2-1.3-4-2.3-6.3-2.9z"/><path fill-rule="evenodd" d="M.4 6.4c4.2.5 8 2.6 11.6 5 3.6-2.4 7.4-4.5 11.6-5-.3 3.6-1.6 6.6-3.9 8.6-2.4.6-5 1.1-7.7 2.6-2.7-1.5-5.3-2-7.7-2.6C2 13 .7 10 .4 6.4zM4.7 11.6a1.9 1.9 0 1 0 3.8 0 1.9 1.9 0 1 0-3.8 0zM5.85 11.6a.75.75 0 1 0 1.5 0 .75.75 0 1 0-1.5 0z"/></g>',
   book: '<path d="M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5V19c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5z"/><path d="M12 6v13.5"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
 };
+/** The Minute Man logo: a militiaman in a tricorn (with cockade) and a musket, on the navy tile.
+ *  Same drawing as public/icon.svg (scripts/icons.sh builds the app icons from that file). */
+export const logo = (cls = '') =>
+  `<svg class="${cls}" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#1a2848"/><g><path fill="#c8962f" stroke="#1a2848" stroke-width="1.4" stroke-linejoin="round" d="M57.7 8L58.4 8.2L58.1 16.1L59.8 16.5L51.5 57L47.3 56L55.8 15.6L57.1 15.8Z"/><path fill="#c8962f" d="M9.5 62.6C10 53 15 48.5 24 46.5L32 51.5L40 46.5C49 48.5 54 53 54.5 62.6A14 14 0 0 1 50 64H14A14 14 0 0 1 9.5 62.6Z"/><path fill="#1a2848" d="M24 46.5L32 59.5L40 46.5L37 45.5L32 53.5L27 45.5Z"/><path fill="#eee6d2" d="M28 41h8v5l-4 5.5-4-5.5z"/><path fill="#c8962f" d="M21.5 27.5C21 33.5 22 38 24.5 41L27 37L26 28.5ZM42.5 27.5C43 33.5 42 38 39.5 41L37 37L38 28.5Z"/><circle cx="32" cy="33.5" r="9.5" fill="#eee6d2"/><path fill="#c8962f" stroke="#1a2848" stroke-width="1.6" stroke-linejoin="round" d="M8 11C12.5 14 17 15.5 21 15.2C22.5 11 26.5 8.5 32 8.5C37.5 8.5 41.5 11 43 15.2C47 15.5 51.5 14 56 11C55.5 18.5 52 23.5 46 26.5C40.5 28.5 35.5 29.5 32 32C28.5 29.5 23.5 28.5 18 26.5C12 23.5 8.5 18.5 8 11Z"/><path fill="none" stroke="#1a2848" stroke-width="1.6" stroke-linecap="round" d="M21 15.6C24.5 17 28 17.6 32 17.6C36 17.6 39.5 17 43 15.6"/><circle cx="16" cy="19.8" r="2.6" fill="#eee6d2"/></g></svg>`;
 export const icon = (name, cls = '') =>
   `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.star}</svg>`;
 /** The Ladder's ranks in order (mirrors src/engine/ladder.js), for the insignia below. */

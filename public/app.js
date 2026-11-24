@@ -1,7 +1,7 @@
 // App shell + router. Views live in ./views/*.js and export render functions:
 //   export async function render(el, arg, sub) { ... }   (el = the <main> content node)
 import { installClock } from './clock.js';
-import { $, $$, api, esc, guard, icon, initials, isNative, refreshStats, state, store, toast } from './core.js';
+import { $, $$, api, esc, guard, icon, initials, logo, isNative, refreshStats, state, store, toast } from './core.js';
 
 // Three tabs: what you're doing (Today), what everyone is getting done (Feed), and where you
 // stand (Leaderboard). The ballot, events and your path all open from Today.
@@ -37,13 +37,13 @@ function shell(active) {
     `<a href="#/${id}" class="${active === id ? 'on' : ''}" ${active === id ? 'aria-current="page"' : ''}>${icon(ic)}<span>${label}</span>${id === 'today' && streak?.atRisk ? '<i class="dot" aria-label="Streak at risk"></i>' : ''}</a>`).join('');
   root.innerHTML = `
     <aside class="sidebar">
-      <a class="wordmark" href="#/today">${icon('tricorn', 'mark')}Minute Man</a>
+      <a class="wordmark" href="#/today">${logo('mark')}Minute Man</a>
       <nav>${navLinks}<a href="#/me" class="${active === null ? 'on' : ''}">${icon('settings')}<span>You</span></a></nav>
       <div class="foot">Your vote is secret. Points can't be traded for anything.</div>
     </aside>
     <div class="col">
       <header class="topbar">
-        <a class="wordmark" href="#/today">${icon('tricorn', 'mark')}Minute Man</a>
+        <a class="wordmark" href="#/today">${logo('mark')}Minute Man</a>
         <span id="stats"></span>
         <a class="avatar" href="#/me" aria-label="Your profile">${esc(initials(state.me?.name))}</a>
       </header>
@@ -84,7 +84,7 @@ function renderWelcome() {
   root.dataset.tab = '';
   root.className = 'welcome';
   root.innerHTML = `<main class="content">
-    <div class="wordmark">${icon('tricorn', 'mark')}Minute Man</div>
+    <div class="wordmark">${logo('mark')}Minute Man</div>
     <h1>Ready at a minute's notice.</h1>
     <p class="muted lede">Your sample ballot, filled in with Minute Man's picks for every race. Then the doors, calls and meetings that win your town, with your neighbors cheering you on.</p>
     <p class="invited" id="invited" hidden></p>
