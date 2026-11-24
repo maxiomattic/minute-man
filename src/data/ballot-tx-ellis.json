@@ -1,0 +1,261 @@
+[
+ {
+  "id": "tx26-us-sen",
+  "race": "US-SEN",
+  "title": "United States Senator",
+  "sort": 0,
+  "choices": [
+   {
+    "id": "tx26-us-sen-0",
+    "label": "Ken Paxton",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-us-sen-1",
+    "label": "James Talarico",
+    "party": "Democratic"
+   },
+   {
+    "id": "tx26-us-sen-2",
+    "label": "Ted Brown",
+    "party": "Libertarian"
+   }
+  ],
+  "source": "https://ballotpedia.org/United_States_Senate_election_in_Texas,_2026"
+ },
+ {
+  "id": "tx26-us-house-6",
+  "race": "US-HOUSE-6",
+  "title": "U.S. Representative, District 6",
+  "sort": 1,
+  "choices": [
+   {
+    "id": "tx26-us-house-6-0",
+    "label": "Jake Ellzey",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-us-house-6-1",
+    "label": "Danny Minton",
+    "party": "Democratic"
+   }
+  ],
+  "source": "https://ballotpedia.org/Texas'_6th_Congressional_District_election,_2026"
+ },
+ {
+  "id": "tx26-gov",
+  "race": "GOV",
+  "title": "Governor",
+  "sort": 2,
+  "choices": [
+   {
+    "id": "tx26-gov-0",
+    "label": "Greg Abbott",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-gov-1",
+    "label": "Gina Hinojosa",
+    "party": "Democratic"
+   },
+   {
+    "id": "tx26-gov-2",
+    "label": "Pat Dixon",
+    "party": "Libertarian"
+   }
+  ],
+  "source": "https://ballotpedia.org/Texas_gubernatorial_election,_2026"
+ },
+ {
+  "id": "tx26-ltgov",
+  "race": "LTGOV",
+  "title": "Lieutenant Governor",
+  "sort": 3,
+  "choices": [
+   {
+    "id": "tx26-ltgov-0",
+    "label": "Dan Patrick",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-ltgov-1",
+    "label": "Vikki Goodwin",
+    "party": "Democratic"
+   },
+   {
+    "id": "tx26-ltgov-2",
+    "label": "Anthony Cristo",
+    "party": "Libertarian"
+   },
+   {
+    "id": "tx26-ltgov-3",
+    "label": "Kevin McCormick",
+    "party": "Green"
+   }
+  ],
+  "source": "https://ballotpedia.org/Lieutenant_Governor_of_Texas"
+ },
+ {
+  "id": "tx26-ag",
+  "race": "AG",
+  "title": "Attorney General",
+  "sort": 4,
+  "choices": [
+   {
+    "id": "tx26-ag-0",
+    "label": "Mayes Middleton",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-ag-1",
+    "label": "Nathan Johnson",
+    "party": "Democratic"
+   },
+   {
+    "id": "tx26-ag-2",
+    "label": "Tom Oxford",
+    "party": "Libertarian"
+   }
+  ],
+  "source": "https://ballotpedia.org/Texas_Attorney_General_election,_2026"
+ },
+ {
+  "id": "tx26-comptroller",
+  "race": "COMPTROLLER",
+  "title": "Comptroller of Public Accounts",
+  "sort": 5,
+  "choices": [
+   {
+    "id": "tx26-comptroller-0",
+    "label": "Donald Huffines",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-comptroller-1",
+    "label": "Sarah Eckhardt",
+    "party": "Democratic"
+   },
+   {
+    "id": "tx26-comptroller-2",
+    "label": "V. Alonzo Echavarria-Garza",
+    "party": "Libertarian"
+   },
+   {
+    "id": "tx26-comptroller-3",
+    "label": "Shehla Faizi",
+    "party": "Green"
+   }
+  ],
+  "source": "https://ballotpedia.org/Texas_Comptroller_election,_2026"
+ },
+ {
+  "id": "tx26-land",
+  "race": "LAND",
+  "title": "Commissioner of the General Land Office",
+  "sort": 6,
+  "choices": [
+   {
+    "id": "tx26-land-0",
+    "label": "Dawn Buckingham",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-land-1",
+    "label": "Benjamin Flores",
+    "party": "Democratic"
+   },
+   {
+    "id": "tx26-land-2",
+    "label": "Neil Snider",
+    "party": "Libertarian"
+   }
+  ],
+  "source": "https://ballotpedia.org/Texas_Public_Lands_Commissioner_election,_2026"
+ },
+ {
+  "id": "tx26-agriculture",
+  "race": "AGRICULTURE",
+  "title": "Commissioner of Agriculture",
+  "sort": 7,
+  "choices": [
+   {
+    "id": "tx26-agriculture-0",
+    "label": "Nate Sheets",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-agriculture-1",
+    "label": "Clayton Tucker",
+    "party": "Democratic"
+   },
+   {
+    "id": "tx26-agriculture-2",
+    "label": "Austin Kelly",
+    "party": "Libertarian"
+   }
+  ],
+  "source": "https://ballotpedia.org/Texas_Agriculture_Commissioner_election,_2026"
+ },
+ {
+  "id": "tx26-railroad",
+  "race": "RAILROAD",
+  "title": "Railroad Commissioner",
+  "sort": 8,
+  "choices": [
+   {
+    "id": "tx26-railroad-0",
+    "label": "Bo French",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-railroad-1",
+    "label": "Jon Rosenthal",
+    "party": "Democratic"
+   },
+   {
+    "id": "tx26-railroad-2",
+    "label": "Arthur DiBianca",
+    "party": "Libertarian"
+   }
+  ],
+  "source": "https://ballotpedia.org/Texas_Railroad_Commissioner_election,_2026"
+ },
+ {
+  "id": "tx26-state-sen-2",
+  "race": "STATE-SEN-2",
+  "title": "State Senator, District 2",
+  "sort": 9,
+  "choices": [
+   {
+    "id": "tx26-state-sen-2-0",
+    "label": "Bob Hall",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-state-sen-2-1",
+    "label": "Keenen Colbert",
+    "party": "Democratic"
+   }
+  ],
+  "source": "https://ballotpedia.org/Texas_State_Senate_District_2"
+ },
+ {
+  "id": "tx26-state-house-10",
+  "race": "STATE-HOUSE-10",
+  "title": "State Representative, District 10",
+  "sort": 10,
+  "choices": [
+   {
+    "id": "tx26-state-house-10-0",
+    "label": "Brian E. Harrison",
+    "party": "Republican"
+   },
+   {
+    "id": "tx26-state-house-10-1",
+    "label": "Michael Myers",
+    "party": "Democratic"
+   }
+  ],
+  "source": "https://ballotpedia.org/Texas_House_of_Representatives_District_10"
+ }
+]

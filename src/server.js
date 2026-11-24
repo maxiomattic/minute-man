@@ -7,6 +7,10 @@ import { fileURLToPath } from 'node:url';
 import { openNodeDb } from './db.js';
 import { createApp } from './app.js';
 import { seed } from './seed.js';
+import { configureClock } from './time.js';
+
+// Showcase defaults: Waxahachie, TX on Oct 1, 2026. Set CVAS_DEMO_DATE= (empty) for the real date.
+configureClock({ zone: process.env.CVAS_ZONE || 'America/Chicago', demoDate: process.env.CVAS_DEMO_DATE ?? '2026-10-01' });
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = join(root, 'public');

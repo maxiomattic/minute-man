@@ -5,6 +5,12 @@
 //   db.tx(fn)         run fn atomically and return its result
 import { SCHEMA } from './schema.js';
 
+// SQLite's 'now' is the real clock. Swap it for the app clock (which may be a demo date)
+// so SQL and JS agree on what time it is.
+const sqlNow = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
+const NOW = /\b(datetime|date)\('now'/g;
+export const nowify = (q) => (q.includes("'now'") ? q.replace(NOW, (_, f) => `${f}('${sqlNow()}'`) : q);
+
 export { SCHEMA };
 
 export async function openNodeDb(path = ':memory:') {
@@ -14,7 +20,10 @@ export async function openNodeDb(path = ':memory:') {
   raw.exec(SCHEMA);
   return {
     prepare: (q) => {
-      const s = raw.prepare(q);
+      // Statements that mention 'now' are re-prepared per call so the time stays current.
+      const fixed = q.includes("'now'") ? null : raw.prepare(q);
+      const st = () => fixed || raw.prepare(nowify(q));
+      const s = { get: (...a) => st().get(...a), all: (...a) => st().all(...a), run: (...a) => st().run(...a) };
       return {
         get: (...a) => s.get(...a),
         all: (...a) => s.all(...a),
@@ -45,10 +54,10 @@ export function durableDb(storage) {
   const split = (q) => q.split(/;\s*\n/).map((s) => s.trim()).filter(Boolean);
   const db = {
     prepare: (q) => ({
-      get: (...a) => sql.exec(q, ...a).toArray()[0],
-      all: (...a) => sql.exec(q, ...a).toArray(),
+      get: (...a) => sql.exec(nowify(q), ...a).toArray()[0],
+      all: (...a) => sql.exec(nowify(q), ...a).toArray(),
       run: (...a) => {
-        const c = sql.exec(q, ...a);
+        const c = sql.exec(nowify(q), ...a);
         c.toArray();
         const id = sql.exec('SELECT last_insert_rowid() AS id').one().id;
         return { lastInsertRowid: Number(id), changes: c.rowsWritten };

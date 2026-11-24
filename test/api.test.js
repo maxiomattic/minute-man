@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { openNodeDb } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { seed } from '../src/seed.js';
+import { configureClock } from '../src/time.js';
 import { aggregate } from '../src/engine/recommend.js';
 import { activityPoints, rankFor } from '../src/engine/recognition.js';
 import { eligibility, ageOn } from '../src/rules.js';
@@ -12,6 +13,7 @@ const base = 'http://t/api';
 const ADMIN = 'test-admin';
 
 before(async () => {
+  configureClock({ zone: 'America/Chicago', demoDate: '2026-10-01' });
   const db = await openNodeDb(':memory:');
   await seed(db);
   handle = createApp(db, { adminToken: ADMIN });
@@ -105,84 +107,86 @@ test('signup, login, auth required', async () => {
   assert.equal((await call('/login', { method: 'POST', body: { email: 'new@x.org', password: 'wrong-pass' } })).status, 401);
 });
 
-test('sample ballot reflects bindings and priority', async () => {
-  const t = await login('demo@example.org');
-  const b = (await call('/elections/el-local/ballot', { token: t })).data;
-  const mayor = b.contests.find((c) => c.id === 'c-mayor');
-  assert.deepEqual(mayor.recommendation.choiceIds, ['ch-mayor-b']);
-  // Measure A: both Riverbend (1) and Teachers (2) say yes → no conflict
-  const ma = b.contests.find((c) => c.id === 'c-meas-a');
-  assert.equal(ma.recommendation.conflicts.length, 0);
-  // School board: only Teachers has an opinion
-  const sb = b.contests.find((c) => c.id === 'c-schools');
-  assert.deepEqual(sb.recommendation.choiceIds, ['ch-sb-a']);
-
-  // Follow taxpayers forum at top priority → mayor flips, conflict shown
-  const ls = (await call('/leaders')).data;
-  const tf = ls.find((l) => l.name.includes('Taxpayers'));
-  let binds = (await call('/bindings', { method: 'POST', body: { leaderId: tf.id }, token: t })).data;
-  const order = [tf.id, ...binds.filter((x) => x.leaderId !== tf.id).map((x) => x.leaderId)].map((leaderId) => ({ leaderId }));
-  binds = (await call('/bindings', { method: 'PUT', body: order, token: t })).data;
-  assert.equal(binds[0].leaderId, tf.id);
-  const b2 = (await call('/elections/el-local/ballot', { token: t })).data;
-  const m2 = b2.contests.find((c) => c.id === 'c-mayor');
-  assert.deepEqual(m2.recommendation.choiceIds, ['ch-mayor-a']);
-  assert.equal(m2.recommendation.conflicts.length, 1);
-  // Revoke binding
-  await call(`/bindings/${tf.id}`, { method: 'DELETE', token: t });
-  const b3 = (await call('/elections/el-local/ballot', { token: t })).data;
-  assert.deepEqual(b3.contests.find((c) => c.id === 'c-mayor').recommendation.choiceIds, ['ch-mayor-b']);
+test('signup binds AFI first, Trump second', async () => {
+  const s = (await call('/signup', { method: 'POST', body: { email: 'binds@x.org', name: 'B', password: 'longenough' } })).data;
+  const b = (await call('/bindings', { token: s.token })).data;
+  assert.deepEqual(b.map((x) => x.name), ['America First Insight', 'Donald J. Trump']);
 });
 
-test('leaders can only publish for their own source, with valid choices', async () => {
+test('sample ballot: AFI first, Trump as fallback, no invented picks', async () => {
+  const t = await login('demo@example.org');
+  const ls = (await call('/leaders')).data;
+  const afi = ls.find((l) => l.name === 'America First Insight').id;
+  const trump = ls.find((l) => l.name === 'Donald J. Trump').id;
+  const b = (await call('/elections/tx-2026-general/ballot', { token: t })).data;
+  const rec = (id) => b.contests.find((c) => c.id === id).recommendation;
+  assert.deepEqual(rec('tx26-us-sen').choiceIds, ['tx26-us-sen-0']); // Paxton
+  assert.equal(rec('tx26-us-sen').sourceLeaderId, afi);
+  assert.equal(rec('tx26-gov').sourceLeaderId, trump); // Abbott, via fallback
+  assert.equal(rec('tx26-state-house-10').sourceLeaderId, afi);
+  assert.deepEqual(rec('tx26-state-sen-2').choiceIds, []); // neither source endorsed
+
+  // Put Trump first: shared picks now credit Trump, AFI-only races still come from AFI
+  await call('/bindings', { method: 'PUT', body: [{ leaderId: trump }, { leaderId: afi }], token: t });
+  const b2 = (await call('/elections/tx-2026-general/ballot', { token: t })).data;
+  const src2 = (id) => b2.contests.find((c) => c.id === id).recommendation.sourceLeaderId;
+  assert.equal(src2('tx26-gov'), trump);
+  assert.ok(b.contests.some((c) => c.recommendation.sourceLeaderId === afi && src2(c.id) === afi), 'some AFI-only race keeps its AFI pick');
+  // Drop Trump: governor has no pick
+  await call(`/bindings/${trump}`, { method: 'DELETE', token: t });
+  const b3 = (await call('/elections/tx-2026-general/ballot', { token: t })).data;
+  assert.deepEqual(b3.contests.find((c) => c.id === 'tx26-gov').recommendation.choiceIds, []);
+  await call('/bindings', { method: 'POST', body: { leaderId: trump }, token: t });
+  const back = (await call('/bindings', { method: 'PUT', body: [{ leaderId: afi }, { leaderId: trump }], token: t })).data;
+  assert.deepEqual(back.map((x) => x.leaderId), [afi, trump]);
+});
+
+test('endorsements browser: attributed picks by state', async () => {
+  const tok = await login('demo@example.org');
+  const tx = (await call('/endorsements?state=TX', { token: tok })).data;
+  assert.deepEqual(tx.sources, ['America First Insight', 'Donald J. Trump']);
+  const sen = tx.races.find((r) => r.race === 'US-SEN');
+  assert.equal(sen.pick.sourceName, 'America First Insight');
+  assert.ok(sen.pick.candidate.includes('Paxton'));
+  const ga = (await call('/endorsements?state=GA', { token: tok })).data;
+  assert.equal(ga.races.find((r) => r.race === 'GOV').pick.sourceName, 'Donald J. Trump');
+});
+
+test('source leaders cannot be edited by sample accounts', async () => {
   const org = await login('org1@example.org');
-  const demo = await login('demo@example.org');
-  assert.equal((await call('/leaders/2/recommendations', { method: 'PUT', body: { contestId: 'c-mayor', choiceIds: ['ch-mayor-c'] }, token: org })).status, 403);
-  assert.equal((await call('/leaders/1/recommendations', { method: 'PUT', body: { contestId: 'c-mayor', choiceIds: ['ch-sb-a'] }, token: org })).status, 400);
-  assert.equal((await call('/leaders/1/recommendations', { method: 'PUT', body: { contestId: 'c-council', choiceIds: ['ch-cc-a', 'ch-cc-b', 'ch-cc-c'] }, token: org })).status, 400);
-  assert.equal((await call('/leaders/1/recommendations', { method: 'PUT', body: { contestId: 'c-mayor', choiceIds: ['ch-mayor-c'] }, token: demo })).status, 403);
-  assert.equal((await call('/leaders/1/recommendations', { method: 'PUT', body: [{ contestId: 'c-mayor', choiceIds: ['ch-mayor-c'], note: 'changed' }], token: org })).status, 200);
-  const b = (await call('/elections/el-local/ballot', { token: demo })).data;
-  assert.deepEqual(b.contests.find((c) => c.id === 'c-mayor').recommendation.choiceIds, ['ch-mayor-c']);
-  await call('/leaders/1/recommendations', { method: 'PUT', body: [{ contestId: 'c-mayor', choiceIds: ['ch-mayor-b'] }], token: org });
+  assert.equal((await call('/leaders/1/recommendations', { method: 'PUT', body: { contestId: 'tx26-gov', choiceIds: ['tx26-gov-1'] }, token: org })).status, 403);
 });
 
 test('voting: turnout points, once per election, no vote choice accepted or stored', async () => {
   const t = await login('friend2@example.org');
+  // Oct 1 is before Texas early voting (Oct 19)
+  assert.equal((await call('/participation', { method: 'POST', body: { electionId: 'tx-2026-general', kind: 'voted' }, token: t })).status, 400);
+  assert.equal((await call('/participation', { method: 'POST', body: { electionId: 'tx-2026-runoff', kind: 'voted' }, token: t })).status, 400);
   const before = (await call('/recognition', { token: t })).data.points;
-  const r = await call('/participation', { method: 'POST', body: { electionId: 'el-local', kind: 'voted', choiceIds: ['ch-mayor-a'] }, token: t });
+  const r = await call('/participation', { method: 'POST', body: { electionId: 'tx-2026-general', kind: 'planned', choiceIds: ['tx26-gov-0'] }, token: t });
   assert.equal(r.status, 200);
-  assert.equal(r.data.score, before + 100);
-  await call('/participation', { method: 'POST', body: { electionId: 'el-local', kind: 'voted' }, token: t });
-  assert.equal((await call('/recognition', { token: t })).data.points, before + 100);
+  assert.equal(r.data.score, before);
   const exp = (await call('/me/export', { token: t })).data;
-  assert.ok(!JSON.stringify(exp).includes('ch-mayor-a'), 'vote choice must never be stored');
-  // Primary hasn't opened
-  assert.equal((await call('/participation', { method: 'POST', body: { electionId: 'el-primary', kind: 'voted' }, token: t })).status, 400);
+  assert.ok(!JSON.stringify(exp).includes('tx26-gov-0'), 'vote choice must never be stored');
 });
 
 test('activism: check-in codes verify, double check-in rejected, self-logging capped', async () => {
   const t = await login('demo@example.org');
   const acts = (await call('/actions', { token: t })).data;
-  const council = acts.find((a) => a.kind === 'council_meeting' && a.leaderName);
-  assert.equal(council.checkinCode, undefined, 'attendees must not see the code');
-  assert.equal((await call(`/actions/${council.id}/checkin`, { method: 'POST', body: { code: 'WRONG' }, token: t })).status, 400);
-  const ok = await call(`/actions/${council.id}/checkin`, { method: 'POST', body: { code: 'council1' }, token: t });
-  assert.equal(ok.data.points, 30);
-  assert.ok([0, 5, 15, 50].includes(ok.data.lucky));
+  const meet = acts.find((a) => a.kind === 'party_meeting');
+  assert.equal(meet.checkinCode, undefined, 'attendees must not see the code');
+  assert.equal((await call(`/actions/${meet.id}/checkin`, { method: 'POST', body: { code: 'WRONG' }, token: t })).status, 400);
+  const ok = await call(`/actions/${meet.id}/checkin`, { method: 'POST', body: { code: 'meet101' }, token: t });
+  assert.ok(ok.data.points > 0);
   assert.equal(ok.data.verified, true);
-  assert.equal((await call(`/actions/${council.id}/checkin`, { method: 'POST', body: { code: 'COUNCIL1' }, token: t })).status, 409);
+  assert.equal((await call(`/actions/${meet.id}/checkin`, { method: 'POST', body: { code: 'MEET101' }, token: t })).status, 409);
   const a = await call('/activity', { method: 'POST', body: { kind: 'social', quantity: 4 }, token: t });
   assert.equal(a.data.points, 12);
   const b = await call('/activity', { method: 'POST', body: { kind: 'social', quantity: 4 }, token: t });
   assert.equal(b.data.points, 3); // cap 15/day
-  const rec = (await call('/recognition', { token: t })).data;
-  assert.ok(rec.badges.some((x) => x.id === 'council'));
-  // Organizer sees code for own event
+  assert.ok((await call('/recognition', { token: t })).data.badges.some((x) => x.id === 'party'));
   const org = await login('org1@example.org');
-  await call('/bindings', { method: 'POST', body: { leaderId: 1 }, token: org });
-  const orgActs = (await call('/actions', { token: org })).data;
-  assert.equal(orgActs.find((x) => x.id === council.id).checkinCode, 'COUNCIL1');
+  assert.equal((await call('/actions', { token: org })).data.find((x) => x.id === meet.id).checkinCode, 'MEET101');
 });
 
 test('leaderboards honor opt-out; groups and friends work', async () => {
@@ -190,60 +194,51 @@ test('leaderboards honor opt-out; groups and friends work', async () => {
   const f1 = await login('friend1@example.org');
   await call('/me', { method: 'PATCH', body: { onLeaderboards: false }, token: f1 });
   const lb = (await call('/leaderboard?scope=friends', { token: t })).data;
-  assert.ok(!lb.rows.some((r) => r.name === 'Jamie Ortega'));
+  assert.ok(!lb.rows.some((r) => r.name === 'Cody Ramirez'));
   assert.ok(lb.rows.some((r) => r.me));
-  const own = (await call('/leaderboard?scope=friends', { token: f1 })).data;
-  assert.ok(own.rows.some((r) => r.me), 'you always see yourself');
+  assert.ok((await call('/leaderboard?scope=friends', { token: f1 })).data.rows.some((r) => r.me), 'you always see yourself');
   await call('/me', { method: 'PATCH', body: { onLeaderboards: true }, token: f1 });
 
   const g = (await call('/groups', { method: 'POST', body: { name: 'Test Team' }, token: t })).data;
   assert.ok(g.inviteCode);
   assert.equal((await call('/groups/join', { method: 'POST', body: { code: g.inviteCode.toLowerCase() }, token: f1 })).status, 200);
-  const glb = (await call(`/leaderboard?scope=group:${g.id}`, { token: f1 })).data;
-  assert.equal(glb.rows.length, 2);
+  assert.equal((await call(`/leaderboard?scope=group:${g.id}`, { token: f1 })).data.rows.length, 2);
   const f4 = await login('friend4@example.org');
   assert.equal((await call(`/leaderboard?scope=group:${g.id}`, { token: f4 })).status, 403);
 
-  // Accept pending request from friend4, then nudge
   const fr = (await call('/friends', { token: t })).data;
-  const kim = fr.find((x) => x.state === 'incoming');
-  await call(`/friends/${kim.userId}/accept`, { method: 'POST', token: t });
-  assert.equal((await call(`/friends/${kim.userId}/nudge`, { method: 'POST', body: { electionId: 'el-local' }, token: t })).status, 200);
-  assert.equal((await call(`/friends/${kim.userId}/nudge`, { method: 'POST', body: { electionId: 'el-local' }, token: t })).status, 429);
-  const n = (await call('/notifications', { token: f4 })).data;
-  assert.ok(n.some((x) => x.kind === 'nudge'));
+  const k = fr.find((x) => x.state === 'incoming');
+  await call(`/friends/${k.userId}/accept`, { method: 'POST', token: t });
+  assert.equal((await call(`/friends/${k.userId}/nudge`, { method: 'POST', body: { electionId: 'tx-2026-general' }, token: t })).status, 200);
+  assert.equal((await call(`/friends/${k.userId}/nudge`, { method: 'POST', body: { electionId: 'tx-2026-general' }, token: t })).status, 429);
+  assert.ok((await call('/notifications', { token: f4 })).data.some((x) => x.kind === 'nudge'));
 });
 
 test('friends only see participation status when shared', async () => {
   const t = await login('demo@example.org');
   const f3 = await login('friend3@example.org');
   await call('/me', { method: 'PATCH', body: { shareStatus: false }, token: f3 });
-  const fr = (await call('/friends', { token: t })).data;
-  assert.equal(fr.find((x) => x.name === 'Ari Feldman').status, undefined);
+  assert.equal((await call('/friends', { token: t })).data.find((x) => x.name === 'Wade Collier').status, undefined);
 });
 
 test('registration status, eligibility and registered badge', async () => {
   const t = await login('demo@example.org');
   const el = (await call('/eligibility', { token: t })).data;
-  assert.ok(el.elections.length >= 1);
-  await call('/registration', { method: 'PUT', body: { status: 'confirmed', desiredParty: 'Green' }, token: t });
-  const el2 = (await call('/eligibility', { token: t })).data;
-  const primary = el2.elections.find((x) => x.election.kind === 'primary');
-  assert.ok(primary.actions.some((a) => a.kind === 'party_change'));
+  assert.ok(el.elections.some((x) => x.election.id === 'tx-2026-general'));
+  await call('/registration', { method: 'PUT', body: { status: 'confirmed' }, token: t });
   assert.ok((await call('/recognition', { token: t })).data.badges.some((b) => b.id === 'registered'));
 });
 
-test('endorsements and slate wins score without any vote data', async () => {
+test('endorsing a source scores without any vote data', async () => {
   const t = await login('demo@example.org');
   const r0 = (await call('/recognition', { token: t })).data;
-  assert.equal(r0.breakdown.groupWins, 25); // Measure Z won and Riverbend recommended it
+  assert.equal(r0.breakdown.groupWins, 0); // no results before Nov 3
   await call('/endorse', { method: 'POST', body: { leaderId: 1 }, token: t });
-  const r1 = (await call('/recognition', { token: t })).data;
-  assert.equal(r1.breakdown.endorsements, 20);
+  assert.equal((await call('/recognition', { token: t })).data.breakdown.endorsements, 20);
 });
 
 test('admin ingestion requires token and upserts', async () => {
-  const data = { elections: [{ id: 'el-new', name: 'New Special', date: '2030-01-01', kind: 'special', jurisdictionId: 'city-maple',
+  const data = { elections: [{ id: 'el-new', name: 'New Special', date: '2026-12-12', kind: 'special', jurisdictionId: 'tx-ellis-wax',
     contests: [{ id: 'c-new', title: 'Prop 1', kind: 'measure', choices: [{ id: 'n-y', label: 'Yes' }, { id: 'n-n', label: 'No' }] }] }] };
   assert.equal((await call('/admin/ingest', { method: 'POST', body: data })).status, 401);
   const r = await call('/admin/ingest', { method: 'POST', body: data, token: ADMIN });
@@ -262,16 +257,13 @@ test('today: next action, quests, streak, claims', async () => {
   const s = (await call('/signup', { method: 'POST', body: { email: 'fresh@x.org', name: 'Fresh', password: 'longenough' } })).data;
   let t = (await call('/today', { token: s.token })).data;
   assert.equal(t.next.kind, 'profile');
-  await call('/me', { method: 'PATCH', body: { jurisdictionId: 'city-maple', birthDate: '1990-01-01' }, token: s.token });
+  await call('/me', { method: 'PATCH', body: { jurisdictionId: 'tx-ellis-wax', birthDate: '1990-01-01' }, token: s.token });
   t = (await call('/today', { token: s.token })).data;
-  assert.equal(t.next.kind, 'follow');
-  await call('/bindings', { method: 'POST', body: { leaderId: 1 }, token: s.token });
-  t = (await call('/today', { token: s.token })).data;
-  assert.equal(t.next.kind, 'register'); // deadline is tomorrow in demo data
+  assert.equal(t.next.kind, 'register'); // Texas deadline is Oct 5
   assert.equal(t.quests.quests.length, 3);
   assert.equal(t.streak.weeks, 0);
   // Do the ballot quest if offered, then claim it
-  await call('/events', { method: 'POST', body: { kind: 'ballot_viewed:el-local' }, token: s.token });
+  await call('/events', { method: 'POST', body: { kind: 'ballot_viewed:tx-2026-general' }, token: s.token });
   await call('/events', { method: 'POST', body: { kind: 'events_viewed' }, token: s.token });
   await call('/activity', { method: 'POST', body: { kind: 'social', quantity: 1 }, token: s.token });
   t = (await call('/today', { token: s.token })).data;

@@ -24,7 +24,7 @@ const hash = (str) => {
 export function luckyBonus(db, userId, activityId) {
   const r = hash(`${userId}:${activityId}:${Date.now()}`) % 100;
   const pts = r < 55 ? 0 : r < 85 ? 5 : r < 97 ? 15 : 50;
-  if (pts) db.prepare('INSERT OR IGNORE INTO bonuses (user_id, source, points) VALUES (?,?,?)').run(userId, `lucky:${activityId}`, pts);
+  if (pts) db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,?, datetime('now'))`).run(userId, `lucky:${activityId}`, pts);
   return pts;
 }
 
@@ -250,14 +250,14 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     const dq = dailyQuests(db, user, election);
     if (params.id === 'chest') {
       if (!dq.chest.ready) throw bad('finish all three quests first');
-      db.prepare('INSERT OR IGNORE INTO bonuses (user_id, source, points) VALUES (?,?,?)').run(user.id, `chest:${dq.day}`, CHEST_XP);
+      db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,?, datetime('now'))`).run(user.id, `chest:${dq.day}`, CHEST_XP);
       return { ok: true, xp: CHEST_XP };
     }
     const q = dq.quests.find((x) => x.id === params.id);
     if (!q) throw new HttpError(404, 'not one of today\'s quests');
     if (!q.done) throw bad('not done yet');
     if (q.claimed) throw new HttpError(409, 'already claimed');
-    db.prepare('INSERT OR IGNORE INTO bonuses (user_id, source, points) VALUES (?,?,?)').run(user.id, `quest:${q.id}:${dq.day}`, q.xp);
+    db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,?, datetime('now'))`).run(user.id, `quest:${q.id}:${dq.day}`, q.xp);
     return { ok: true, xp: q.xp };
   });
 
@@ -276,7 +276,7 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     if (!item || owner === user.id) throw bad('cannot cheer that');
     if (!crewIds(db, user.id).includes(owner)) throw new HttpError(403, 'not in your crew');
     if (body.remove) db.prepare('DELETE FROM cheers WHERE user_id=? AND item=?').run(user.id, item);
-    else db.prepare('INSERT OR IGNORE INTO cheers (user_id, item, owner_id) VALUES (?,?,?)').run(user.id, item, owner);
+    else db.prepare(`INSERT OR IGNORE INTO cheers (user_id, item, owner_id, at) VALUES (?,?,?, datetime('now'))`).run(user.id, item, owner);
     return { cheers: db.prepare('SELECT COUNT(*) n FROM cheers WHERE item=?').get(item).n };
   });
 }

@@ -1,0 +1,3326 @@
+{
+ "source": "https://ballotpedia.org/Endorsements_by_Donald_Trump",
+ "endorsements": [
+  {
+   "category": "U.S. Senate",
+   "candidate": "Barry Moore",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate Alabama",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Dan S. Sullivan",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Alaska",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Tom Cotton",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Arkansas",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Ashley B. Moody",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Florida (special)",
+   "type": "General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Mike Collins",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. Senate Georgia",
+   "type": "Primary Runoff, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Jim Risch",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Idaho",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Ashley Hinson",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate Iowa",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Roger Marshall",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Kansas",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Andy Barr",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate Kentucky",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Julia Letlow",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. Senate Louisiana",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Susan Collins",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Maine",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Mike Rogers",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate Michigan",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Michele Tafoya",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate Minnesota",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Cindy Hyde-Smith",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Mississippi",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Kurt Alme",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate Montana",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Steve Daines",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Montana",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Pete Ricketts",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Nebraska",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "John Sununu",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate New Hampshire",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Michael Whatley",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate North Carolina",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Jon Husted",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Ohio (special)",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Kevin Hern",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate Oklahoma",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Markwayne Mullin",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate Oklahoma",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Darline Graham",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate South Carolina",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Lindsey Graham",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate South Carolina",
+   "type": "Primary",
+   "outcome": "Not on the ballot general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Mike Rounds",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate South Dakota",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Bill Hagerty",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Tennessee",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Ken Paxton",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. Senate Texas",
+   "type": "Primary Runoff, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Shelley Moore Capito",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate West Virginia",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Cynthia Lummis",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. Senate Wyoming",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. Senate",
+   "candidate": "Harriet Hageman",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. Senate Wyoming",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jerry Carl",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Alabama District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Rhett Marques",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Alabama District 2",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Rogers",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Alabama District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Robert Aderholt",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Alabama District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Dale Strong",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Alabama District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Gary Palmer",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Alabama District 6",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Nicholas Begich",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Alaska At-large District",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Eli Crane",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Arizona District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mark Lamb",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Arizona District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Juan Ciscomani",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Arizona District 6",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Abraham Hamadeh",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Arizona District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Paul Gosar",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Arizona District 9",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Rick Crawford",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Arkansas District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "French Hill",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Arkansas District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Steve Womack",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Arkansas District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Bruce Westerman",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Arkansas District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "James Gallagher",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House California District 1",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "James Gallagher",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House California District 1 (special)",
+   "type": "Primary",
+   "outcome": "Won primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Kevin Lincoln II",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House California District 13",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Vince Fong",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House California District 20",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jay Obernolte",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House California District 23",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Darrell Issa",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House California District 48",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jim Desmond",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House California District 48",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tom McClintock",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House California District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jeff Hurd",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Colorado District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Lauren Boebert",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Colorado District 4",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jeff Crank",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Colorado District 5",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Gabe Evans",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Colorado District 8",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jimmy Patronis",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Daniel Webster",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 11",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Joe Strada",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Florida District 11",
+   "type": "General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Gus M. Bilirakis",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 12",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Anna Paulina Luna",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 13",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Beltran",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Florida District 14",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Laurel Lee",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 15",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Sydney Gruters",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Florida District 16",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Vern Buchanan",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 16",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Greg Steube",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 17",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Scott Franklin",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 18",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Catalina Lauf",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Florida District 19",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jim Schwartzel",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Florida District 19",
+   "type": "General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Neal Dunn",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 2",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brian Mast",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 21",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Casey Askar",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Florida District 22",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Scott Singer",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Florida District 25",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mario Diaz-Balart",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 26",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Maria Elvira Salazar",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 27",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Carlos Gimenez",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 28",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Kat Cammack",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Aaron Bean",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "John Rutherford",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Randy Fine",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 6",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Cory Mills",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 7",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Ryan Elijah",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Florida District 7",
+   "type": "General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Haridopolos",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Florida District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Dan Green",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Florida District 9",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "James Kingston",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Georgia District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Houston Gaines",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Georgia District 10",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Barry Loudermilk",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Georgia District 11",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "John Cowan",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Georgia District 11",
+   "type": "General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Rick Allen",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Georgia District 12",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Clayton Fuller",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Georgia District 14 (special)",
+   "type": "Primary, General",
+   "outcome": "Won general runoff"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brian Jack",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Georgia District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Rich McCormick",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Georgia District 7",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Austin Scott",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Georgia District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Andrew Clyde",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Georgia District 9",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Russ Fulcher",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Idaho District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael K. Simpson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Idaho District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Bost",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Illinois District 12",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mary Miller",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Illinois District 15",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Darin LaHood",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Illinois District 16",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Barb Regnitz",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Indiana District 1",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Rudy Yakym",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Indiana District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Marlin A. Stutzman",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Indiana District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jim Baird",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Indiana District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Victoria Spartz",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Indiana District 5",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jefferson Shreve",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Indiana District 6",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mark Messmer",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Indiana District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Erin Houchin",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Indiana District 9",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mariannette Miller-Meeks",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Iowa District 1",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Joe Mitchell",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Iowa District 2",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Zach Nunn",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Iowa District 3",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Chris McGowan",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Iowa District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tracey Mann",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Kansas District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Derek Schmidt",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Kansas District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Ron Estes",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Kansas District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "James Comer Jr.",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Kentucky District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brett Guthrie",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Kentucky District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Ed Gallrein",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Kentucky District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Hal Rogers",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Kentucky District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Ralph Alvarado",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Kentucky District 6",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Steve Scalise",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Louisiana District 1",
+   "type": "Primary, General",
+   "outcome": "Won primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Clay Higgins",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Louisiana District 3",
+   "type": "Primary, General",
+   "outcome": "Won primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Johnson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Louisiana District 4",
+   "type": "Primary, General",
+   "outcome": "Won primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Paul LePage",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Maine District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jack Bergman",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Michigan District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael Bouchard",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Michigan District 10",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "John Moolenaar",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Michigan District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tim Walberg",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Michigan District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tom Barrett",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Michigan District 7",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Amir Hassan",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Michigan District 8",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Lisa McClain",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Michigan District 9",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brad Finstad",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Minnesota District 1",
+   "type": "Primary, General",
+   "outcome": "Won primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tom Emmer",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Minnesota District 6",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michelle Fischbach",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Minnesota District 7",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Pete Stauber",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Minnesota District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Trent Kelly",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Mississippi District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael Guest",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Mississippi District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Ezell",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Mississippi District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Ann Wagner",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Missouri District 2",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Bob Onder",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Missouri District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mark Alford",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Missouri District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Rick Brattin",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Missouri District 5",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Eric Burlison",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Missouri District 7",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jason Smith",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Missouri District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Aaron Flint",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Montana District 1",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Ryan K. Zinke",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Montana District 1",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Troy Downing",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Montana District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Flood",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Nebraska District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brinker Harding",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Nebraska District 2",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Adrian Smith",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Nebraska District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Carrie Buck",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Nevada District 1",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "David Flippo",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Nevada District 2",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mark Amodei",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Nevada District 2",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Marty O'Donnell",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Nevada District 3",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Anthony DiLorenzo",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House New Hampshire District 1",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jeff Van Drew",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House New Jersey District 2",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Chris Smith",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House New Jersey District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Thomas Kean Jr.",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House New Jersey District 7",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Greg Cunningham",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House New Mexico District 2",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Nicholas J. LaLota",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House New York District 1",
+   "type": "Primary, General",
+   "outcome": "Won primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Nicole Malliotakis",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House New York District 11",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael Lawler",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House New York District 17",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Peter Oberacker",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House New York District 19",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Andrew Garbarino",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House New York District 2",
+   "type": "Primary, General",
+   "outcome": "Won primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Anthony Constantino",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House New York District 21",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Nick Langworthy",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House New York District 23",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Claudia Tenney",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House New York District 24",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael LiPetri Jr.",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House New York District 3",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jeanine Driscoll",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House New York District 4",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Laurie Buckhout",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House North Carolina District 1",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Pat Harrigan",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 10",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Chuck Edwards",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 11",
+   "type": "Primary",
+   "outcome": "Not on the ballot general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jennifer Balkcom",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House North Carolina District 11",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brad Knott",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 13",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Timothy K. Moore",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 14",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Gregory Murphy",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 3",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Virginia Foxx",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 5",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Addison McDowell",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 6",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "David Rouzer",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 7",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mark Harris",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Richard Hudson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Carolina District 9",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Julie Fedorchak",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House North Dakota At-large District",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Eric Conroy",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Ohio District 1",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael Turner",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 10",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Troy Balderson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 12",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "David Joyce",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 14",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Carey",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 15",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "David Taylor",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jim Jordan",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Bob Latta",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael Rulli",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 6",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Max Miller",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 7",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Warren Davidson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Ohio District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Derek Merrin",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Ohio District 9",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jackson Lahmeyer",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Oklahoma District 1",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary runoff"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Kevin Hern",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Oklahoma District 1",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mark Tedford",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Oklahoma District 1",
+   "type": "General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Josh Brecheen",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Oklahoma District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Frank Lucas",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Oklahoma District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tom Cole",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Oklahoma District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Stephanie Bice",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Oklahoma District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Cliff Bentz",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Oregon District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Scott Perry",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Pennsylvania District 10",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Lloyd Smucker",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Pennsylvania District 11",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "John Joyce",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Pennsylvania District 13",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Guy Reschenthaler",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Pennsylvania District 14",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Glenn Thompson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Pennsylvania District 15",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Kelly",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Pennsylvania District 16",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Ryan Mackenzie",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Pennsylvania District 7",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Rob Bresnahan Jr.",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Pennsylvania District 8",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Dan Meuser",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Pennsylvania District 9",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jenny Honeycutt",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House South Carolina District 1",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Joe Wilson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House South Carolina District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Sheri Biggs",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House South Carolina District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "William Timmons",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House South Carolina District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Russell Fry",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House South Carolina District 7",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Marty J. Jackley",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House South Dakota At-large District",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Diana Harshbarger",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Tennessee District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tim Burchett",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Tennessee District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Charles J. Fleischmann",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Tennessee District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Scott DesJarlais",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Tennessee District 4",
+   "type": "Primary, General",
+   "outcome": "Won primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Andy Ogles",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Tennessee District 5",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Matt Van Epps",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Tennessee District 7",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "David Kustoff",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Tennessee District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brent Taylor",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Tennessee District 9",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Nathaniel Moran",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Chris Gober",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Texas District 10",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "August Pfluger",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 11",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Craig Goldman",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 12",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Ronny L. Jackson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 13",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Randy Weber",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 14",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Monica De La Cruz",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 15",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Pete Sessions",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 17",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jodey Arrington",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 19",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Steve Toth",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Texas District 2",
+   "type": "General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mark Teixeira",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Texas District 21",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Trever Nehls",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Texas District 22",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Troy Nehls",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 22",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brandon Herrera",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Texas District 23",
+   "type": "Primary Runoff, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tony Gonzales",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 23",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary runoff"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Beth Van Duyne",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 24",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Roger Williams",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 25",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brandon Gill",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 26",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael Cloud",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 27",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tano Tijerina",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Texas District 28",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Keith Self",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "John Carter",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 31",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jace Yarbrough",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Texas District 32",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Eric Flores",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Texas District 34",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Carlos De La Cruz",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Texas District 35",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Brian Babin",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 36",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jon Bonck",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Texas District 38",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Pat Fallon",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Lance Gooden",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jake Ellzey",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Texas District 6",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jessica Steinmann",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Texas District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Alex Mealer",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Texas District 9",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Blake Moore",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Utah District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Celeste Maloy",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Utah District 3",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Burgess Owens",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Utah District 4",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Mike Kennedy",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Utah District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Robert J. Wittman",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Virginia District 1",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Jennifer Kiggans",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Virginia District 2",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "John McGuire",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Virginia District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Benjamin Lee Cline",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Virginia District 6",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "H. Morgan Griffith",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Virginia District 9",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "John Braun",
+   "party": "R",
+   "status": "Challenger",
+   "office": "U.S. House Washington District 3",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Amanda McKinney",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Washington District 4",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael Baumgartner",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Washington District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Carol Miller",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House West Virginia District 1",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Riley Moore",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House West Virginia District 2",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Bryan Steil",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Wisconsin District 1",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Derrick Van Orden",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Wisconsin District 3",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Scott Fitzgerald",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Wisconsin District 5",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Glenn Grothman",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Wisconsin District 6",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Michael Alfonso",
+   "party": "R",
+   "status": "Open seat",
+   "office": "U.S. House Wisconsin District 7",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "U.S. House",
+   "candidate": "Tony Wied",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "U.S. House Wisconsin District 8",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Rick Roth",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Florida State Senate District 26",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Ileana Garcia",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Florida State Senate District 36",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Ana Maria Rodriguez",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Florida State Senate District 40",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Trevor De Vries",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Indiana State Senate District 1",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Brian Schmutzler",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Indiana State Senate District 11",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Tyler Johnson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 14",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Liz Brown",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 15",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Blake Fiechter",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Indiana State Senate District 19",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Tracey Powell",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Indiana State Senate District 21",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Ronnie Alting",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 22",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Paula Copenhaver",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Indiana State Senate District 23",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Mike Gaskill",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 25",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Scott Alexander",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 26",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Jeff Raatz",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 27",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Brenda Wilson",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Indiana State Senate District 38",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Jeff Ellington",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Indiana State Senate District 39",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Michelle Davis",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Indiana State Senate District 41",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Randy Maxwell",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 43",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Chris Garten",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 45",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Gary Byrne",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 47",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Daryl Schmitt",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 48",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Jim Tomes",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana State Senate District 49",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Phil Berger",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "North Carolina State Senate District 26",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "David Cook",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Texas State Senate District 22",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Leigh Wambsganss",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Texas State Senate District 9",
+   "type": "General Runoff",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Kim Kendall",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Florida House of Representatives District 18",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "J.J. Grow",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Florida House of Representatives District 23",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Jon Maples",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Florida House of Representatives District 87 (special)",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Meg Weinberger",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Florida House of Representatives District 94",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Jeff Thompson",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Idaho House of Representatives District 33B",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Jim Pressel",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana House of Representatives District 20",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Craig Snow",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana House of Representatives District 22",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Heath VanNatter",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana House of Representatives District 38",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Beau Baird",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana House of Representatives District 44",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Bruce Borders",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana House of Representatives District 45",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Bob Heaton",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana House of Representatives District 46",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Tony Isa",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana House of Representatives District 51",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Ben Smaltz",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana House of Representatives District 52",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Martin Carbaugh",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Indiana House of Representatives District 81",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Kenny Cody",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Tennessee House of Representatives District 11",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Angelia Orr",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Texas House of Representatives District 13",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Dustin Burrows",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Texas House of Representatives District 83",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State legislative",
+   "candidate": "Candy Noble",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Texas House of Representatives District 89",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Tommy Tuberville",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Alabama",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Bernadette Wilson",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Alaska",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Andy Biggs",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Governor of Arizona",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Sarah Huckabee Sanders",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Governor of Arkansas",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Steve Hilton",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of California",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Byron Donalds",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Florida",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Burt Jones",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Georgia",
+   "type": "Primary",
+   "outcome": "Lost primary runoff"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Rick Jackson",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Georgia",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Brad Little",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Governor of Idaho",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Darren Bailey",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Governor of Illinois",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Randy Feenstra",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Iowa",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Zach Lahn",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Iowa",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Ty Masterson",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Kansas",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "John James",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Michigan",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Mike Lindell",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Minnesota",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Jim Pillen",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Governor of Nebraska",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Joe Lombardo",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Governor of Nevada",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Bruce Blakeman",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Governor of New York",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Vivek Ramaswamy",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Ohio",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Mike Mazzei",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Oklahoma",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Stacy Garrity",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Governor of Pennsylvania",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Alan Wilson",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of South Carolina",
+   "type": "Primary Runoff, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Pamela Evette",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of South Carolina",
+   "type": "Primary",
+   "outcome": "Lost primary runoff"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Larry Rhoden",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Governor of South Dakota",
+   "type": "General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Marsha Blackburn",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Tennessee",
+   "type": "General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Greg Abbott",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Governor of Texas",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Tom Tiffany",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Wisconsin",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Megan Degenfelder",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Governor of Wyoming",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "State executive",
+   "candidate": "John Wahl",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Lieutenant Governor of Alabama",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Greg Dolezal",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Lieutenant Governor of Georgia",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Scott Bedke",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Lieutenant Governor of Idaho",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Stavros Anthony",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Lieutenant Governor of Nevada",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "T. W. Shannon",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Lieutenant Governor of Oklahoma",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Dan Patrick",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Lieutenant Governor of Texas",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Warren Petersen",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Attorney General of Arizona",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "James Uthmeier",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Attorney General of Florida",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Brenna Bird",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Attorney General of Iowa",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Mike Hilgers",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Attorney General of Nebraska",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Adriana Guzm\u00e1n Fralick",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Attorney General of Nevada",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Keith Faber",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Attorney General of Ohio",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Mayes Middleton",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Attorney General of Texas",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Tim Fleming",
+   "party": "R",
+   "status": "Open seat",
+   "office": "Georgia Secretary of State",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Max Engling",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Indiana Secretary of State",
+   "type": "General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Wilton Simpson",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Florida Commissioner of Agriculture and Consumer Services",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Cody Simpson",
+   "party": "R",
+   "status": "Open seat",
+   "office": "South Carolina Commissioner of Agriculture",
+   "type": "Primary, General",
+   "outcome": "Won general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Sid Miller",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Texas Commissioner of Agriculture",
+   "type": "Primary",
+   "outcome": "Lost primary"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Donald Huffines",
+   "party": "R",
+   "status": "Incumbent",
+   "office": "Texas Comptroller of Public Accounts",
+   "type": "Primary, General",
+   "outcome": "Lost general"
+  },
+  {
+   "category": "State executive",
+   "candidate": "Joe Gruters",
+   "party": "R",
+   "status": "Challenger",
+   "office": "Florida Chief Financial Officer",
+   "type": "Primary",
+   "outcome": "Not on the ballot primary"
+  }
+ ]
+}

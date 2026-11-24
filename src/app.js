@@ -10,7 +10,9 @@ class HttpError extends Error {
   }
 }
 const bad = (msg) => new HttpError(400, msg);
-import { localDay, setZone } from './time.js';
+import { clockConfig, localDay } from './time.js';
+import { SOURCES, bindDefaults } from './sources.js';
+import ENDORSEMENTS from './data/endorsements.json' with { type: 'json' };
 const today = () => localDay();
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const rand = (n) => crypto.getRandomValues(new Uint8Array(n));
@@ -112,6 +114,7 @@ export function createApp(db, { adminToken, seed } = {}) {
       .prepare('INSERT INTO users (email, name, pw_hash) VALUES (?,?,?)')
       .run(email.toLowerCase(), name, await hashPw(password));
     const id = Number(r.lastInsertRowid);
+    bindDefaults(db, id);
     return { token: issueSession(id), user: userPublic(db.prepare('SELECT * FROM users WHERE id=?').get(id)) };
   }, { auth: false });
 
@@ -165,6 +168,8 @@ export function createApp(db, { adminToken, seed } = {}) {
     db.prepare('DELETE FROM users WHERE id=?').run(user.id);
     return { ok: true };
   });
+
+  route('GET', '/api/clock', () => ({ ...clockConfig(), now: new Date().toISOString() }), { auth: false });
 
   route('GET', '/api/meta', () => ({
     strategies: listStrategies(),
@@ -241,6 +246,31 @@ export function createApp(db, { adminToken, seed } = {}) {
         .sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
     }
     return rows;
+  });
+
+  // ---------- endorsement directory (every state) ----------
+  // One row per race: the pick from each source, in the user's follow order.
+  route('GET', '/api/endorsements', ({ user, query }) => {
+    const state = String(query.get('state') || (user.jurisdiction_id || '').slice(0, 2)).toUpperCase();
+    const order = db.prepare(
+      `SELECT u.email FROM bindings b JOIN leaders l ON l.id=b.leader_id JOIN users u ON u.id=l.owner_id
+       WHERE b.user_id=? AND b.active=1 ORDER BY b.priority`,
+    ).all(user.id).map((r) => SOURCES.find((s) => s.email === r.email)?.key).filter(Boolean);
+    const keys = order.length ? order : SOURCES.map((s) => s.key);
+    const races = new Map();
+    for (const e of ENDORSEMENTS) {
+      if (e.state !== state || !keys.includes(e.source)) continue;
+      const r = races.get(e.race) || { race: e.race, label: e.raceLabel, picks: [] };
+      r.picks.push({ source: e.source, sourceName: SOURCES.find((s) => s.key === e.source).name, candidate: e.candidate, party: e.party, note: e.note || null, url: e.url });
+      races.set(e.race, r);
+    }
+    const rank = (r) => /^US-SEN/.test(r) ? 0 : r === 'GOV' ? 1 : /^US-HOUSE/.test(r) ? 3 : /^STATE-/.test(r) ? 4 : 2;
+    const num = (r) => Number(r.split('-').pop()) || 0;
+    const list = [...races.values()].map((r) => {
+      r.picks.sort((a, b) => keys.indexOf(a.source) - keys.indexOf(b.source));
+      return { ...r, pick: r.picks[0] };
+    }).sort((a, b) => rank(a.race) - rank(b.race) || a.race.replace(/\d+$/, '').localeCompare(b.race.replace(/\d+$/, '')) || num(a.race) - num(b.race));
+    return { state, sources: keys.map((k) => SOURCES.find((s) => s.key === k).name), races: list };
   });
 
   // ---------- leadership sources ----------
@@ -359,7 +389,7 @@ export function createApp(db, { adminToken, seed } = {}) {
        desired_party=excluded.desired_party, updated_at=datetime('now')`,
     ).run(user.id, status, body.party ?? cur.party, body.desiredParty ?? cur.desiredParty);
     if (status === 'confirmed')
-      db.prepare(`INSERT OR IGNORE INTO participation (user_id, election_id, kind) VALUES (?, NULL, 'registered')`).run(user.id);
+      db.prepare(`INSERT OR IGNORE INTO participation (user_id, election_id, kind, at) VALUES (?, NULL, 'registered', datetime('now'))`).run(user.id);
     return getReg(user.id);
   });
 
@@ -390,7 +420,7 @@ export function createApp(db, { adminToken, seed } = {}) {
       const late = (new Date(today()) - new Date(e.date)) / 86400000;
       if (late > 7) throw bad('too late to log a vote for this election');
     }
-    db.prepare('INSERT OR IGNORE INTO participation (user_id, election_id, kind) VALUES (?,?,?)').run(user.id, e.id, body.kind);
+    db.prepare(`INSERT OR IGNORE INTO participation (user_id, election_id, kind, at) VALUES (?,?,?, datetime('now'))`).run(user.id, e.id, body.kind);
     return { ok: true, score: scorecard(db, user.id).points };
   });
 
@@ -448,7 +478,7 @@ export function createApp(db, { adminToken, seed } = {}) {
     const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=?`).get(user.id, a.kind, today()).q;
     const perUnit = ACTIVITY[a.kind].perUnit || 0;
     const pts = activityPoints(a.kind, qty, verified, already * perUnit);
-    const ins = db.prepare('INSERT INTO activity (user_id, action_id, kind, quantity, verified, points, day) VALUES (?,?,?,?,?,?,?)')
+    const ins = db.prepare(`INSERT INTO activity (user_id, action_id, kind, quantity, verified, points, day, at) VALUES (?,?,?,?,?,?,?, datetime('now'))`)
       .run(user.id, a.id, a.kind, qty, verified ? 1 : 0, pts, today());
     const lucky = verified ? luckyBonus(db, user.id, ins.lastInsertRowid) : 0;
     return { ok: true, points: pts, verified, lucky };
@@ -461,7 +491,7 @@ export function createApp(db, { adminToken, seed } = {}) {
     const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=?`).get(user.id, body.kind, today()).q;
     const perUnit = ACTIVITY[body.kind].perUnit || 0;
     const pts = activityPoints(body.kind, qty, false, already * perUnit);
-    db.prepare('INSERT INTO activity (user_id, kind, quantity, note, points, day) VALUES (?,?,?,?,?,?)')
+    db.prepare(`INSERT INTO activity (user_id, kind, quantity, note, points, day, at) VALUES (?,?,?,?,?,?, datetime('now'))`)
       .run(user.id, body.kind, qty, body.note ? String(body.note).slice(0, 280) : null, pts, today());
     return { ok: true, points: pts };
   });
@@ -476,7 +506,7 @@ export function createApp(db, { adminToken, seed } = {}) {
     const l = db.prepare('SELECT id FROM leaders WHERE id=?').get(Number(body.leaderId));
     if (!l) throw new HttpError(404, 'no such leader');
     if (body.remove) db.prepare('DELETE FROM endorsements WHERE user_id=? AND leader_id=?').run(user.id, l.id);
-    else db.prepare('INSERT OR IGNORE INTO endorsements (user_id, leader_id) VALUES (?,?)').run(user.id, l.id);
+    else db.prepare(`INSERT OR IGNORE INTO endorsements (user_id, leader_id, at) VALUES (?,?, datetime('now'))`).run(user.id, l.id);
     return db.prepare('SELECT leader_id AS leaderId FROM endorsements WHERE user_id=?').all(user.id);
   });
 
@@ -613,7 +643,7 @@ export function createApp(db, { adminToken, seed } = {}) {
     if (!e) throw new HttpError(404, 'no such election');
     const recent = db.prepare(`SELECT 1 FROM nudges WHERE from_id=? AND to_id=? AND election_id=? AND at > datetime('now','-1 day')`).get(user.id, o, e.id);
     if (recent) throw new HttpError(429, 'you already nudged them today');
-    db.prepare('INSERT INTO nudges (from_id, to_id, election_id) VALUES (?,?,?)').run(user.id, o, e.id);
+    db.prepare(`INSERT INTO nudges (from_id, to_id, election_id, at) VALUES (?,?,?, datetime('now'))`).run(user.id, o, e.id);
     return { ok: true };
   });
 

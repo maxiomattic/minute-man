@@ -4,10 +4,12 @@ import { DurableObject } from 'cloudflare:workers';
 import { durableDb } from './db.js';
 import { createApp } from './app.js';
 import { seed } from './seed.js';
+import { configureClock } from './time.js';
 
 export class CvasDb extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
+    configureClock({ zone: env.CVAS_ZONE || 'America/Chicago', demoDate: env.CVAS_DEMO_DATE || null });
     this.db = durableDb(ctx.storage);
     this.handle = createApp(this.db, { adminToken: env.CVAS_ADMIN_TOKEN, seed });
     ctx.blockConcurrencyWhile(async () => {

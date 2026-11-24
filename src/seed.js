@@ -1,180 +1,174 @@
-// Demo data. All places, people and organizations are fictional.
+// Showcase data: the real Nov 3, 2026 Texas general election ballot for Waxahachie (Ellis County),
+// with real endorsements from America First Insight and Donald Trump (see src/data/ and
+// scripts/build_data.py). The app clock is set to Oct 1, 2026, so no results are shown.
+//
+// The voters, the volunteer group and its events are fictional sample accounts. Endorsement
+// sources are real; a pick only appears where that source actually endorsed that candidate.
 import { ingest, hashPw } from './app.js';
 import { localDay, utcAt } from './time.js';
+import { SOURCES, bindDefaults } from './sources.js';
+import BALLOT from './data/ballot-tx-ellis.json' with { type: 'json' };
+import ENDORSEMENTS from './data/endorsements.json' with { type: 'json' };
 
 const day = (offset) => localDay(new Date(Date.now() + offset * 86400000));
-const at = (offset, hour) => utcAt(day(offset), hour);
-// Days until the next Saturday (1-7), so the weekend canvass lands on a Saturday.
+const at = (offset, hour, minute = 0) => utcAt(day(offset), hour, minute);
+// Days until the next Saturday (1-7), so the weekend block walk lands on a Saturday.
 const untilSat = () => (6 - new Date(day(0) + 'T12:00:00Z').getUTCDay() + 7) % 7 || 7;
 
+const TX_RULES = {
+  minAge: 18, preregisterAge: 17, closedPrimaries: false, sameDayRegistration: false,
+  registrationDeadlineDays: 30, idRequired: 'strict',
+  idNote: "Bring a Texas driver license, Texas personal ID, election ID certificate, handgun license, U.S. passport, U.S. military ID or U.S. citizenship certificate with photo. If you can't get one, you can sign a Reasonable Impediment Declaration at the polls.",
+  onlineRegistrationUrl: 'https://www.votetexas.gov/register-to-vote/',
+  statusLookupUrl: 'https://teamrv-mvp.sos.texas.gov/MVP/mvp.do',
+  pollingLookupUrl: 'https://www.elliscountytx.gov/312/Elections',
+  ballotPhotoAllowed: false,
+  notes: "Texas has no online registration: print or request the application, mail it, and it must be postmarked by the deadline. Phones and cameras aren't allowed within 100 feet of the voting stations.",
+};
+
+const STATE_NAMES = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming' };
+export const stateOf = (jurisdictionId) => (jurisdictionId || '').slice(0, 2).toUpperCase();
+
 export function demoData() {
+  const statewide = (c) => !/^(US-HOUSE|STATE-SEN|STATE-HOUSE)/.test(c.race);
   return {
     jurisdictions: [
-      {
-        id: 'st-co', name: 'State of Columbia',
-        rules: {
-          minAge: 18, preregisterAge: 16, closedPrimaries: true, partyChangeDeadlineDays: 29,
-          sameDayRegistration: false, idRequired: 'non-strict',
-          idNote: 'Bring a photo ID or a utility bill with your name and address.',
-          onlineRegistrationUrl: 'https://example.org/register',
-          statusLookupUrl: 'https://example.org/lookup',
-          ballotPhotoAllowed: false,
-        },
-      },
-      { id: 'cty-cedar', name: 'Cedar Valley County', parentId: 'st-co', rules: {} },
-      { id: 'city-maple', name: 'City of Maplewood', parentId: 'cty-cedar', rules: {} },
-    ],
-    pollingPlaces: [
-      { jurisdictionId: 'city-maple', precinct: '12', kind: 'polling', name: 'Maplewood Public Library', address: '200 Elm St, Maplewood', lat: 39.742, lng: -104.99, hours: '7am – 7pm' },
-      { jurisdictionId: 'city-maple', precinct: '14', kind: 'polling', name: 'Lincoln Elementary Gym', address: '45 School Rd, Maplewood', lat: 39.751, lng: -104.97, hours: '7am – 7pm' },
-      { jurisdictionId: 'city-maple', kind: 'dropbox', name: 'City Hall Drop Box', address: '1 Civic Plaza, Maplewood', lat: 39.739, lng: -104.985, hours: '24 hours until 7pm election day' },
-      { jurisdictionId: 'cty-cedar', kind: 'early', name: 'County Clerk Office', address: '500 Court St, Cedar Valley', lat: 39.73, lng: -105.01, hours: 'Mon–Sat 8am – 6pm' },
+      ...Object.entries(STATE_NAMES).map(([code, name]) => ({
+        id: code.toLowerCase(), name, rules: code === 'TX' ? TX_RULES : {},
+      })),
+      { id: 'tx-ellis', name: 'Ellis County, Texas', parentId: 'tx', rules: {} },
+      { id: 'tx-ellis-wax', name: 'Waxahachie, Ellis County (TX-6, SD-2, HD-10)', parentId: 'tx-ellis', rules: {} },
     ],
     elections: [
       {
-        id: 'el-local', name: 'Maplewood Municipal Election', kind: 'local', date: day(9),
-        jurisdictionId: 'city-maple', registrationDeadline: day(1), earlyVotingStart: day(-5),
-        contests: [
-          { id: 'c-mayor', title: 'Mayor', choices: [
-            { id: 'ch-mayor-a', label: 'Dana Whitfield' }, { id: 'ch-mayor-b', label: 'Marcus Oyelaran' }, { id: 'ch-mayor-c', label: 'Priya Castellanos' } ] },
-          { id: 'c-council', title: 'City Council, At-Large', voteFor: 2, choices: [
-            { id: 'ch-cc-a', label: 'Tom Brennan' }, { id: 'ch-cc-b', label: 'Lucia Ferreira' },
-            { id: 'ch-cc-c', label: 'Hank Delacroix' }, { id: 'ch-cc-d', label: 'Amara Nwosu' } ] },
-          { id: 'c-schools', title: 'School Board, District 3', choices: [
-            { id: 'ch-sb-a', label: 'Grace Lindqvist' }, { id: 'ch-sb-b', label: 'Ray Holloway' } ] },
-          { id: 'c-meas-a', title: 'Measure A: Library Bond', kind: 'measure',
-            description: 'Issue $18M in bonds to renovate and expand branch libraries.', choices: [
-            { id: 'ch-ma-y', label: 'Yes' }, { id: 'ch-ma-n', label: 'No' } ] },
-          { id: 'c-meas-b', title: 'Measure B: Short-Term Rental Limits', kind: 'measure',
-            description: 'Cap short-term rental permits at 2% of housing units per neighborhood.', choices: [
-            { id: 'ch-mb-y', label: 'Yes' }, { id: 'ch-mb-n', label: 'No' } ] },
-        ],
+        id: 'tx-2026-general', name: 'Texas General Election', kind: 'general', date: '2026-11-03',
+        jurisdictionId: 'tx', registrationDeadline: '2026-10-05', earlyVotingStart: '2026-10-19', mailBallotDeadline: '2026-10-23',
+        contests: BALLOT.map((c) => ({
+          id: c.id, title: c.title, jurisdictionId: statewide(c) ? 'tx' : 'tx-ellis-wax',
+          choices: c.choices.map(({ id, label, party }) => ({ id, label, party })),
+        })),
       },
-      {
-        id: 'el-primary', name: 'Columbia State Primary', kind: 'primary', date: day(95),
-        jurisdictionId: 'st-co', registrationDeadline: day(70), earlyVotingStart: day(80),
-        contests: [
-          { id: 'c-gov-p', title: 'Governor (Party Primary)', choices: [
-            { id: 'ch-gov-a', label: 'Elaine Moritz' }, { id: 'ch-gov-b', label: 'Jordan Sato' } ] },
-          { id: 'c-cty-comm', title: 'County Commissioner, District 2', jurisdictionId: 'cty-cedar', choices: [
-            { id: 'ch-com-a', label: 'Walt Pruitt' }, { id: 'ch-com-b', label: 'Sofia Benavides' } ] },
-        ],
-      },
-      {
-        id: 'el-past', name: 'Maplewood Special Election', kind: 'special', date: day(-200),
-        jurisdictionId: 'city-maple',
-        contests: [
-          { id: 'c-past-meas', title: 'Measure Z: Parks Levy', kind: 'measure', choices: [
-            { id: 'ch-z-y', label: 'Yes' }, { id: 'ch-z-n', label: 'No' } ] },
-        ],
-      },
+      { id: 'tx-2026-runoff', name: 'Texas Primary Runoff', kind: 'primary', date: '2026-05-26', jurisdictionId: 'tx' },
+      { id: 'tx-2026-primary', name: 'Texas Primary Election', kind: 'primary', date: '2026-03-03', jurisdictionId: 'tx' },
     ],
   };
 }
 
-/** Seed demo data. With force, refresh election and event dates so the demo stays current. */
+// ---------- endorsement sources ----------
+const lastName = (s) => s.replace(/,? (Jr\.|Sr\.|II|III|IV)$/i, '').trim().split(/\s+/).pop().toLowerCase();
+const firstName = (s) => s.replace(/^Dr\.\s*/i, '').trim().split(/\s+/)[0].toLowerCase();
+const sameFirst = (a, b) => a === b || a.startsWith(b) || b.startsWith(a) || (a[0] === b[0] && Math.min(a.length, b.length) <= 3);
+
+/** The choice in `choices` that an endorsement of `candidate` refers to, if any. */
+export function matchChoice(choices, candidate) {
+  const ln = lastName(candidate);
+  const fn = firstName(candidate);
+  const hits = choices.filter((c) => lastName(c.label) === ln);
+  return hits.length === 1 ? hits[0] : hits.find((c) => sameFirst(firstName(c.label), fn)) || null;
+}
+
+/** Create (or find) the AFI and Trump leaders and load their picks for every seeded contest. */
+export async function loadSources(db) {
+  const ids = {};
+  for (const s of SOURCES) {
+    let owner = db.prepare('SELECT id FROM users WHERE email=?').get(s.email)?.id;
+    if (!owner) {
+      owner = Number(db.prepare(
+        `INSERT INTO users (email, name, pw_hash, role, share_status, on_leaderboards) VALUES (?,?,?,?,0,0)`,
+      ).run(s.email, s.name, await hashPw(crypto.randomUUID() + crypto.randomUUID()), 'leader').lastInsertRowid);
+    }
+    let id = db.prepare('SELECT id FROM leaders WHERE owner_id=?').get(owner)?.id;
+    if (!id) {
+      id = Number(db.prepare('INSERT INTO leaders (owner_id, name, kind, blurb, brand_color) VALUES (?,?,?,?,?)')
+        .run(owner, s.name, s.kind, s.blurb, s.color).lastInsertRowid);
+    } else {
+      db.prepare('UPDATE leaders SET name=?, kind=?, blurb=?, brand_color=? WHERE id=?').run(s.name, s.kind, s.blurb, s.color, id);
+    }
+    ids[s.key] = id;
+  }
+  for (const c of BALLOT) {
+    const choices = db.prepare('SELECT id, label FROM choices WHERE contest_id=?').all(c.id);
+    for (const s of SOURCES) {
+      const e = ENDORSEMENTS.find((x) => x.source === s.key && x.state === 'TX' && x.race === c.race && matchChoice(choices, x.candidate));
+      db.prepare('DELETE FROM recommendations WHERE leader_id=? AND contest_id=?').run(ids[s.key], c.id);
+      if (!e) continue;
+      db.prepare('INSERT INTO recommendations (leader_id, contest_id, choice_ids, note) VALUES (?,?,?,?)')
+        .run(ids[s.key], c.id, JSON.stringify([matchChoice(choices, e.candidate).id]), e.note || null);
+    }
+  }
+  return ids;
+}
+
+// ---------- sample voters and volunteer events (fictional) ----------
+const EVENTS = [ // [kind, title, location, day offset (fn of today), hour, minute, code, group-only]
+  ['social', 'Share your America First sample ballot', 'Online', () => 0, 9, 0, 'SHARE1', false],
+  ['phonebank', 'Phone bank: registration deadline reminders', 'Block Walkers HQ, or call from home', () => 1, 18, 0, 'CALLS1', false],
+  ['canvass', 'Block walk: Precinct 101 door hangers', 'Meet at Block Walkers HQ', untilSat, 9, 0, 'KNOCK101', false],
+  ['party_meeting', 'Precinct 101 neighbors meetup', 'Block Walkers HQ', () => 6, 19, 0, 'MEET101', true],
+  ['volunteer', 'Poll watcher training', 'Online', () => 9, 18, 30, 'WATCH9', false],
+  ['gotv', 'First day of early voting: rides to the polls', 'Block Walkers HQ', () => 18, 8, 0, 'RIDES18', false],
+];
+
+/** Seed showcase data. With force on an existing database, refresh sources and event dates. */
 export async function seed(db, { force = false } = {}) {
   ingest(db, demoData());
-  if (db.prepare('SELECT COUNT(*) n FROM users').get().n) {
+  const fresh = !db.prepare(`SELECT COUNT(*) n FROM users WHERE email NOT LIKE '%@sources.cvas.app'`).get().n;
+  const src = await loadSources(db);
+  if (!fresh) {
     if (force) refreshEventDates(db);
     return;
   }
   const hashed = await hashPw('demo-password');
-  const pw = () => hashed;
-
   const user = (email, name, extra = {}) =>
-    Number(
-      db.prepare(
-        `INSERT INTO users (email, name, pw_hash, role, jurisdiction_id, precinct, birth_date, share_status, on_leaderboards)
-         VALUES (?,?,?,?,?,?,?,?,?)`,
-      ).run(email, name, pw('demo-password'), extra.role || 'voter', 'city-maple', extra.precinct || '12',
-        extra.birth || '1990-04-12', 1, 1).lastInsertRowid,
-    );
-  const org1 = user('org1@example.org', 'Riverbend Civic League', { role: 'leader' });
-  const org2 = user('org2@example.org', 'Maplewood Taxpayers Forum', { role: 'leader' });
+    Number(db.prepare(
+      `INSERT INTO users (email, name, pw_hash, role, jurisdiction_id, precinct, birth_date, share_status, on_leaderboards)
+       VALUES (?,?,?,?,?,?,?,1,1)`,
+    ).run(email, name, hashed, extra.role || 'voter', 'tx-ellis-wax', extra.precinct || '101', extra.birth || '1988-06-14').lastInsertRowid);
+  const org = user('org1@example.org', 'Dale Whitmore', { role: 'leader' });
   const demo = user('demo@example.org', 'Demo Voter');
-  const friends = ['Jamie Ortega', 'Sam Whitaker', 'Ari Feldman', 'Kim Nakamura'].map((n, i) =>
-    user(`friend${i + 1}@example.org`, n, { precinct: i % 2 ? '14' : '12' }));
-
-  const leader = (owner, name, kind, blurb, color, ranks) =>
-    Number(db.prepare('INSERT INTO leaders (owner_id, name, kind, blurb, brand_color, rank_names) VALUES (?,?,?,?,?,?)')
-      .run(owner, name, kind, blurb, color, ranks ? JSON.stringify(ranks) : null).lastInsertRowid);
-  const l1 = leader(org1, 'Riverbend Civic League', 'organization', 'Neighborhood-first local politics since 1998.', '#2f6f4f',
-    ['Neighbor', 'Member', 'Block Regular', 'Block Captain', 'Ward Captain', 'Steward', 'Elder']);
-  const l2 = leader(org2, 'Maplewood Taxpayers Forum', 'organization', 'Fiscal accountability for city hall.', '#8a4b1f');
-  const l3 = leader(org1, 'Teachers for Cedar Valley', 'list', 'School board and education measures only.', '#3b5a9a');
-
-  const rec = (l, c, ids, note) =>
-    db.prepare('INSERT INTO recommendations (leader_id, contest_id, choice_ids, note) VALUES (?,?,?,?)').run(l, c, JSON.stringify(ids), note || null);
-  rec(l1, 'c-mayor', ['ch-mayor-b'], 'Marcus has shown up to every neighborhood meeting for six years.');
-  rec(l1, 'c-council', ['ch-cc-b', 'ch-cc-d']);
-  rec(l1, 'c-meas-a', ['ch-ma-y']);
-  rec(l1, 'c-meas-b', ['ch-mb-y']);
-  rec(l1, 'c-past-meas', ['ch-z-y']);
-  rec(l2, 'c-mayor', ['ch-mayor-a'], 'Only candidate who committed to a line-item budget review.');
-  rec(l2, 'c-council', ['ch-cc-a', 'ch-cc-c']);
-  rec(l2, 'c-meas-a', ['ch-ma-n'], 'Bond cost outpaces projected use.');
-  rec(l2, 'c-meas-b', ['ch-mb-n']);
-  rec(l3, 'c-schools', ['ch-sb-a'], 'Former teacher; backs smaller class sizes.');
-  rec(l3, 'c-meas-a', ['ch-ma-y']);
-  db.prepare(`INSERT INTO results (contest_id, winner_ids) VALUES ('c-past-meas', '["ch-z-y"]')`).run();
-
-  const bind = (u, l, p) => db.prepare('INSERT INTO bindings (user_id, leader_id, priority) VALUES (?,?,?)').run(u, l, p);
-  bind(demo, l1, 1);
-  bind(demo, l3, 2);
-  friends.forEach((f, i) => bind(f, i < 3 ? l1 : l2, 1));
+  const friends = ['Cody Ramirez', 'Shelby Hart', 'Wade Collier', 'Kristen Boyd'].map((n, i) =>
+    user(`friend${i + 1}@example.org`, n, { precinct: i % 2 ? '104' : '101' }));
+  for (const u of [org, demo, ...friends]) bindDefaults(db, u);
 
   for (const f of friends.slice(0, 3)) db.prepare(`INSERT INTO friendships (a, b, status) VALUES (?,?,'accepted')`).run(demo, f);
   db.prepare(`INSERT INTO friendships (a, b, status) VALUES (?,?,'pending')`).run(friends[3], demo);
 
-  const g = Number(db.prepare(`INSERT INTO groups (name, kind, leader_id, invite_code, owner_id) VALUES ('Elm Street Block Team','neighborhood',?, 'ELMST001', ?)`).run(l1, org1).lastInsertRowid);
-  for (const u of [demo, ...friends.slice(0, 3)]) db.prepare('INSERT INTO group_members (group_id, user_id) VALUES (?,?)').run(g, u);
+  const g = Number(db.prepare(`INSERT INTO groups (name, kind, leader_id, invite_code, owner_id) VALUES ('Ellis County Block Walkers','neighborhood',?, 'ELLIS101', ?)`).run(src.afi, org).lastInsertRowid);
+  for (const u of [org, demo, ...friends.slice(0, 3)]) db.prepare('INSERT INTO group_members (group_id, user_id) VALUES (?,?)').run(g, u);
 
-  const action = (l, kind, title, loc, offset, hour, codeStr) =>
-    Number(db.prepare(
-      `INSERT INTO actions (leader_id, jurisdiction_id, kind, title, location, starts_at, ends_at, checkin_code, created_by)
-       VALUES (?, 'city-maple', ?,?,?,?,?,?,?)`,
-    ).run(l, kind, title, loc, at(offset, hour), at(offset, hour + 2), codeStr, org1).lastInsertRowid);
-  action(l1, 'council_meeting', 'City Council regular session — zoning item 7', 'City Hall Chambers', 2, 18, 'COUNCIL1');
-  action(l1, 'canvass', 'Saturday canvass: Precinct 12', 'Meet at Elm St Coffee', untilSat(), 10, 'KNOCK12');
-  action(l1, 'phonebank', 'Evening phone bank', 'Riverbend office or remote', 3, 18, 'CALLS3');
-  action(l1, 'gotv', 'Election-day GOTV shift', 'Riverbend office', 9, 8, 'GOTV9');
-  action(l1, 'party_meeting', 'Ward 4 monthly meeting', 'VFW Hall', 6, 19, 'WARD4');
-  action(l3, 'volunteer', 'School board candidate forum volunteers', 'Lincoln Elementary', 5, 17, 'FORUM5');
-  action(null, 'council_meeting', 'County Commission public hearing — budget', 'County Courthouse', 12, 9, 'BUDGET12');
-  db.prepare(
-    `INSERT INTO actions (leader_id, jurisdiction_id, kind, title, location, starts_at, checkin_code, created_by)
-     VALUES (?, 'city-maple', 'social', 'Share the Measure A explainer', 'Online', ?, 'SHAREA', ?)`,
-  ).run(l1, at(0, 9), org1);
+  for (const [kind, title, loc, off, h, m, code, groupOnly] of EVENTS) {
+    db.prepare(
+      `INSERT INTO actions (group_id, jurisdiction_id, kind, title, location, starts_at, ends_at, checkin_code, created_by)
+       VALUES (?, 'tx-ellis-wax', ?,?,?,?,?,?,?)`,
+    ).run(groupOnly ? g : null, kind, title, loc, at(off(), h, m), at(off(), h + 2, m), code, org);
+  }
 
-  // History for friends so leaderboards have something on them.
-  const log = (u, kind, qty, verified, pts, actionId = null) =>
-    db.prepare('INSERT INTO activity (user_id, action_id, kind, quantity, verified, points, day) VALUES (?,?,?,?,?,?, ?)')
-      .run(u, actionId, kind, qty, verified, pts, day(-3));
+  // History so leaderboards and the feed have something on them.
+  const log = (u, kind, qty, verified, pts, d = -3) =>
+    db.prepare(`INSERT INTO activity (user_id, kind, quantity, verified, points, day, at) VALUES (?,?,?,?,?,?,?)`)
+      .run(u, kind, qty, verified, pts, day(d), at(d, 11));
   log(friends[0], 'canvass', 85, 1, 105);
-  log(friends[0], 'phonebank', 60, 0, 60);
-  log(friends[0], 'party_meeting', 1, 1, 30);
-  log(friends[1], 'council_meeting', 1, 1, 30);
-  log(friends[1], 'social', 4, 0, 12);
-  log(friends[2], 'volunteer', 1, 1, 40);
-  log(friends[2], 'gotv', 1, 1, 40);
-  log(demo, 'social', 2, 0, 6);
-  for (const u of [friends[0], friends[1], friends[2], demo])
-    db.prepare(`INSERT INTO participation (user_id, election_id, kind) VALUES (?, 'el-past', 'voted')`).run(u);
-  for (const u of [friends[0], friends[2]])
-    db.prepare(`INSERT INTO participation (user_id, election_id, kind) VALUES (?, 'el-local', 'voted')`).run(u);
-  db.prepare(`INSERT INTO participation (user_id, election_id, kind) VALUES (?, 'el-local', 'planned')`).run(friends[1]);
-  for (const u of [friends[0], friends[1], friends[2]])
-    db.prepare(`INSERT INTO participation (user_id, election_id, kind) VALUES (?, NULL, 'registered')`).run(u);
-  db.prepare(`INSERT INTO registrations (user_id, status, party) VALUES (?, 'submitted', 'Independent')`).run(demo);
-  db.prepare(`INSERT INTO nudges (from_id, to_id, election_id) VALUES (?,?, 'el-local')`).run(friends[0], demo);
+  log(friends[0], 'phonebank', 60, 0, 60, -2);
+  log(friends[0], 'party_meeting', 1, 1, 30, -6);
+  log(friends[1], 'council_meeting', 1, 1, 30, -5);
+  log(friends[1], 'social', 4, 0, 12, -1);
+  log(friends[2], 'volunteer', 1, 1, 40, -4);
+  log(friends[2], 'gotv', 1, 1, 40, -9);
+  log(demo, 'social', 2, 0, 6, -2);
+  const part = (u, e, kind, d) =>
+    db.prepare('INSERT INTO participation (user_id, election_id, kind, at) VALUES (?,?,?,?)').run(u, e, kind, at(d, 12));
+  for (const u of [friends[0], friends[1], friends[2], demo]) part(u, 'tx-2026-primary', 'voted', -212);
+  for (const u of [friends[0], friends[2]]) part(u, 'tx-2026-runoff', 'voted', -128);
+  part(friends[1], 'tx-2026-general', 'planned', -1);
+  for (const u of [friends[0], friends[1], friends[2]]) part(u, null, 'registered', -300);
+  db.prepare(`INSERT INTO nudges (from_id, to_id, election_id, at) VALUES (?,?, 'tx-2026-general', ?)`).run(friends[0], demo, at(-1, 19));
 }
 
 function refreshEventDates(db) {
-  const rows = db.prepare(`SELECT id FROM actions WHERE created_by = (SELECT id FROM users WHERE email='org1@example.org') ORDER BY id`).all();
-  const plan = [[2, 18], [untilSat(), 10], [3, 18], [9, 8], [6, 19], [5, 17], [12, 9], [0, 9]];
-  rows.forEach((r, i) => {
-    const [d, h] = plan[i % plan.length];
-    db.prepare('UPDATE actions SET starts_at=?, ends_at=? WHERE id=?').run(at(d, h), at(d, h + 2), r.id);
-  });
+  const org = db.prepare(`SELECT id FROM users WHERE email='org1@example.org'`).get()?.id;
+  if (!org) return;
+  for (const [, , , off, h, m, code] of EVENTS) {
+    db.prepare('UPDATE actions SET starts_at=?, ends_at=? WHERE created_by=? AND checkin_code=?')
+      .run(at(off(), h, m), at(off(), h + 2, m), org, code);
+  }
 }
