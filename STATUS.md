@@ -35,7 +35,8 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] No catch-all logging: Today's "Your tasks" lists your open skill-tree actions, and each one logs only its own kind of work (posts, doors, calls, shifts)
 - [x] Invite links: recruits join your crew; you earn a bonus each time a recruit reaches a new rank
 - [x] Share a post: the app writes the post (endorsed races on your ballot, each attributed to AFI or Trump; deadlines; Election Day countdown) with your invite link. "Share this post" opens the phone's share sheet (or copies); a finished share records the post (+3, 15/day cap). No logging or counting posts by hand
-- [x] 24 tests pass; screens checked at Pixel 7 and 1280x800
+- [x] Daily quests need the real action, checked by the server: review every race on your ballot ("Looks good" or change a pick; the server stores the race, never the pick), RSVP "I'm going" to an event this week, cheer, share, remind, log 10 doors or calls. Opening a page no longer counts. Each quest shows what's left ("Review all 11 races. 3 of 11 done") and taps through to where you do it; Claim appears only when done
+- [x] 28 tests pass; screens checked at Pixel 7 and 1280x800
 - [x] New logo: a front-view tricorn (crown behind two cocked flaps, cockade) in brass, for the header mark, web icon, Android launcher (adaptive, safe zone) and splash; `scripts/icons.sh` now uses coat navy
 - [x] Quieter chrome: no brass rules on the top bar, tab bar, sidebar, Today hero or Feed muster; bars sit on a 1px darker-navy edge and a soft shadow. Brass stays on the active tab, figures and buttons
 - [x] Android app installed and verified on the Pixel 6 (rebuild: `scripts/android.sh <phone-ip:port>`)

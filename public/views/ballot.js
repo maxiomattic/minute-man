@@ -2,6 +2,7 @@
 // Guardrail: picks and overrides live only in localStorage on this device. Nothing about how
 // anyone votes is sent to the server; the server only hears "planned" and "voted".
 import { $, $$, api, celebrate, daysTo, esc, fmtDate, guard, haptic, icon, more, refreshStats, state, store, toast, todayIso, xpFly } from '../core.js';
+import { openRemind } from './remind.js';
 
 const uid = () => state.me?.id;
 const kBallot = (eid) => `ballot:${uid()}:${eid}`;
@@ -67,7 +68,7 @@ function cheatSheet(b, ov) {
   }).join('')}</ol>`;
 }
 
-function contestHtml(c, ov) {
+function contestHtml(c, ov, seen) {
   const rec = c.recommendation;
   const sel = picksFor(c, ov);
   const isOv = Array.isArray(ov[c.id]) && !sameSet(ov[c.id], rec.choiceIds);
@@ -92,6 +93,9 @@ function contestHtml(c, ov) {
         <span class="who">${esc(ch.label)}${ch.party ? ` <span class="muted small">${esc(ch.party)}</span>` : ''}</span>${tag}</label>`;
     }).join('')}
     ${notes.length ? `<div class="note">${notes.join('')}</div>` : ''}
+    <footer class="review noprint">${seen
+      ? `<span class="reviewed">${icon('check')}Reviewed</span>`
+      : '<span class="small muted">Happy with this pick?</span><button class="btn sm" data-review>Looks good</button>'}</footer>
   </section>`;
 }
 
@@ -116,9 +120,41 @@ export async function render(el, eid) {
   const names = (state.leaders || []).map((x) => x.name);
   const srcLine = names.length > 1 ? `${names[0]}'s endorsements first, then ${names.slice(1).join(', then ')} where ${names[0].split(' ').map((w) => w[0]).join('')} hasn't picked`
     : names.length ? `${names[0]}'s endorsements` : 'your sources';
-  if (!offline) api('/events', { method: 'POST', body: { kind: `ballot_viewed:${eid}` } }).then(refreshStats).catch(() => {});
+  // Races you've reviewed (the daily quest counts these). The server hears which race, never the pick.
+  const seen = new Set(b.reviewed || []);
   const e = b.election;
   const others = els.filter((x) => x.id !== eid);
+
+  const total = b.contests.length;
+  const reviewBar = () => {
+    if (!total) return '';
+    const n = b.contests.filter((c) => seen.has(c.id)).length;
+    return `<div class="panel review-bar noprint" role="status">
+      <div class="row between"><strong>${n >= total ? `All ${total} races reviewed` : `Review all ${total} races`}</strong>
+        <span class="small muted num">${n} of ${total}</span></div>
+      <div class="bar" role="progressbar" aria-label="Races reviewed" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${n}"><div style="width:${(n / total) * 100}%"></div></div>
+      ${n >= total ? '<p class="small" style="margin:8px 0 0">Your ballot is ready. <a href="#/today">Claim your quest on Today</a>.</p>'
+        : `<p class="small muted" style="margin:8px 0 0">Check each race and tap Looks good. ${n ? '<button class="link-btn" id="nextRace">Go to the next race</button>' : ''}</p>`}
+    </div>`;
+  };
+  const nextUnseen = () => b.contests.find((c) => !seen.has(c.id));
+  const goTo = (c) => c && el.querySelector(`.contest[data-c="${CSS.escape(c.id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const markReviewed = async (c, { advance = false } = {}) => {
+    if (seen.has(c.id)) return;
+    if (offline) { toast("You're offline. Reviews save when you're back online."); return; }
+    await api(`/elections/${encodeURIComponent(eid)}/reviewed`, { method: 'POST', body: { contestId: c.id } });
+    seen.add(c.id);
+    b.reviewed = [...seen];
+    store.set(kBallot(eid), b);
+    const scroll = window.scrollY;
+    draw();
+    window.scrollTo(0, scroll);
+    if (seen.size >= total && b.contests.every((x) => seen.has(x.id))) {
+      haptic('success');
+      toast('Ballot reviewed. Claim your quest on Today.');
+      refreshStats();
+    } else if (advance) goTo(nextUnseen());
+  };
 
   const draw = () => {
     const ov = store.get(kOvr(eid), {});
@@ -139,7 +175,8 @@ export async function render(el, eid) {
           ${more('Where these picks come from', `<p class="small">Filled in from ${esc(srcLine)}. Where nobody endorsed and only one Republican is running, that candidate is filled in. Tap an oval to change a pick.</p>`)}
           ${state.me?.jurisdictionId && !state.me.jurisdictionId.includes('-') ? more('Some races are missing', `<p class="small">This shows statewide races only. Races for your congressional and legislative districts aren't loaded for your area yet. <a href="#/endorsements">See every endorsement in your state</a>.</p>`) : ''}
         </div>
-        <div class="sheets">${b.contests.map((c) => contestHtml(c, ov)).join('') || '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>'}</div>
+        ${reviewBar()}
+        <div class="sheets">${b.contests.map((c) => contestHtml(c, ov, seen.has(c.id))).join('') || '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>'}</div>
         <p class="legal">Your picks stay on this device. Minute Man never sees how you vote.</p>
       </div>
       <aside class="side">
@@ -166,8 +203,15 @@ export async function render(el, eid) {
         store.set(kLog(), log.slice(0, 200));
         haptic();
         redrawContest(c);
+        // Changing a pick counts as reviewing that race.
+        markReviewed(c).catch(() => {});
       });
     });
+    $$('[data-review]', el).forEach((btn) => (btn.onclick = guard(async () => {
+      btn.disabled = true;
+      try { await markReviewed(b.contests.find((x) => x.id === btn.closest('.contest').dataset.c), { advance: true }); haptic(); } finally { btn.disabled = false; }
+    })));
+    $('#nextRace', el)?.addEventListener('click', () => goTo(nextUnseen()));
     const redrawContest = () => {
       const scroll = window.scrollY;
       draw();
@@ -249,7 +293,7 @@ export async function renderVote(el, eid) {
         <div class="stamp">${icon('check')}</div>
         <h1>You voted</h1>
         <p class="muted">Thanks for showing up in the ${esc(e.name)}. The next best thing is bringing someone with you.</p>
-        <a class="btn go block" href="#/board/friends">Remind your friends</a></div>`;
+        <button class="btn go block" id="remindBtn">${icon('chat')}Remind someone to vote</button></div>`;
     } else if (!planned || editing) {
       const how = plan?.how || '';
       const shown = placesFor(how);
@@ -302,6 +346,7 @@ export async function renderVote(el, eid) {
     </div>`;
 
     $('#print', el).onclick = () => print();
+    $('#remindBtn', el)?.addEventListener('click', guard(() => openRemind()));
     $('#editPlan', el)?.addEventListener('click', () => { editing = true; draw(); });
     $('#cancelEdit', el)?.addEventListener('click', () => { editing = false; draw(); });
     $('#already', el)?.addEventListener('click', () => { planned = true; editing = false; draw(); });
@@ -360,8 +405,9 @@ export async function renderVote(el, eid) {
       voted = true;
       haptic('heavy');
       refreshStats();
-      await celebrate({ big: '+100', title: 'You voted', body: 'Thanks for showing up. Now bring someone with you.', cta: 'Remind my crew' });
-      location.hash = '#/board/friends';
+      await celebrate({ big: '+100', title: 'You voted', body: 'Thanks for showing up. Now bring someone with you.', cta: 'Remind someone to vote' });
+      draw();
+      openRemind();
     };
   };
   draw();

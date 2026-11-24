@@ -84,37 +84,74 @@ export function streak(db, uid) {
 }
 
 // ---------- quests ----------
+// Every quest completes from something the voter really did, recorded on the server: races reviewed
+// on the ballot, an RSVP, a reminder sent, a cheer, a share, doors or calls logged. Opening a page
+// never counts. `progress` returns { have, goal }; `need` says what's left; `href` is where to do it.
 const QUESTS = {
-  ballot: { title: 'See who to vote for', xp: 15, when: (c) => c.election, check: (c) => c.ev(`ballot_viewed:${c.election.id}`) },
-  remind: { title: 'Remind a friend to vote', xp: 20, when: (c) => c.election && c.friends > 0, check: (c) => c.count('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND date(at, ?)=?') > 0 },
-  cheer: { title: 'Cheer someone in your feed', xp: 10, when: () => true, check: (c) => c.count('SELECT COUNT(*) n FROM cheers WHERE user_id=? AND date(at, ?)=?') > 0 },
-  post: { title: 'Share a post', xp: 15, check: (c) => c.count(`SELECT COUNT(*) n FROM activity WHERE user_id=? AND kind='social' AND day=?`) > 0 },
-  events: { title: "See what's happening this week", xp: 10, check: (c) => c.ev('events_viewed') },
-  doors: { title: 'Knock on 10 doors', xp: 30, check: (c) => c.count(`SELECT COALESCE(SUM(quantity),0) n FROM activity WHERE user_id=? AND kind='canvass' AND day=?`) >= 10 },
-  calls: { title: 'Make 10 calls', xp: 30, check: (c) => c.count(`SELECT COALESCE(SUM(quantity),0) n FROM activity WHERE user_id=? AND kind='phonebank' AND day=?`) >= 10 },
+  ballot: {
+    title: 'Review your ballot', xp: 15,
+    // Once you've reviewed every race on an earlier day, the quest stops coming back.
+    when: (c) => c.election && c.ballot.total > 0 && !(c.ballot.have >= c.ballot.total && c.ballot.lastDay < c.day),
+    progress: (c) => ({ have: c.ballot.have, goal: c.ballot.total }),
+    need: (c) => `Review all ${c.ballot.total} races`,
+    href: (c) => `#/ballot/${c.election.id}`,
+  },
+  remind: { title: 'Remind a friend to vote', xp: 20, when: (c) => c.election && c.friends > 0, progress: (c) => ({ have: c.count('SELECT COUNT(*) n FROM nudges WHERE from_id=? AND date(at, ?)=?'), goal: 1 }), href: () => '#/board/friends' },
+  cheer: { title: 'Cheer someone in your feed', xp: 10, when: () => true, progress: (c) => ({ have: c.count('SELECT COUNT(*) n FROM cheers WHERE user_id=? AND date(at, ?)=?'), goal: 1 }), href: () => '#/feed' },
+  post: { title: 'Share a post', xp: 15, progress: (c) => ({ goal: 1, have: c.count(`SELECT COUNT(*) n FROM activity WHERE user_id=? AND kind='social' AND day=?`) }), href: () => '#/act/share' },
+  events: {
+    title: 'RSVP to an event this week', xp: 10,
+    when: (c) => c.week.length > 0,
+    progress: (c) => ({ have: c.week.filter((a) => a.rsvpDay === c.day).length, goal: 1 }),
+    need: () => "Tap I'm going on an event near you",
+    href: (c) => { const a = c.week.find((x) => !x.going) || c.week[0]; return `#/act/${a.id}`; },
+  },
+  doors: { title: 'Knock on 10 doors', xp: 30, progress: (c) => ({ have: c.count(`SELECT COALESCE(SUM(quantity),0) n FROM activity WHERE user_id=? AND kind='canvass' AND day=?`), goal: 10 }), href: () => '#/act/log/canvass' },
+  calls: { title: 'Make 10 calls', xp: 30, progress: (c) => ({ have: c.count(`SELECT COALESCE(SUM(quantity),0) n FROM activity WHERE user_id=? AND kind='phonebank' AND day=?`), goal: 10 }), href: () => '#/act/log/phonebank' },
 };
 export const CHEST_XP = 30;
 
-function questContext(db, user, election) {
+/** How far along the voter is on reviewing their ballot (races only, never picks). */
+export function ballotReview(db, user, election, ballotFor) {
+  if (!election || !ballotFor) return { have: 0, total: 0, lastDay: null };
+  const ids = new Set(ballotFor(user, election).map((x) => x.id));
+  const rows = db.prepare('SELECT contest_id id, date(at, ?) day FROM ballot_reviews WHERE user_id=? AND election_id=?').all(sqlShift(), user.id, election.id).filter((r) => ids.has(r.id));
+  return { have: rows.length, total: ids.size, lastDay: rows.reduce((m, r) => (r.day > m ? r.day : m), '') || null };
+}
+
+function questContext(db, user, election, deps = {}) {
   const day = todayStr();
+  const memo = {};
+  const once = (k, f) => (k in memo ? memo[k] : (memo[k] = f()));
   return {
     day,
     election,
     friends: db.prepare(`SELECT COUNT(*) n FROM friendships WHERE status='accepted' AND (a=?1 OR b=?1)`).get(user.id).n,
-    crew: crewIds(db, user.id).length,
-    bindings: db.prepare('SELECT COUNT(*) n FROM bindings WHERE user_id=? AND active=1').get(user.id).n,
     count: (q) => (q.includes('date(at, ?)') ? db.prepare(q).get(user.id, sqlShift(), day) : db.prepare(q).get(user.id, day)).n,
-    ev: (kind) => !!db.prepare('SELECT 1 FROM events WHERE user_id=? AND kind=? AND day=?').get(user.id, kind, day),
+    get ballot() { return once('ballot', () => ballotReview(db, user, election, deps.ballotFor)); },
+    // Events you can still go to in the next 7 days (not share-a-post items), with your RSVP day.
+    get week() {
+      return once('week', () => {
+        if (!deps.visibleActions) return [];
+        const now = Date.now();
+        const sql = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+        const list = deps.visibleActions(user).filter((a) => a.kind !== 'social' && a.starts_at >= sql(now - 2 * 3600e3) && a.starts_at <= sql(now + 7 * DAY));
+        const rs = db.prepare('SELECT action_id id, date(at, ?) day FROM rsvps WHERE user_id=?').all(sqlShift(), user.id);
+        const m = new Map(rs.map((r) => [r.id, r.day]));
+        return list.map((a) => ({ id: a.id, going: m.has(a.id), rsvpDay: m.get(a.id) || null }));
+      });
+    },
   };
 }
 
-export function dailyQuests(db, user, election) {
-  const c = questContext(db, user, election);
+export function dailyQuests(db, user, election, deps) {
+  const c = questContext(db, user, election, deps);
   const pool = Object.entries(QUESTS).filter(([, q]) => !q.when || q.when(c));
   pool.sort((a, b) => hash(`${user.id}:${c.day}:${a[0]}`) - hash(`${user.id}:${c.day}:${b[0]}`));
   const picked = pool.slice(0, 3).map(([id, q]) => {
     const claimed = !!db.prepare('SELECT 1 FROM bonuses WHERE user_id=? AND source=?').get(user.id, `quest:${id}:${c.day}`);
-    return { id, title: q.title, xp: q.xp, done: claimed || q.check(c), claimed };
+    const { have, goal } = q.progress(c);
+    return { id, title: q.title, xp: q.xp, done: claimed || have >= goal, claimed, have: Math.min(have, goal), goal, need: q.need ? q.need(c) : null, href: q.href ? q.href(c) : null };
   });
   const chestClaimed = !!db.prepare('SELECT 1 FROM bonuses WHERE user_id=? AND source=?').get(user.id, `chest:${c.day}`);
   return { day: c.day, quests: picked, chest: { xp: CHEST_XP, ready: picked.every((q) => q.claimed) && !chestClaimed, claimed: chestClaimed } };
@@ -153,8 +190,9 @@ function nextActions(db, user, ctx) {
     }
     if (!parts.includes('voted') && !parts.includes('planned'))
       add({ kind: 'plan', title: 'Make your voting plan', body: `Pick when and where you'll vote in ${e.name}. It takes 30 seconds.`, cta: 'Make a plan', href: `#/vote/${e.id}`, xp: 10 });
-    if (!parts.includes('voted') && !db.prepare('SELECT 1 FROM events WHERE user_id=? AND kind=?').get(user.id, `ballot_viewed:${e.id}`))
-      add({ kind: 'ballot', title: 'See who to vote for', body: `${ctx.contests} races, already filled in from your endorsements.`, cta: 'See my picks', href: `#/ballot/${e.id}`, xp: 15 });
+    const br = ctx.review;
+    if (!parts.includes('voted') && br.total > 0 && br.have < br.total)
+      add({ kind: 'ballot', title: 'Review your ballot', progress: `${br.have} of ${br.total} races reviewed`, body: `${br.total} races, already filled in from your endorsements. Check each one and tap Looks good.`, cta: br.have ? 'Keep reviewing' : 'See my picks', href: `#/ballot/${e.id}`, xp: 15 });
     if (d <= 14) {
       const f = db.prepare(
         `SELECT u.id, u.name FROM friendships fr JOIN users u ON u.id = CASE WHEN fr.a=?1 THEN fr.b ELSE fr.a END
@@ -184,7 +222,8 @@ function nextActions(db, user, ctx) {
 }
 
 // ---------- routes ----------
-export function engagementRoutes(route, { db, HttpError, bad, upcomingElections, today }) {
+export function engagementRoutes(route, { db, HttpError, bad, upcomingElections, today, ballotFor, visibleActions }) {
+  const deps = { ballotFor, visibleActions };
   const nextElection = (user) => upcomingElections(user).find((e) => daysBetween(today(), e.date) <= 60) || null;
 
   route('GET', '/api/today', ({ user }) => {
@@ -192,7 +231,8 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     const contests = election ? db.prepare('SELECT COUNT(*) n FROM contests WHERE election_id=?').get(election.id).n : 0;
     const bindings = db.prepare('SELECT COUNT(*) n FROM bindings WHERE user_id=? AND active=1').get(user.id).n;
     const ladder = ladderFor(db, user); // awards rung bonuses before we total points
-    const actions = nextActions(db, user, { election, contests, bindings, ladder });
+    const review = ballotReview(db, user, election, ballotFor);
+    const actions = nextActions(db, user, { election, contests, bindings, ladder, review });
     const sc = scorecard(db, user.id);
     const crew = crewIds(db, user.id);
     let proof = null;
@@ -207,7 +247,7 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     return {
       next: actions[0],
       upNext: actions.slice(1, 4),
-      quests: dailyQuests(db, user, election),
+      quests: dailyQuests(db, user, election, deps),
       streak: streak(db, user.id),
       points: sc.points,
       rank: { level: ladder.level, name: ladder.name, nextName: ladder.nextName, progress: ladder.progress, coach: ladder.coach, of: ladder.rungs.length },
@@ -220,7 +260,7 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
 
   route('POST', '/api/quests/:id/claim', ({ user, params }) => {
     const election = nextElection(user);
-    const dq = dailyQuests(db, user, election);
+    const dq = dailyQuests(db, user, election, deps);
     if (params.id === 'chest') {
       if (!dq.chest.ready) throw bad('finish all three quests first');
       db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,?, datetime('now'))`).run(user.id, `chest:${dq.day}`, CHEST_XP);
@@ -228,7 +268,7 @@ export function engagementRoutes(route, { db, HttpError, bad, upcomingElections,
     }
     const q = dq.quests.find((x) => x.id === params.id);
     if (!q) throw new HttpError(404, 'not one of today\'s quests');
-    if (!q.done) throw bad('not done yet');
+    if (!q.done) throw bad(`Not done yet. ${q.need || q.title} first${q.goal > 1 ? ` (${q.have} of ${q.goal})` : ''}.`);
     if (q.claimed) throw new HttpError(409, 'already claimed');
     db.prepare(`INSERT OR IGNORE INTO bonuses (user_id, source, points, at) VALUES (?,?,?, datetime('now'))`).run(user.id, `quest:${q.id}:${dq.day}`, q.xp);
     return { ok: true, xp: q.xp };

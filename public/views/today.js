@@ -76,11 +76,15 @@ export async function render(el, arg, fromAct = false, sub = null) {
     const right = x.claimed ? `<span class="tiny muted">Claimed</span>`
       : x.done ? `<button class="btn go sm" data-claim="${esc(x.id)}">Claim ${x.xp} XP</button>`
       : `<span class="tiny muted q-xp">+${x.xp} XP</span>`;
+    // What's left, from the server: "Review all 12 races. 3 of 12 done." Gone once it's done.
+    const left = !x.done && (x.need || x.goal > 1)
+      ? [x.need, x.goal > 1 ? `${x.have} of ${x.goal} done` : ''].filter(Boolean).join('. ') : '';
     const inner = `<span class="oval ${x.done ? 'done' : ''}" aria-hidden="true"></span>
-      <span class="grow title ${x.claimed ? 'q-done' : ''}">${esc(x.title)}</span>${right}`;
-    return x.done || !QUEST_HREF[x.id]
+      <span class="grow"><span class="title ${x.claimed ? 'q-done' : ''}">${esc(x.title)}</span>${left ? `<span class="sub">${esc(left)}</span>` : ''}</span>${right}`;
+    const href = x.href || QUEST_HREF[x.id];
+    return x.done || !href
       ? `<li class="quest" aria-label="${esc(x.title)}${x.done ? ', done' : ''}">${inner}</li>`
-      : `<li class="quest linked"><a class="rowlink" href="${QUEST_HREF[x.id]}">${inner}${icon('chevron', 'chev')}</a></li>`;
+      : `<li class="quest linked"><a class="rowlink" href="${esc(href)}">${inner}${icon('chevron', 'chev')}</a></li>`;
   };
   const chest = q.chest.claimed
     ? `<div class="chest">${icon('gift', 'chest-ic')}<span class="grow small">Bonus opened. New quests tomorrow.</span></div>`
@@ -120,6 +124,7 @@ export async function render(el, arg, fromAct = false, sub = null) {
     </div>`;
 
   // ----- wiring -----
+
   $$('[data-act]', el).forEach((b) => (b.onclick = guard(async () => {
     const a = actions[Number(b.dataset.act)];
     if (a?.action?.type !== 'nudge') return;
@@ -132,7 +137,7 @@ export async function render(el, arg, fromAct = false, sub = null) {
     await render(el);
   })));
 
-  await renderEvents($('#events-slot', el), arg, { embedded: true, viewed: fromAct, sub });
+  await renderEvents($('#events-slot', el), arg, { embedded: true, sub, onChange: () => render(el) });
   if (fromAct && !arg) $('#events', el)?.scrollIntoView({ block: 'start' });
 
   $$('[data-claim]', el).forEach((b) => (b.onclick = guard(async () => {

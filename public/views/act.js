@@ -73,6 +73,7 @@ function openEvent(a, rerender) {
       ${host ? `<li>${icon('crew')}<span>Hosted by ${esc(host)}</span></li>` : ''}
     </ul>
     ${a.description ? `<p>${esc(a.description)}</p>` : ''}
+    ${!a.done && parseTs(a.starts_at) > Date.now() - 2 * 3600e3 ? `<div class="going-row" id="goingRow"></div>` : ''}
     ${a.checkinCode ? `<div class="code-card"><span class="small">Your event's check-in code</span><b class="num">${esc(a.checkinCode)}</b><span class="tiny muted">Show it at the event so people get full points.</span></div>` : ''}
     ${a.done ? '<p class="tag good" style="margin-top:12px">Checked in</p>' : `
     <form id="ci" class="stack" style="margin-top:14px">
@@ -85,6 +86,27 @@ function openEvent(a, rerender) {
     </form>`}
   </div>`);
   $('[data-close]', el).onclick = close;
+  // "I'm going": an RSVP the host can count on. It's what the events quest asks for.
+  const goingRow = $('#goingRow', el);
+  const paintGoing = () => {
+    if (!goingRow) return;
+    const others = (a.goingCount || 0) - (a.going ? 1 : 0);
+    goingRow.innerHTML = a.going
+      ? `<span class="tag good">${icon('check')}You're going</span><span class="grow small muted">${others > 0 ? `${others} other${others === 1 ? '' : 's'} going` : ''}</span><button class="link-btn" id="notGoing">Can't make it</button>`
+      : `<button class="btn" id="imGoing">I'm going</button><span class="grow small muted">${others > 0 ? `${others} going` : 'Let the host know to expect you.'}</span>`;
+    const setGoing = (going) => guard(async () => {
+      const r = await api(`/actions/${a.id}/rsvp`, { method: 'POST', body: { going } });
+      a.going = r.going; a.goingCount = r.goingCount;
+      haptic(going ? 'success' : undefined);
+      toast(going ? "You're going. Check in there with the host's code for full points." : 'Got it. You\'re off the list.');
+      paintGoing();
+      refreshStats();
+      rerender();
+    });
+    $('#imGoing', goingRow)?.addEventListener('click', setGoing(true));
+    $('#notGoing', goingRow)?.addEventListener('click', setGoing(false));
+  };
+  paintGoing();
   wireSteppers(el);
   const form = $('#ci', el);
   if (!form) return;
@@ -223,16 +245,16 @@ function openLog(rerender, kind) {
 
 /**
  * Events near you, the log button and your record. Lives inside the Today tab (`embedded`), so
- * "what I'm doing" is one place. `viewed` marks the events quest done (only when you opened it).
+ * "what I'm doing" is one place. Just looking doesn't count for quests; an RSVP or check-in does.
  */
-export async function render(el, arg, { embedded = false, viewed = true, sub = null } = {}) {
-  if (viewed) api('/events', { method: 'POST', body: { kind: 'events_viewed' } }).then(refreshStats).catch(() => {});
+export async function render(el, arg, { embedded = false, sub = null, onChange = null } = {}) {
   const [actions, activity, myGroups] = await Promise.all([
     api('/actions'),
     api('/activity').catch(() => []),
     api('/groups').catch(() => []),
   ]);
-  const rerender = () => render(el, null, { embedded, viewed: false });
+  // Today passes onChange so an RSVP or check-in also refreshes its quests.
+  const rerender = onChange || (() => render(el, null, { embedded }));
 
   const groups = {};
   for (const a of actions) (groups[bucket(a)] ||= []).push(a);
@@ -245,7 +267,7 @@ export async function render(el, arg, { embedded = false, viewed = true, sub = n
       <span class="grow"><span class="title">${esc(a.title)}</span>
         <span class="sub">${esc(fmtWhen(a.starts_at))}${a.location ? `, ${esc(a.location)}` : ''}</span>
         ${host ? `<span class="sub">${esc(host)}</span>` : ''}</span>
-      ${a.done ? '<span class="tag good">Done</span>' : `<span class="xp">${esc(xpText(k))}</span>`}
+      ${a.done ? '<span class="tag good">Done</span>' : a.going ? '<span class="tag good">Going</span>' : `<span class="xp">${esc(xpText(k))}</span>`}
     </button></li>`;
   };
 

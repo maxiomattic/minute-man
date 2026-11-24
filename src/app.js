@@ -262,7 +262,20 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     const e = db.prepare('SELECT * FROM elections WHERE id=?').get(params.id);
     if (!e) throw new HttpError(404, 'no such election');
     const rules = rulesFor(db, user.jurisdiction_id || e.jurisdiction_id);
-    return { election: e, strategy: 'priority', contests: ballotFor(user, e), rules, generatedAt: new Date().toISOString() };
+    const reviewed = db.prepare('SELECT contest_id id FROM ballot_reviews WHERE user_id=? AND election_id=?').all(user.id, e.id).map((r) => r.id);
+    return { election: e, strategy: 'priority', contests: ballotFor(user, e), reviewed, rules, generatedAt: new Date().toISOString() };
+  });
+
+  // Mark one race on your sample ballot as reviewed. Records only that you looked at the race, never your pick.
+  route('POST', '/api/elections/:id/reviewed', ({ user, params, body }) => {
+    const e = db.prepare('SELECT * FROM elections WHERE id=?').get(params.id);
+    if (!e) throw new HttpError(404, 'no such election');
+    const ids = ballotFor(user, e).map((c) => c.id);
+    const cid = String(body.contestId || '');
+    if (!ids.includes(cid)) throw bad('that race is not on your ballot');
+    db.prepare(`INSERT OR IGNORE INTO ballot_reviews (user_id, election_id, contest_id, at) VALUES (?,?,?, datetime('now'))`).run(user.id, e.id, cid);
+    const done = new Set(db.prepare('SELECT contest_id id FROM ballot_reviews WHERE user_id=? AND election_id=?').all(user.id, e.id).map((r) => r.id));
+    return { reviewed: ids.filter((id) => done.has(id)).length, total: ids.length };
   });
 
   route('GET', '/api/polling', ({ user, query }) => {
@@ -387,12 +400,15 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     db.prepare('SELECT election_id AS electionId, kind, at FROM participation WHERE user_id=?').all(user.id));
 
   // ---------- activism ----------
-  route('GET', '/api/actions', ({ user }) => {
+  /** Events this voter can see: their sources', their groups', their own, and public ones where they live. */
+  function visibleActions(user) {
     const chain = user.jurisdiction_id ? jurisdictionChain(db, user.jurisdiction_id) : [];
-    const rows = db
+    return db
       .prepare(
         `SELECT a.*, l.name AS leaderName, g.name AS groupName,
-           (SELECT 1 FROM activity x WHERE x.action_id=a.id AND x.user_id=?) AS done
+           (SELECT 1 FROM activity x WHERE x.action_id=a.id AND x.user_id=?) AS done,
+           (SELECT 1 FROM rsvps r WHERE r.action_id=a.id AND r.user_id=?) AS going,
+           (SELECT COUNT(*) FROM rsvps r WHERE r.action_id=a.id) AS goingCount
          FROM actions a LEFT JOIN leaders l ON l.id=a.leader_id LEFT JOIN groups g ON g.id=a.group_id
          WHERE COALESCE(a.ends_at, a.starts_at) >= datetime('now','-1 day') AND (
            a.leader_id IN (SELECT leader_id FROM bindings WHERE user_id=? AND active=1)
@@ -401,10 +417,15 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
            ${chain.length ? `OR (a.leader_id IS NULL AND a.group_id IS NULL AND a.jurisdiction_id IN (${chain.map(() => '?').join(',')}))` : ''}
          ) ORDER BY a.starts_at`,
       )
-      .all(user.id, user.id, user.id, user.id, ...chain);
+      .all(user.id, user.id, user.id, user.id, user.id, ...chain);
+  }
+
+  route('GET', '/api/actions', ({ user }) => {
+    const rows = visibleActions(user);
     return rows.map(({ checkin_code, created_by, ...a }) => ({
       ...a,
       done: !!a.done,
+      going: !!a.going,
       checkinCode: created_by === user.id || (a.leader_id && db.prepare('SELECT 1 FROM leaders WHERE id=? AND owner_id=?').get(a.leader_id, user.id)) ? checkin_code : undefined,
     }));
   });
@@ -424,6 +445,20 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
         body.jurisdictionId || user.jurisdiction_id || null, body.kind, body.title, body.description || null,
         body.location || null, body.startsAt, body.endsAt || null, code(), user.id);
     return db.prepare('SELECT * FROM actions WHERE id=?').get(Number(r.lastInsertRowid));
+  });
+
+  // "I'm going": an RSVP to an upcoming event you can see. Turns into a check-in when you get there.
+  route('POST', '/api/actions/:id/rsvp', ({ user, params, body }) => {
+    const a = visibleActions(user).find((x) => x.id === Number(params.id));
+    if (!a) throw new HttpError(404, 'no such event');
+    if (a.kind === 'social') throw bad('Share a post from this event to count it.');
+    if (body.going === false) db.prepare('DELETE FROM rsvps WHERE user_id=? AND action_id=?').run(user.id, a.id);
+    else {
+      if (a.starts_at < new Date(Date.now() - 2 * 3600e3).toISOString().replace('T', ' ').slice(0, 19)) throw bad('that event already started');
+      db.prepare(`INSERT OR IGNORE INTO rsvps (user_id, action_id, at) VALUES (?,?, datetime('now'))`).run(user.id, a.id);
+    }
+    const n = db.prepare('SELECT COUNT(*) n FROM rsvps WHERE action_id=?').get(a.id).n;
+    return { going: body.going !== false, goingCount: n };
   });
 
   route('POST', '/api/actions/:id/checkin', ({ user, params, body }) => {
@@ -673,7 +708,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     return { ok: true };
   }, { auth: 'admin' });
 
-  engagementRoutes(route, { db, HttpError, bad, upcomingElections, today });
+  engagementRoutes(route, { db, HttpError, bad, upcomingElections, today, ballotFor, visibleActions });
 
   if (seed) {
     route('POST', '/api/admin/reseed', async () => {

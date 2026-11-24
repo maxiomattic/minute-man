@@ -231,6 +231,15 @@ p { margin: 0 0 8px; }
 .contest .pick { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--brand-text); text-align: right; }
 .contest .note { padding: 10px 14px 12px; font-size: 14px; background: var(--sunk); border-top: 1px solid var(--line); }
 .contest .warn { color: var(--flame); }
+.contest { scroll-margin-top: 72px; }
+.contest .review { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.contest .review .small { flex: 1; }
+.contest .reviewed { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--good); }
+.contest .reviewed svg { width: 16px; height: 16px; }
+.review-bar .bar { height: 10px; margin-top: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.review-bar .bar > div { height: 100%; background: var(--marker); border-radius: inherit; transition: width .5s var(--ease); }
+.going-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.going-row .tag svg { width: 14px; height: 14px; margin-right: 4px; }
 
 /* ---------- quests ---------- */
 .quest { display: flex; align-items: center; gap: 14px; }

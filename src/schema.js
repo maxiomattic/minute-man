@@ -231,4 +231,18 @@ export const MIGRATIONS = [
   // Feed: recent activity and rank-ups across everyone.
   'CREATE INDEX IF NOT EXISTS activity_at ON activity(at)',
   'CREATE INDEX IF NOT EXISTS bonuses_at ON bonuses(at)',
+  // Quests count real actions: races you reviewed on your ballot (never your picks) and events you RSVP'd to.
+  `CREATE TABLE IF NOT EXISTS ballot_reviews (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    election_id TEXT NOT NULL,
+    contest_id TEXT NOT NULL,
+    at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, election_id, contest_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS rsvps (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action_id INTEGER NOT NULL REFERENCES actions(id) ON DELETE CASCADE,
+    at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, action_id)
+  )`,
 ];

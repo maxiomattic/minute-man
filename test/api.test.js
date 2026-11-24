@@ -456,3 +456,98 @@ test('skill tree: trainings unlock in order and pay once', async () => {
   await call('/ladder/learn', { method: 'POST', body: { id: 'learn_local' }, token: t });
   assert.equal((await call('/recognition', { token: t })).data.points, before + 15);
 });
+
+// ---- quests need the real action, not a page view ----
+let questN = 0;
+/** A fresh Waxahachie voter in the block-walk group (so there are events this week) with quest `id` today. */
+async function voterWithQuest(id) {
+  for (let i = 0; i < 80; i++) {
+    const email = `q${++questN}@x.org`;
+    const s = (await call('/signup', { method: 'POST', body: { email, name: 'Quest Tester', password: 'longenough' } })).data;
+    await call('/me', { method: 'PATCH', body: { jurisdictionId: 'tx-ellis-wax', birthDate: '1990-01-01' }, token: s.token });
+    await call('/groups/join', { method: 'POST', body: { code: 'ELLIS101' }, token: s.token });
+    await call('/friends', { method: 'POST', body: { email: 'demo@example.org' }, token: s.token });
+    const demo = await login('demo@example.org');
+    await call('/friends', { method: 'POST', body: { email }, token: demo });
+    const q = (await call('/today', { token: s.token })).data.quests.quests.find((x) => x.id === id);
+    if (q) return { token: s.token, q };
+  }
+  throw new Error(`no voter got the ${id} quest`);
+}
+const quest = async (token, id) => (await call('/today', { token })).data.quests.quests.find((x) => x.id === id);
+const claim = (token, id) => call(`/quests/${id}/claim`, { method: 'POST', token });
+
+test('quests: opening the ballot or events page no longer completes anything', async () => {
+  for (const id of ['ballot', 'events']) {
+    const { token } = await voterWithQuest(id);
+    await call('/events', { method: 'POST', body: { kind: 'ballot_viewed:tx-2026-general' }, token });
+    await call('/events', { method: 'POST', body: { kind: 'events_viewed' }, token });
+    await call('/elections/tx-2026-general/ballot', { token });
+    await call('/actions', { token });
+    assert.equal((await quest(token, id)).done, false, id);
+    assert.equal((await claim(token, id)).status, 400, id);
+  }
+});
+
+test('quest: ballot needs every race reviewed', async () => {
+  const { token, q } = await voterWithQuest('ballot');
+  assert.ok(q.goal > 1 && q.have === 0 && /Review all \d+ races/.test(q.need));
+  assert.equal(q.href, '#/ballot/tx-2026-general');
+  const b = (await call('/elections/tx-2026-general/ballot', { token })).data;
+  assert.equal(b.contests.length, q.goal);
+  assert.deepEqual(b.reviewed, []);
+  assert.equal((await call('/elections/tx-2026-general/reviewed', { method: 'POST', body: { contestId: 'nope' }, token })).status, 400);
+  for (const c of b.contests.slice(0, -1)) await call('/elections/tx-2026-general/reviewed', { method: 'POST', body: { contestId: c.id }, token });
+  const part = await quest(token, 'ballot');
+  assert.equal(part.have, q.goal - 1);
+  const no = await claim(token, 'ballot');
+  assert.equal(no.status, 400);
+  assert.match(no.data.error || JSON.stringify(no.data), /Review all/);
+  const r = await call('/elections/tx-2026-general/reviewed', { method: 'POST', body: { contestId: b.contests.at(-1).id }, token });
+  assert.deepEqual(r.data, { reviewed: q.goal, total: q.goal });
+  assert.equal((await claim(token, 'ballot')).status, 200);
+  assert.equal((await call('/elections/tx-2026-general/ballot', { token })).data.reviewed.length, q.goal);
+});
+
+test('quest: events needs an RSVP to an event this week', async () => {
+  const { token, q } = await voterWithQuest('events');
+  assert.match(q.href, /^#\/act\/\d+$/);
+  assert.equal((await claim(token, 'events')).status, 400);
+  const id = Number(q.href.split('/').pop());
+  const r = await call(`/actions/${id}/rsvp`, { method: 'POST', body: { going: true }, token });
+  assert.equal(r.status, 200);
+  assert.ok(r.data.going && r.data.goingCount >= 1);
+  assert.ok((await call('/actions', { token })).data.find((a) => a.id === id).going);
+  // Taking it back undoes it.
+  await call(`/actions/${id}/rsvp`, { method: 'POST', body: { going: false }, token });
+  assert.equal((await claim(token, 'events')).status, 400);
+  await call(`/actions/${id}/rsvp`, { method: 'POST', body: { going: true }, token });
+  assert.equal((await claim(token, 'events')).status, 200);
+  assert.equal((await call('/actions/999999/rsvp', { method: 'POST', body: {}, token })).status, 404);
+});
+
+test('quests: cheer, share, remind, doors and calls complete only from the real action', async () => {
+  const demoId = (await call('/me', { token: await login('demo@example.org') })).data.id;
+  const acts = {
+    cheer: async (token) => {
+      const item = (await call('/feed', { token })).data.items.find((i) => i.userId);
+      return call('/cheers', { method: 'POST', body: { item: item.key, ownerId: item.userId }, token });
+    },
+    post: async (token) => call('/posts/share', { method: 'POST', body: { postId: (await call('/posts', { token })).data.posts[0].id }, token }),
+    remind: (token) => call(`/friends/${demoId}/nudge`, { method: 'POST', body: { electionId: 'tx-2026-general' }, token }),
+    doors: async (token) => {
+      await call('/activity', { method: 'POST', body: { kind: 'canvass', quantity: 6 }, token });
+      const q = await quest(token, 'doors');
+      assert.equal(q.have, 6);
+      assert.equal((await claim(token, 'doors')).status, 400);
+      return call('/activity', { method: 'POST', body: { kind: 'canvass', quantity: 4 }, token });
+    },
+    calls: (token) => call('/activity', { method: 'POST', body: { kind: 'phonebank', quantity: 10 }, token }),
+  };
+  for (const [id, act] of Object.entries(acts)) {
+    const { token } = await voterWithQuest(id);
+    assert.equal((await claim(token, id)).status, 400, `${id} before`);
+    assert.equal((await act(token)).status, 200, `${id} action`);
+    assert.equal((await claim(token, id)).status, 200, `${id} after`);
+  }
+});
