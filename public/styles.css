@@ -310,6 +310,91 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 }
 
 /* ===== views: today + crew (agent A edits only inside this block) ===== */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.chev { width: 18px; height: 18px; flex: none; color: var(--muted); }
+
+/* link rows inside lists */
+.list.links > li { padding: 0; }
+.list.links > li.quest:not(.linked) { padding: 12px 18px; }
+.list .rowlink {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 12px 18px;
+  color: var(--ink); text-decoration: none; background: none; border: 0; font: inherit; text-align: left; cursor: pointer;
+}
+.list .rowlink:hover { background: color-mix(in srgb, var(--sunk) 60%, transparent); }
+
+/* today */
+.election-line {
+  display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-size: 15px; padding: 2px 2px 0;
+}
+.election-line svg { width: 20px; height: 20px; color: var(--brand); flex: none; }
+.today .section-head { margin-bottom: 8px; }
+.today .section-head .h3 { font-family: var(--text); }
+.today .main > section, .today .side > section { min-width: 0; }
+.quest .title { font-weight: 600; }
+.quest .q-done { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.quest .q-xp { white-space: nowrap; }
+.quest .btn.sm { flex: none; }
+.chest-ic { width: 24px; height: 24px; flex: none; color: var(--muted); }
+.chest .btn { flex: none; }
+
+.streak .streak-top { gap: 8px; margin-bottom: 14px; }
+.streak .streak-flame { width: 40px; height: 40px; color: var(--flame); flex: none; }
+.streak.cold .streak-flame { color: var(--muted); }
+.streak .streak-n { font-size: 56px; line-height: .9; margin-right: 6px; }
+.streak .streak-line { margin: 14px 0 0; }
+.streak .streak-line.risk { color: var(--flame); font-weight: 600; }
+
+.standing { display: flex; align-items: center; gap: 14px; color: var(--ink); text-decoration: none; }
+.standing-n { font-size: 44px; line-height: .9; color: var(--brand); }
+.standing-ic { width: 32px; height: 32px; color: var(--muted); flex: none; }
+.proof { display: flex; align-items: center; gap: 10px; margin: 0; padding: 0 4px; color: var(--muted); }
+.proof svg { width: 20px; height: 20px; color: var(--good); flex: none; }
+
+.feed-meta { gap: 6px; margin-top: 2px; }
+.feed-kind svg { width: 15px; height: 15px; display: block; }
+.feed-item .grow { min-width: 0; }
+.feed-mini .feed-item { padding: 12px 14px; }
+.feed-mini .feed-item .avatar { width: 34px; height: 34px; font-size: 13px; }
+.feed-mini .cheer { padding: 0 10px; }
+.today .badges { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 10px; }
+.today .badge .seal { width: 48px; height: 48px; }
+.today .badge .seal svg { width: 22px; height: 22px; }
+
+/* crew */
+.crew { max-width: 760px; display: grid; gap: 16px; }
+.crew h1 { margin: 0; }
+.crew-lede { margin: 0 0 10px; }
+#crewBody { display: grid; gap: 16px; min-width: 0; }
+#crewBody > * { min-width: 0; }
+.crew-seg { overflow-x: auto; }
+.crew .list .avatar { width: 38px; height: 38px; font-size: 14px; }
+.board-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+.board-controls .seg { flex: 1 1 220px; }
+.board-controls select { flex: 1 1 200px; width: auto; min-height: 44px; border-radius: 999px; }
+.board-nudge { font-weight: 700; font-size: 17px; margin: 0 0 4px; }
+.board-hidden { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 10px; }
+.board-hidden svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.board li { gap: 10px; }
+.board-pts { display: flex; align-items: baseline; gap: 4px; }
+.friend-actions { gap: 8px; flex: none; }
+.friend-actions .xp { height: 20px; font-size: 13px; padding: 0 7px; }
+.friend-actions .btn svg { width: 16px; height: 16px; }
+.group-row { flex-wrap: wrap; }
+.group-row .grow { flex: 1 1 220px; }
+.group-meta { gap: 8px; margin-top: 4px; }
+.group-meta .code { font-family: var(--display); font-size: 16px; letter-spacing: .06em; color: var(--ink); }
+.group-actions { gap: 8px; }
+.danger-link { color: var(--danger); padding: 6px 4px; }
+.crew-forms { display: grid; gap: 16px; }
+.crew-form h3 { margin-bottom: 2px; }
+.inline-form { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.inline-form input { flex: 1 1 200px; width: auto; }
+.inline-form .btn { flex: 1 0 auto; min-height: 48px; }
+@media (min-width: 720px) { .crew-forms { grid-template-columns: 1fr 1fr; align-items: start; } .inline-form .btn { flex: 0 0 auto; } }
+@media (max-width: 420px) {
+  .friend-actions .btn.sm { padding: 0 10px; }
+  .crew .list > li { padding: 12px 14px; }
+}
 /* ===== end today + crew ===== */
 
 /* ===== views: ballot + act + me (agent B edits only inside this block) ===== */
