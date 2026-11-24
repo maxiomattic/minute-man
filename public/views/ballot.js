@@ -128,7 +128,7 @@ export async function render(el, eid) {
           ${offline ? '<p class="tag hot">Offline. Showing your saved ballot.</p>' : ''}
           <div class="narrow-only noprint" style="margin-top:14px">${cta}</div>
         </div>
-        <p class="small muted">Filled in from people you follow${b.strategy === 'consensus' ? ', weighted by priority' : ', top priority first'}. Tap an oval to change a pick.${changed ? ` <button class="link-btn" id="reset">Undo all ${changed} change${changed > 1 ? 's' : ''}</button>` : ''}</p>
+        <p class="small muted">Filled in from people you follow${b.strategy === 'consensus' ? ', weighted by priority' : ', top priority first'}. Tap an oval to change a pick.${changed ? ` <button class="link-btn" id="reset">${changed > 1 ? `Undo all ${changed} changes` : 'Undo your change'}</button>` : ''}</p>
         <div class="sheets">${b.contests.map((c) => contestHtml(c, ov)).join('') || '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>'}</div>
         <p class="legal">Your picks stay on this device. CVAS never sees how you vote. Sample ballots are a guide only.</p>
       </div>
@@ -141,7 +141,7 @@ export async function render(el, eid) {
       </aside>
     </div>`;
     $('#print', el).onclick = () => print();
-    $('#reset', el)?.addEventListener('click', () => { store.del(kOvr(eid)); toast('Back to their picks'); draw(); });
+    $('#reset', el)?.addEventListener('click', () => { store.del(kOvr(eid)); toast(changed > 1 ? 'Undid all changes' : 'Undid your change'); draw(); });
     $$('.contest', el).forEach((sec) => {
       const c = b.contests.find((x) => x.id === sec.dataset.c);
       sec.addEventListener('change', (ev) => {
@@ -208,6 +208,14 @@ export async function renderVote(el, eid) {
   const late = daysTo(e.date) < -7;
   const open = today >= opens && !late;
 
+  // Places that fit how you'll vote, best kind first (early voting sites before polling places).
+  const placesFor = (how) => {
+    const kinds = HOW_PLACES[how];
+    if (!kinds) return places;
+    const list = places.filter((p) => kinds.includes(p.kind));
+    return list.length ? list.sort((a, b) => kinds.indexOf(a.kind) - kinds.indexOf(b.kind)) : places;
+  };
+
   const draw = () => {
     const plan = store.get(kPlan(eid));
     const ov = store.get(kOvr(eid), {});
@@ -231,9 +239,7 @@ export async function renderVote(el, eid) {
         <a class="btn go block" href="#/crew/friends">Remind my crew</a></div>`;
     } else if (!planned || editing) {
       const how = plan?.how || '';
-      const kinds = HOW_PLACES[how];
-      const list = kinds ? places.filter((p) => kinds.includes(p.kind)) : places;
-      const shown = list.length ? list : places;
+      const shown = placesFor(how);
       head = `<form id="planForm" class="stack">
         <div><p class="kick">${esc(e.name)}</p><h1>Make your plan</h1>
           <p class="muted">People who plan when and where are more likely to make it. It takes 30 seconds.</p></div>
@@ -270,7 +276,7 @@ export async function renderVote(el, eid) {
         ${offline ? '<p class="tag hot">Offline. Showing what was saved on this device.</p>' : ''}
         ${head}
         ${planSummary}
-        <div class="panel"><h3>Steps</h3><ol class="steps">${steps.map((s) => `<li>${s}</li>`).join('')}</ol></div>
+        ${voted ? '' : `<div class="panel"><h3>Steps</h3><ol class="steps">${steps.map((s) => `<li>${s}</li>`).join('')}</ol></div>`}
       </div>
       <aside class="side">
         <div class="panel">
@@ -289,10 +295,8 @@ export async function renderVote(el, eid) {
     if (form) {
       // Changing "how" narrows the place list; keep the form's other state.
       $$('input[name=how]', form).forEach((r) => (r.onchange = () => {
-        const kinds = HOW_PLACES[r.value];
-        const list = places.filter((x) => kinds.includes(x.kind));
         const chosen = $('input[name=place]:checked', form)?.value || '';
-        $('#places', el).innerHTML = (list.length ? list : places).map((p) => placeRow(p, chosen)).join('') || '<p class="muted small">No locations on file for your area yet.</p>';
+        $('#places', el).innerHTML = placesFor(r.value).map((p) => placeRow(p, chosen)).join('') || '<p class="muted small">No locations on file for your area yet.</p>';
         haptic();
       }));
       $('#near', el)?.addEventListener('click', () => {
@@ -300,11 +304,8 @@ export async function renderVote(el, eid) {
         navigator.geolocation.getCurrentPosition(guard(async (pos) => {
           places = await api(`/polling?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
           store.set(kPlaces(), places);
-          const how = $('input[name=how]:checked', form)?.value;
-          const kinds = HOW_PLACES[how];
-          const list = kinds ? places.filter((x) => kinds.includes(x.kind)) : places;
           const chosen = $('input[name=place]:checked', form)?.value || '';
-          $('#places', el).innerHTML = (list.length ? list : places).map((p) => placeRow(p, chosen)).join('');
+          $('#places', el).innerHTML = placesFor($('input[name=how]:checked', form)?.value).map((p) => placeRow(p, chosen)).join('');
           toast('Sorted by distance');
         }), () => toast("Couldn't get your location. Allow location access or pick from the list."));
       });
@@ -322,8 +323,8 @@ export async function renderVote(el, eid) {
           mine.push('planned');
           xpFly(10, btn);
           refreshStats();
-          toast('Plan saved. +10 XP');
-        } else toast('Plan saved');
+          toast('Saved my plan. +10 XP');
+        } else toast('Saved my plan');
         planned = true;
         editing = false;
         draw();

@@ -401,6 +401,8 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 
 /* ===== views: ballot + act + me (agent B edits only inside this block) ===== */
 /* Everything is scoped under .vb (view root, and sheet content) so it can't leak into other views. */
+.vb.page > *, .vb .page > *, .vb .main > *, .vb .side > * { min-width: 0; }
+.vb nav.seg a { white-space: normal; line-height: 1.25; display: flex; align-items: center; justify-content: center; }
 .vb .kick { font-size: 14px; font-weight: 600; color: var(--brand); margin: 0 0 4px; }
 .vb .center { text-align: center; }
 .vb .wide-only { display: none; }
@@ -417,6 +419,7 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 /* ballot sheets */
 .vb .sheets { display: grid; gap: 16px; }
 .vb .contest .who { min-width: 0; overflow-wrap: anywhere; }
+.vb .contest .pick { max-width: 45%; flex: none; }
 .vb .contest .pick.mine { color: var(--ink); }
 .vb .contest .pick.off { color: var(--muted); font-weight: 600; }
 .vb .contest .note p { margin: 0 0 4px; }
