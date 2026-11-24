@@ -85,8 +85,8 @@ const P = {
   feed: '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 10.5h6M9 14h6M9 17.5h3.5"/>',
   // Laurel and a star: honors.
   laurel: '<path d="M12 21c-4.5-1.5-7.5-5.5-7.5-10.5M12 21c4.5-1.5 7.5-5.5 7.5-10.5"/><path d="M5 14.5c1.8.2 3 1.2 3.5 2.6M4.3 10.8c1.7-.1 3 .7 3.8 2M19 14.5c-1.8.2-3 1.2-3.5 2.6M19.7 10.8c-1.7-.1-3 .7-3.8 2"/><path d="m12 4 1.4 2.9 3.1.4-2.3 2.2.6 3.1L12 11.1l-2.8 1.5.6-3.1-2.3-2.2 3.1-.4z" fill="currentColor" stroke="none"/>',
-  // The tricorn: the Minute Man mark.
-  tricorn: '<path d="M2.5 13.5c2.6 1 5.6 1.5 9.5 1.5s6.9-.5 9.5-1.5c-1.2-.9-2-2.2-2.4-3.9-.5-2.3-3.3-3.9-7.1-3.9S5.4 7.3 4.9 9.6c-.4 1.7-1.2 3-2.4 3.9z" fill="currentColor" stroke="none"/><path d="M5 16.5c2.2.7 4.4 1 7 1s4.8-.3 7-1" />',
+  // The tricorn, seen from the front: crown behind two cocked flaps, a cockade on the left flap.
+  tricorn: '<g transform="translate(0 1.4)" fill="currentColor" stroke="none"><path d="M5.7 7.6C6.5 5.3 8.9 4 12 4s5.5 1.3 6.3 3.6c-2.3.6-4.3 1.6-6.3 2.9-2-1.3-4-2.3-6.3-2.9z"/><path fill-rule="evenodd" d="M.4 6.4c4.2.5 8 2.6 11.6 5 3.6-2.4 7.4-4.5 11.6-5-.3 3.6-1.6 6.6-3.9 8.6-2.4.6-5 1.1-7.7 2.6-2.7-1.5-5.3-2-7.7-2.6C2 13 .7 10 .4 6.4zM4.7 11.6a1.9 1.9 0 1 0 3.8 0 1.9 1.9 0 1 0-3.8 0zM5.85 11.6a.75.75 0 1 0 1.5 0 .75.75 0 1 0-1.5 0z"/></g>',
   book: '<path d="M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5V19c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5z"/><path d="M12 6v13.5"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
 };

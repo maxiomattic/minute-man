@@ -6,14 +6,14 @@ if ! command -v rsvg-convert >/dev/null || ! command -v magick >/dev/null; then
   exec nix shell nixpkgs#librsvg nixpkgs#imagemagick -c "$0" "$@"
 fi
 cd "$(dirname "$0")/.."
-BG='#0e6b4e'
+BG='#1a2848'
 RES=android/app/src/main/res
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 
-# Glyph only (ballot box, no rounded background), from public/icon.svg.
+# Glyph only (tricorn, no rounded background), from public/icon.svg.
 glyph=$(sed -E 's#<rect width="64" height="64"[^>]*/>##; s#<svg [^>]*>##; s#</svg>##' public/icon.svg)
-# Adaptive foreground: 108dp canvas, glyph kept well inside the 66dp safe zone.
-printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -12 88 88">%s</svg>' "$glyph" > "$TMP/fg.svg"
+# Adaptive foreground: 108dp canvas, hat spans ~61dp, inside the 66dp safe circle.
+printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -7 78 78">%s</svg>' "$glyph" > "$TMP/fg.svg"
 # Full-bleed square (iOS icon, no alpha / no rounded corners; iOS masks it).
 printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="%s"/>%s</svg>' "$BG" "$glyph" > "$TMP/square.svg"
 # Round legacy icon.
@@ -35,7 +35,7 @@ cat > "$RES/values/ic_launcher_background.xml" <<XML
 </resources>
 XML
 
-# Splash images: keep each existing file's size, green background, centered glyph.
+# Splash images: keep each existing file's size, navy background, centered glyph.
 rsvg-convert -w 1024 -h 1024 "$TMP/splash.svg" -o "$TMP/splash.png"
 splash() { # file
   local size; size=$(magick identify -format '%wx%h' "$1")

@@ -34,6 +34,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] No catch-all logging: Today's "Your tasks" lists your open skill-tree actions, and each one logs only its own kind of work (posts, doors, calls, shifts)
 - [x] Invite links: recruits join your crew; you earn a bonus each time a recruit reaches a new rank
 - [x] 24 tests pass; screens checked at Pixel 7 and 1280x800
+- [x] New logo: a front-view tricorn (crown behind two cocked flaps, cockade) in brass, for the header mark, web icon, Android launcher (adaptive, safe zone) and splash; `scripts/icons.sh` now uses coat navy
 - [x] Android app installed and verified on the Pixel 6 (rebuild: `scripts/android.sh <phone-ip:port>`)
 
 ## Left / ideas
