@@ -3,29 +3,111 @@
 // for friends who chose to share their status (the API filters this). Points are honorific.
 import { $, $$, api, esc, guard, haptic, icon, insignia, ACTIVITY_ICON, ago, initials, plural, refreshStats, sheet, state, store, toast, xpFly } from '../core.js';
 import { openRemind } from './remind.js';
+import { PEN, mediaUrl, noteSheet, openImage } from './compose.js';
 
 const first = (name) => String(name || '').split(' ')[0];
 
 // ---------- feed items (shared with Today) ----------
+// Items on screen by key, so a note, photo or delete can redraw one in place.
+const ITEMS = new Map();
+const DOTS = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+
+/** The words and photo someone added to an item (escaped; the photo opens full size on tap). */
+function postParts(it) {
+  return {
+    body: it.body ? `<p class="feed-body">${esc(it.body)}</p>` : '',
+    photo: it.image ? `<button type="button" class="feed-photo" data-full="${esc(it.image)}" aria-label="View photo full size">
+      <img src="${esc(mediaUrl(it.image))}" alt="Photo from ${esc(first(it.name))}" loading="lazy" decoding="async"${it.imageW && it.imageH ? ` width="${Number(it.imageW)}" height="${Number(it.imageH)}"` : ''}></button>` : '',
+  };
+}
+
+/** Your own activity: add a note or photo. Items with someone's words or photo: a menu (yours: edit/delete; others': report). */
+function postActions(it, mine) {
+  if (!it.postId) return mine && it.activityId ? `<button type="button" class="link-btn feed-add" data-note="${esc(it.key)}">Add a note or photo</button>` : '';
+  return `<button type="button" class="feed-menu" data-menu="${esc(it.key)}" aria-label="${mine ? 'Edit or delete' : 'More options'}">${DOTS}</button>`;
+}
+
 export function feedItemHtml(it) {
   const mine = it.userId === state.me?.id;
-  return `<div class="feed-item">
+  ITEMS.set(it.key, it);
+  const { body, photo } = postParts(it);
+  return `<div class="feed-item${it.post ? ' is-post' : ''}${photo ? ' has-photo' : ''}" data-key="${esc(it.key)}">
     <span class="avatar" aria-hidden="true">${esc(initials(it.name))}</span>
     <div class="grow">
       <div><strong>${esc(it.name)}</strong>${it.rank && it.icon !== 'rank' ? ` <span class="feed-rank">${insignia(it.rank)}${esc(it.rank)}</span>` : ''} ${esc(it.text)}</div>
+      ${body}
       <div class="row tiny muted feed-meta">
-        <span class="feed-kind">${icon(ACTIVITY_ICON[it.icon] || 'star')}</span>
+        <span class="feed-kind">${it.icon === 'post' ? PEN : icon(ACTIVITY_ICON[it.icon] || 'star')}</span>
         <span>${esc(ago(it.at))} ago${it.place && !mine ? `, ${esc(it.place.replace(/, [A-Z]{2}$/, ''))}` : ''}</span>
         ${it.verified ? '<span class="tag good">Verified</span>' : ''}
+        ${postActions(it, mine)}
       </div>
     </div>
     ${mine ? (it.cheers ? `<span class="tiny muted">${plural(it.cheers, 'cheer')}</span>` : '')
       : `<button class="cheer ${it.cheered ? 'on' : ''} ${it.cheers ? '' : 'zero'}" data-item="${esc(it.key)}" data-owner="${it.userId}" aria-pressed="${it.cheered}" aria-label="Cheer ${esc(first(it.name))}">${icon('clap')}<span>${it.cheers || 'Cheer'}</span></button>`}
+    ${photo}
   </div>`;
+}
+
+/** Redraw one item in place (after a note, photo or edit), keeping its handlers. */
+function redraw(el, it, onCheer) {
+  const box = document.createElement('div');
+  box.innerHTML = feedItemHtml(it);
+  bindCheers(box, onCheer);
+  el.replaceWith(box.firstElementChild);
+}
+
+/** Photos open full size; your items get "Add a note or photo" and edit/delete; others' get Report. */
+function bindPostActions(root, onCheer) {
+  $$('.feed-photo[data-full]', root).forEach((b) => (b.onclick = () => openImage(b.dataset.full, $('img', b)?.alt || '')));
+  const itemOf = (b) => [b.closest('.feed-item'), ITEMS.get(b.dataset.note || b.dataset.menu)];
+  const edit = (el, it) => noteSheet({
+    activityId: it.activityId,
+    post: it.postId ? { body: it.body, image: it.image } : null,
+    title: it.postId ? 'Edit your note or photo' : 'Add a note or photo',
+    onSaved: (p) => redraw(el, { ...it, postId: p?.id || null, body: p?.body || null, image: p?.image || null, imageW: p?.imageW, imageH: p?.imageH }, onCheer),
+  });
+  $$('[data-note]', root).forEach((b) => (b.onclick = () => { const [el, it] = itemOf(b); if (it) edit(el, it); }));
+  $$('[data-menu]', root).forEach((b) => (b.onclick = () => {
+    const [el, it] = itemOf(b);
+    if (!it) return;
+    const mine = it.userId === state.me?.id;
+    const s = sheet(mine
+      ? `<h2>${it.post ? 'Your post' : 'Your note and photo'}</h2>
+        <div class="sheet-actions">
+          ${it.activityId ? '<button class="btn line block" data-do="edit">Edit note or photo</button>' : ''}
+          <button class="btn danger block" data-do="delete">${it.post ? 'Delete post' : 'Remove note and photo'}</button>
+          <button class="btn quiet block" data-do="close">Cancel</button>
+        </div>`
+      : `<h2>Report this post?</h2>
+        <p class="muted">It disappears from your feed, and we'll take a look. ${esc(first(it.name))} isn't told who reported it.</p>
+        <div class="sheet-actions">
+          <button class="btn danger block" data-do="report">Report and hide</button>
+          <button class="btn quiet block" data-do="close">Cancel</button>
+        </div>`);
+    const on = (k, fn) => { const x = $(`[data-do="${k}"]`, s.el); if (x) x.onclick = fn; };
+    on('close', s.close);
+    on('edit', () => { s.close(); edit(el, it); });
+    on('delete', guard(async () => {
+      await api(`/feed/posts/${it.postId}`, { method: 'DELETE' });
+      s.close();
+      toast(it.post ? 'Post deleted' : 'Note and photo removed');
+      if (it.post) { ITEMS.delete(it.key); el.remove(); }
+      else redraw(el, { ...it, postId: null, body: null, image: null }, onCheer);
+    }));
+    on('report', guard(async () => {
+      await api('/feed/report', { method: 'POST', body: { item: it.key } });
+      s.close();
+      toast('Reported. You won\'t see it again.');
+      ITEMS.delete(it.key);
+      el.remove();
+    }));
+  }));
 }
 
 /** Wire cheer toggles inside root. onCheer runs after a successful cheer (e.g. refresh quests). */
 export function bindCheers(root, onCheer) {
+  bindPostActions(root, onCheer);
   $$('.cheer[data-item]', root).forEach((b) => {
     b.onclick = async () => {
       if (b.dataset.busy) return;

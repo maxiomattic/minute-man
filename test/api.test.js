@@ -621,3 +621,115 @@ test('reminders: ready-made messages, share records it, daily cap, Reminder badg
   assert.equal((await call('/recognition', { token })).data.points, pre + 25);
   assert.equal((await call('/standing', { token })).data.totals.recruits, 1);
 });
+
+// ---- feed posts: words and a photo ----
+// A tiny "JPEG" with an EXIF segment that says GPS, to check the server strips it.
+const fakeJpeg = () => {
+  const exif = [...'Exif\0\0GPS 32.38N 96.84W'].map((c) => c.charCodeAt(0));
+  const app1 = [0xff, 0xe1, 0, exif.length + 2, ...exif];
+  const app0 = [0xff, 0xe0, 0, 16, ...'JFIF\0'.split('').map((c) => c.charCodeAt(0)), 1, 1, 0, 0, 1, 0, 1, 0, 0];
+  const bytes = [0xff, 0xd8, ...app0, ...app1, 0xff, 0xda, 0, 2, 1, 2, 3, 4, 5, 0xff, 0xd9];
+  return btoa(String.fromCharCode(...bytes));
+};
+async function feedAllOf(token) {
+  const out = [];
+  let c = 0;
+  while (c !== null) { const p = (await call(`/feed?cursor=${c}`, { token })).data; out.push(...p.items); c = p.next; }
+  return out;
+}
+
+test('feed posts: text and photo, visibility, limits, report, delete, account deletion', async () => {
+  const mk = async (email, name) => (await call('/signup', { method: 'POST', body: { email, name, password: 'longenough' } })).data.token;
+  const author = await mk('poster@x.org', 'Paula Poster');
+  const friend = await mk('pfriend@x.org', 'Fred Friend');
+  const stranger = await mk('pstranger@x.org', 'Sam Stranger');
+  await call('/friends', { method: 'POST', body: { email: 'poster@x.org' }, token: friend });
+  const me = (await call('/me', { token: author })).data;
+  assert.equal((await call(`/friends/${(await call('/me', { token: friend })).data.id}/accept`, { method: 'POST', token: author })).status, 200);
+
+  // Text post, then a photo post. No points for either.
+  const before = (await call('/recognition', { token: author })).data.points;
+  const t1 = await call('/feed/posts', { method: 'POST', body: { body: 'Knocked on Elm St. <b>Great</b> folks.' }, token: author });
+  assert.equal(t1.status, 200);
+  const p2 = await call('/feed/posts', { method: 'POST', body: { body: '', image: { data: fakeJpeg(), w: 1280, h: 960 } }, token: author });
+  assert.equal(p2.status, 200);
+  assert.match(p2.data.post.image, /^\/api\/media\/[A-Za-z0-9_-]{22}\.jpg$/);
+  assert.equal((await call('/recognition', { token: author })).data.points, before);
+  // The image is served without a token (unguessable URL), as a JPEG, with the GPS segment gone.
+  const img = await handle(new Request('http://t' + p2.data.post.image));
+  assert.equal(img.status, 200);
+  assert.equal(img.headers.get('content-type'), 'image/jpeg');
+  const bytes = new Uint8Array(await img.arrayBuffer());
+  assert.ok(!String.fromCharCode(...bytes).includes('GPS'));
+  assert.equal(bytes[0], 0xff);
+  assert.equal((await handle(new Request('http://t/api/media/AAAAAAAAAAAAAAAAAAAAAA.jpg'))).status, 404);
+
+  // Rejects: empty, too long, not an image.
+  assert.equal((await call('/feed/posts', { method: 'POST', body: { body: '  ' }, token: author })).status, 400);
+  assert.equal((await call('/feed/posts', { method: 'POST', body: { body: 'x'.repeat(501) }, token: author })).status, 400);
+  assert.equal((await call('/feed/posts', { method: 'POST', body: { image: { data: btoa('<svg onload=alert(1)>') } }, token: author })).status, 400);
+
+  // Friends see the posts with the full name.
+  const ff = (await feedAllOf(friend)).filter((i) => i.userId === me.id && i.icon === 'post');
+  assert.equal(ff.length, 2);
+  assert.ok(ff.every((i) => i.name === 'Paula Poster'));
+  assert.ok(ff.some((i) => i.body === 'Knocked on Elm St. <b>Great</b> folks.'), 'stored as text; the client escapes it');
+  // If the author can be off leaderboards, strangers don't see their posts (friends still do).
+  if ((await call('/me', { method: 'PATCH', body: { onLeaderboards: false }, token: author })).status === 200) {
+    assert.ok(!(await feedAllOf(stranger)).some((i) => i.userId === me.id));
+    assert.equal((await feedAllOf(friend)).filter((i) => i.userId === me.id && i.icon === 'post').length, 2);
+  }
+  // On leaderboards, strangers see posts as first name, last initial.
+  await call('/me', { method: 'PATCH', body: { onLeaderboards: true }, token: author });
+  const sf = (await feedAllOf(stranger)).filter((i) => i.userId === me.id && i.icon === 'post');
+  assert.equal(sf.length, 2);
+  assert.ok(sf.every((i) => i.name === 'Paula P.'));
+
+  // A text-only post doesn't outrank verified work from the same moment.
+  const raw = (await feedAllOf(stranger));
+  assert.ok(raw.findIndex((i) => i.key === t1.data.key) > 0);
+
+  // Report: hidden for the reporter, flagged for the admin, still visible to others.
+  assert.equal((await call('/feed/report', { method: 'POST', body: { item: t1.data.key, reason: 'spam' }, token: stranger })).status, 200);
+  assert.ok(!(await feedAllOf(stranger)).some((i) => i.key === t1.data.key));
+  assert.ok((await feedAllOf(friend)).some((i) => i.key === t1.data.key));
+  assert.equal((await call('/feed/report', { method: 'POST', body: { item: t1.data.key }, token: author })).status, 400);
+  assert.equal((await call('/admin/reports')).status, 401);
+  const flagged = (await call('/admin/reports', { token: ADMIN })).data;
+  assert.ok(flagged.some((r) => r.id === t1.data.post.id && r.reports === 1));
+
+  // Note and photo on an activity you logged; only you can add them.
+  const act = (await call('/activity', { method: 'POST', body: { kind: 'canvass', quantity: 30 }, token: author })).data;
+  assert.ok(act.activityId);
+  assert.equal((await call(`/activity/${act.activityId}/post`, { method: 'PUT', body: { body: 'hi' }, token: friend })).status, 404);
+  const cap = await call(`/activity/${act.activityId}/post`, { method: 'PUT', body: { body: 'Hot day, good talks.', image: { data: fakeJpeg() } }, token: author });
+  assert.equal(cap.status, 200);
+  const item = (await feedAllOf(friend)).find((i) => i.key === `a:${act.activityId}`);
+  assert.equal(item.body, 'Hot day, good talks.');
+  assert.ok(item.image);
+  const edited = await call(`/activity/${act.activityId}/post`, { method: 'PUT', body: { body: 'Edited.', removeImage: true }, token: author });
+  assert.equal(edited.data.post.image, null);
+  assert.equal((await handle(new Request('http://t' + item.image))).status, 404, 'replaced photo is gone');
+
+  // Delete your own post (only yours).
+  assert.equal((await call(`/feed/posts/${t1.data.post.id}`, { method: 'DELETE', token: friend })).status, 404);
+  assert.equal((await call(`/feed/posts/${t1.data.post.id}`, { method: 'DELETE', token: author })).status, 200);
+  assert.ok(!(await feedAllOf(friend)).some((i) => i.key === t1.data.key));
+
+  // Admin removal.
+  const bad = (await call('/feed/posts', { method: 'POST', body: { body: 'remove me' }, token: author })).data;
+  assert.equal((await call(`/admin/posts/${bad.post.id}`, { method: 'DELETE', token: ADMIN })).status, 200);
+
+  // Rate limit: 10 posts a day (activity notes count when first added).
+  let status = 200;
+  let n = 0;
+  while (status === 200 && n < 20) { status = (await call('/feed/posts', { method: 'POST', body: { body: `post ${n}` }, token: author })).status; n++; }
+  assert.equal(status, 429);
+  assert.equal(n - 1 + 4, 10, 'ten in all today, counting the earlier ones');
+
+  // Deleting the account removes its posts and photos.
+  const img2 = p2.data.post.image;
+  assert.equal((await call('/me', { method: 'DELETE', token: author })).status, 200);
+  assert.equal((await handle(new Request('http://t' + img2))).status, 404);
+  assert.ok(!(await feedAllOf(friend)).some((i) => i.userId === me.id));
+});

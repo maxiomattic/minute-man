@@ -11,7 +11,7 @@ Minute Man is free, open-source software under the MIT License (see `LICENSE`). 
 - **Registration help**: eligibility checks, deadlines and a guided flow. ID details stay on your device (IndexedDB) and are never uploaded.
 - **Three tabs**:
   - **Today**: your next step, your path, tasks, daily quests, events near you, streak. Group members can host events with a check-in code.
-  - **Feed**: an endless feed of what people are getting done, ranked by impact and how close it is to you (see below), with a county "muster" total at the top and cheers.
+  - **Feed**: an endless feed of what people are getting done, ranked by impact and how close it is to you (see below), with a county "muster" total at the top and cheers. Write your own update (text and one photo) at the top, or add a note and photo to something you did.
   - **Leaderboard**: your place in your precinct, districts, county, state and nationwide, plus friends and groups; filters for this week, 30 days and all time; your numbers, an 8-week chart and honors (14 badges).
 - **The Ladder**: 8 ranks earned by doing each step of political engagement in order, with a skill tree and short trainings before the in-person steps. The ranks are Continental Army ranks: Private (joined), Corporal (registered, with a plan), Sergeant (voted), Ensign (spreads the word), Lieutenant (goes to local meetings), Captain (works for campaigns), Major (organizes a neighborhood) and Colonel (leads a precinct). The DB stores only the level number, so rank names can change without a migration.
 - **Invites**: everyone has an invite link and earns a bonus each time a recruit reaches a new rank.
@@ -19,7 +19,7 @@ Minute Man is free, open-source software under the MIT License (see `LICENSE`). 
 ### Feed ranking
 
 `rankedFeed()` in `src/engine/community.js`. Score = impact × closeness × freshness:
-- **Impact**: log2(2 + points), ×1.4 if verified by a check-in code, ×1.3 for a rank-up, +15% per cheer (up to 10).
+- **Impact**: log2(2 + points), ×1.4 if verified by a check-in code, ×1.3 for a rank-up, +15% per cheer (up to 10). A written post earns no points and counts as 3 (a small unverified action, below any verified work); a photo adds 10% on a post, 15% on an activity.
 - **Closeness**: same precinct 3, shared district 2.2, county 1.6, state 1.25, elsewhere 1; friends and group-mates ×1.5.
 - **Freshness**: halves every 3 days; last 30 days only.
 - **Variety**: each further item from the same person is worth 0.6× the one before.
@@ -28,6 +28,7 @@ Minute Man is free, open-source software under the MIT License (see `LICENSE`). 
 
 - Strangers see only people who opted in ("Show what I do on the feed and leaderboards"), as first name, last initial and town.
 - Whether someone voted, and their plan, show only to friends and group-mates, and only if they share their status. Rank-ups and trainings need that setting too.
+- Posts, notes and photos people add reach the same people as their activity, and friends and group-mates always. No points for them. Photos are shrunk and re-encoded on the phone (dropping EXIF and GPS), checked and stripped again on the server, and served at unguessable URLs. Reporting a post hides it for you and flags it for review; deleting a post or your account deletes its photos.
 - Area totals appear only when at least 3 people are active there.
 - Nobody, including the app, knows how anyone voted.
 

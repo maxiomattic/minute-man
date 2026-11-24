@@ -13,6 +13,7 @@
     "bindings": [{ "name": "CVAS_DB", "class_name": "CvasDb" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CvasDb"] }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "minute-man-media" }],
   "vars": { "CVAS_DEMO_DATE": "2026-10-01", "CVAS_ZONE": "America/Chicago" },
   "observability": { "enabled": true }
 }

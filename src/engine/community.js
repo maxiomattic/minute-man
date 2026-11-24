@@ -96,17 +96,22 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
   };
 
   const items = [];
+  // Things you reported stay hidden for you.
+  const hidden = new Set(db.prepare('SELECT item FROM post_reports WHERE user_id=?').all(user.id).map((r) => r.item));
+  // Words and a photo someone added (feed posts, src/engine/feedposts.js).
+  const words = (r) => (r.pid ? { postId: r.pid, body: r.body || null, image: r.image ? `/api/media/${r.image}` : null, imageW: r.image_w, imageH: r.image_h } : {});
   // Their Ladder rank beside their name, under the same rule as rank-ups (and the leaderboard):
   // yours always, anyone else's only if they share their status. Uses the stored rung, once per person.
-  const push = (p, it) => items.push({
+  const push = (p, it) => hidden.has(it.key) || items.push({
     ...it, userId: p.u.id, name: p.mine || p.isCrew ? p.u.name : short(p.u.name),
     rank: p.seesRank ? LADDER[(p.u.rung || 1) - 1]?.name || null : null,
     place: p.u.home_label || null, near: p.near.level, crew: p.isCrew,
   });
 
   for (const r of db.prepare(
-    `SELECT a.id, a.user_id, a.kind, a.quantity, a.verified, a.points, a.at, x.title FROM activity a
-     LEFT JOIN actions x ON x.id=a.action_id WHERE a.at > ? ORDER BY a.at DESC LIMIT 2000`,
+    `SELECT a.id, a.user_id, a.kind, a.quantity, a.verified, a.points, a.at, x.title,
+       p.id pid, p.body, p.image, p.image_w, p.image_h FROM activity a
+     LEFT JOIN actions x ON x.id=a.action_id LEFT JOIN posts p ON p.activity_id=a.id WHERE a.at > ? ORDER BY a.at DESC LIMIT 2000`,
   ).all(since)) {
     const p = who(r.user_id);
     if (!p.sees) continue;
@@ -114,7 +119,7 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     const qty = k?.perUnit ? `${r.quantity.toLocaleString('en-US')} ${k.unit}${r.quantity === 1 ? '' : 's'}` : null;
     const verb = { canvass: 'knocked', phonebank: 'made', social: 'shared' }[r.kind];
     push(p, {
-      key: `a:${r.id}`, at: r.at, icon: r.kind, points: r.points, verified: !!r.verified,
+      key: `a:${r.id}`, at: r.at, icon: r.kind, points: r.points, verified: !!r.verified, activityId: r.id, ...words(r),
       text: r.kind === 'reminded' ? `reminded ${r.quantity === 1 ? 'someone' : `${r.quantity} people`} to vote`
         : verb ? `${verb} ${qty}${r.title ? ` at ${r.title}` : ''}` : r.title ? `went to ${r.title}` : `worked a ${k?.label.toLowerCase() || r.kind}`,
     });
@@ -140,10 +145,23 @@ export function rankedFeed(db, user, { cursor = 0, limit = PAGE } = {}) {
     push(p, { key: `p:${r.user_id}:${r.election_id}:${r.kind}`, at: r.at, icon: r.kind, points: { voted: 100, planned: 10, registered: 50 }[r.kind], text });
   }
 
+  // Posts people wrote: the same audience as their activity, and friends and group-mates always.
+  for (const r of db.prepare(
+    `SELECT id pid, user_id, body, image, image_w, image_h, at FROM posts WHERE activity_id IS NULL AND at > ? ORDER BY at DESC LIMIT 1000`,
+  ).all(since)) {
+    const p = who(r.user_id);
+    if (!(p.mine || p.isCrew || ('sees' in p ? p.sees : true))) continue;
+    push(p, { key: `u:${r.pid}`, at: r.at, icon: 'post', points: 0, text: '', post: true, ...words(r) });
+  }
+
   const cheers = db.prepare('SELECT COUNT(*) n FROM cheers WHERE item=?');
   for (const it of items) {
     it.cheers = cheers.get(it.key).n;
-    const impact = Math.log2(2 + it.points) * (it.verified ? 1.4 : 1) * (it.milestone ? 1.3 : 1) * (1 + 0.15 * Math.min(it.cheers, 10));
+    // A post earns no points; it counts like a small unverified action (impact 3, about 6 points' worth),
+    // so it never outranks verified work of the same age and distance (at least 7). A photo adds a
+    // little: more on real work (an activity) than on a free-form post.
+    const photo = it.image ? (it.post ? 1.1 : 1.15) : 1;
+    const impact = (it.post ? 3 : Math.log2(2 + it.points)) * (it.verified ? 1.4 : 1) * (it.milestone ? 1.3 : 1) * photo * (1 + 0.15 * Math.min(it.cheers, 10));
     const near = people.get(it.userId).near.w * (it.crew ? 1.5 : 1);
     const fresh = 0.5 ** (Math.max(0, ageMs(it.at)) / (3 * DAY));
     it.score = impact * near * fresh;

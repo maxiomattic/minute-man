@@ -42,6 +42,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] 28 tests pass; screens checked at Pixel 7 and 1280x800
 - [x] New logo: a front-view tricorn (crown behind two cocked flaps, cockade) in brass, for the header mark, web icon, Android launcher (adaptive, safe zone) and splash; `scripts/icons.sh` now uses coat navy
 - [x] Quieter chrome: no brass rules on the top bar, tab bar, sidebar, Today hero or Feed muster; bars sit on a 1px darker-navy edge and a soft shadow. Brass stays on the active tab, figures and buttons
+- [x] Feed posts: write an update (500 characters, one photo) at the top of the Feed, or add a note and photo to something you did (offered right after logging or checking in, and later from your own feed item). Photos resized on the phone to 1280px WebP under 400 KB (EXIF/GPS dropped), type and size checked and metadata stripped again on the server, stored in R2 (`minute-man-media`; disk under data/media locally) at unguessable URLs, tap for full size. No points for posts or photos; 10 posts a day (deleting doesn't refund); text posts rank like a small unverified action, photos get a small boost. Delete your own; Report hides it for you and flags it (`GET /api/admin/reports`, `DELETE /api/admin/posts/:id` with the admin token); deleting your account deletes your posts and photos
 - [x] Android app installed and verified on the Pixel 6 (rebuild: `scripts/android.sh <phone-ip:port>`)
 
 ## Left / ideas

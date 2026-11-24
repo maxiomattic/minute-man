@@ -1,7 +1,7 @@
 // Local/dev server: Node http -> Fetch handler, plus static files from public/.
 import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openNodeDb } from './db.js';
@@ -19,7 +19,17 @@ const fresh = !existsSync(dbPath);
 const db = await openNodeDb(dbPath);
 if (fresh || process.env.CVAS_SEED) await seed(db, { force: true });
 
-const handle = createApp(db, { adminToken: process.env.CVAS_ADMIN_TOKEN, seed });
+// Feed photos on disk next to the database (data/media), one file per unguessable key.
+const mediaDir = join(dirname(dbPath), 'media');
+await mkdir(mediaDir, { recursive: true });
+const TYPE = { webp: 'image/webp', jpg: 'image/jpeg' };
+const media = {
+  put: (key, bytes) => writeFile(join(mediaDir, key), bytes),
+  get: async (key) => { try { return { type: TYPE[key.split('.').pop()], body: await readFile(join(mediaDir, key)) }; } catch { return null; } },
+  delete: (key) => unlink(join(mediaDir, key)).catch(() => {}),
+};
+
+const handle = createApp(db, { adminToken: process.env.CVAS_ADMIN_TOKEN, seed, media });
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml',

@@ -1,7 +1,8 @@
 // Feed: everything people are getting done, ranked by impact and how close it is to you.
 // The server does the ranking (src/engine/community.js); this page pages through it as you scroll.
-import { $, api, esc, state } from '../core.js';
+import { $, api, esc, haptic, state, toast } from '../core.js';
 import { bindCheers, feedItemHtml } from './crew.js';
+import { editorHtml, wireEditor } from './compose.js';
 
 const n = (x) => Number(x || 0).toLocaleString('en-US');
 
@@ -18,12 +19,33 @@ function togetherHtml(t) {
 export async function render(el) {
   el.innerHTML = `<div class="feed-page">
     <h1>Feed</h1>
+    <div class="panel composer-panel">${editorHtml({ id: 'composer' })}</div>
     <div id="together"></div>
     <div id="feedList" class="panel flush"><div class="skeleton"></div></div>
     <div id="feedMore" class="feed-more" aria-live="polite"></div>
   </div>`;
   const list = $('#feedList', el);
   const moreEl = $('#feedMore', el);
+  // Your own post goes straight to the top of your feed.
+  wireEditor($('#composer', el), {
+    onSubmit: async (v) => {
+      const r = await api('/feed/posts', { method: 'POST', body: v });
+      const me = state.me || {};
+      const it = {
+        key: r.key, userId: me.id, name: me.name, at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        icon: 'post', points: 0, text: '', post: true, cheers: 0, postId: r.post.id,
+        body: r.post.body, image: r.post.image, imageW: r.post.imageW, imageH: r.post.imageH,
+      };
+      const feed = $('#feedList', el);
+      if (!feed) return render(el);
+      const box = document.createElement('div');
+      box.innerHTML = feedItemHtml(it);
+      bindCheers(box);
+      feed.prepend(box.firstElementChild);
+      haptic('success');
+      toast('Posted');
+    },
+  });
   api('/together').then((t) => { const box = $('#together', el); if (box) box.innerHTML = togetherHtml(t); }).catch(() => {});
 
   let cursor = 0;

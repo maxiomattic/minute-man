@@ -4,6 +4,7 @@ import { aggregate } from './engine/recommend.js';
 import { ACTIVITY, PARTICIPATION, REMIND_DAILY_LIMIT, activityPoints, scorecard } from './engine/recognition.js';
 import { LADDER, LESSONS, LESSON_POINTS, ladderFor, recruitsOf, inviteCode } from './engine/ladder.js';
 import { PUBLIC_URL, buildPosts, buildReminders } from './engine/posts.js';
+import { deleteUserPosts, postRoutes, sqliteMedia } from './engine/feedposts.js';
 import { eligibility, jurisdictionChain, rulesFor } from './rules.js';
 
 class HttpError extends Error {
@@ -51,7 +52,7 @@ const CORS = {
   'access-control-max-age': '86400',
 };
 
-export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}) {
+export function createApp(db, { adminToken, seed, geocode = censusGeocode, media = sqliteMedia(db) } = {}) {
   const routes = [];
   const route = (method, pattern, handler, opts = {}) => {
     const keys = [];
@@ -192,9 +193,12 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
       endorsements: q('SELECT * FROM endorsements WHERE user_id=?'),
       groups: q('SELECT group_id FROM group_members WHERE user_id=?'),
       friends: q('SELECT * FROM friendships WHERE a=?1 OR b=?1'),
+      posts: q('SELECT id, activity_id, body, image, at FROM posts WHERE user_id=?'),
     };
   });
-  route('DELETE', '/api/me', ({ user }) => {
+  route('DELETE', '/api/me', async ({ user }) => {
+    // Your posts and their photos go first (the photos live outside the database).
+    await deleteUserPosts(db, media, user.id);
     // Bonuses your recruiter earned from you go too, so throwaway accounts can't farm points.
     db.prepare('DELETE FROM bonuses WHERE source LIKE ?').run(`recruit:${user.id}:%`);
     db.prepare('DELETE FROM users WHERE id=?').run(user.id);
@@ -474,7 +478,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     const ins = db.prepare(`INSERT INTO activity (user_id, action_id, kind, quantity, verified, points, day, at) VALUES (?,?,?,?,?,?,?, datetime('now'))`)
       .run(user.id, a.id, a.kind, qty, verified ? 1 : 0, pts, today());
     const lucky = verified ? luckyBonus(db, user.id, ins.lastInsertRowid) : 0;
-    return { ok: true, points: pts, verified, lucky };
+    return { ok: true, points: pts, verified, lucky, activityId: Number(ins.lastInsertRowid) };
   });
 
   // Self-logged activism with no event (e.g., posted on social media, knocked doors solo).
@@ -486,9 +490,9 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     const already = db.prepare(`SELECT COALESCE(SUM(quantity),0) q FROM activity WHERE user_id=? AND kind=? AND day=?`).get(user.id, body.kind, today()).q;
     const perUnit = ACTIVITY[body.kind].perUnit || 0;
     const pts = activityPoints(body.kind, qty, false, already * perUnit);
-    db.prepare(`INSERT INTO activity (user_id, kind, quantity, note, points, day, at) VALUES (?,?,?,?,?,?, datetime('now'))`)
+    const ins = db.prepare(`INSERT INTO activity (user_id, kind, quantity, note, points, day, at) VALUES (?,?,?,?,?,?, datetime('now'))`)
       .run(user.id, body.kind, qty, body.note ? String(body.note).slice(0, 280) : null, pts, today());
-    return { ok: true, points: pts };
+    return { ok: true, points: pts, activityId: Number(ins.lastInsertRowid) };
   });
 
   // ---------- ready-made posts ----------
@@ -722,6 +726,7 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
   }, { auth: 'admin' });
 
   engagementRoutes(route, { db, HttpError, bad, upcomingElections, today, ballotFor, visibleActions });
+  postRoutes(route, { db, HttpError, bad, media, today });
 
   if (seed) {
     route('POST', '/api/admin/reseed', async () => {
@@ -765,7 +770,8 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
         ).get(token, new Date().toISOString());
         if (!user) throw new HttpError(401, 'sign in required');
       }
-      return json(200, await r.handler({ req, user, token, params, body, query: url.searchParams }));
+      const out = await r.handler({ req, user, token, params, body, query: url.searchParams });
+      return out instanceof Response ? out : json(200, out); // images come back as a Response
     } catch (e) {
       if (e instanceof HttpError) return json(e.status, { error: e.message });
       if (String(e.message).includes('constraint')) return json(400, { error: e.message });

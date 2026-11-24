@@ -217,6 +217,39 @@ CREATE TABLE IF NOT EXISTS cheers (
   at TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (user_id, item)
 );
+-- Feed posts: your own updates (activity_id NULL) or a note/photo on something you did.
+-- No points. Images live in R2 (or media_blobs) under an unguessable key. See src/engine/feedposts.js.
+CREATE TABLE IF NOT EXISTS posts (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  activity_id INTEGER REFERENCES activity(id) ON DELETE CASCADE,
+  body TEXT,
+  image TEXT,
+  image_w INTEGER,
+  image_h INTEGER,
+  day TEXT NOT NULL DEFAULT (date('now')),
+  at TEXT NOT NULL DEFAULT (datetime('now')),
+  edited_at TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS posts_activity ON posts(activity_id) WHERE activity_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS posts_at ON posts(at);
+-- Posts made per day, for the daily limit (deleting a post doesn't give the slot back).
+CREATE TABLE IF NOT EXISTS post_counts (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day TEXT NOT NULL,
+  n INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day)
+);
+
+-- "Report": hides the item for the reporter and flags its post for the admin.
+CREATE TABLE IF NOT EXISTS post_reports (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  item TEXT NOT NULL,                           -- feed item key (u:<post id> | a:<activity id>)
+  post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
+  reason TEXT,
+  at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, item)
+);
 `;
 
 // Columns added after launch. Each runs once; 'duplicate column' errors are ignored.

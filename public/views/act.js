@@ -1,6 +1,7 @@
 // Act: local volunteer events, check-ins, and self-logged civic work.
 import { $, $$, ACTIVITY_ICON, ago, api, confetti, esc, fmtWhen, guard, haptic, icon, more, refreshStats, sheet, state, toast, xpFly } from '../core.js';
 import { openRemind } from './remind.js';
+import { offerFeedNote } from './compose.js';
 
 const kindOf = (k) => state.meta?.activityKinds?.find((x) => x.kind === k) || { kind: k, label: k, self: 0, verified: 0 };
 const localDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -123,6 +124,7 @@ function openEvent(a, rerender) {
       toast(`Checked in. +${r.points + (r.lucky || 0)} XP`);
       await landPoints(r.points, r.lucky || 0, btn.isConnected ? btn : null);
       rerender();
+      offerFeedNote(r.activityId, a.title);
     } catch (e) {
       btn.disabled = false;
       toast(/wrong/i.test(e.message) ? "That code doesn't match. Check it with the host and try again." : e.message);
@@ -240,6 +242,7 @@ function openLog(rerender, kind) {
       toast(r.points ? `Logged. +${r.points} XP` : "Logged. You've hit today's points cap for this one.");
       await landPoints(r.points, 0, null);
       rerender();
+      offerFeedNote(r.activityId);
     } finally { btn.disabled = false; }
   });
 }

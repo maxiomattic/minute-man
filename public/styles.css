@@ -812,3 +812,37 @@ h1 + #together:empty { display: none; }
 .remind-text:focus { outline: none; }
 .post-card:focus-within { border-color: var(--brand-text); }
 .friend-meta { gap: 6px; flex-wrap: wrap; margin-top: 3px; align-items: center; }
+
+/* ===== Feed posts: composer, notes and photos on feed items, photo viewer (views/compose.js) ===== */
+.composer-panel { padding: 12px 14px; margin-bottom: 14px; }
+.composer textarea { width: 100%; min-height: 48px; resize: none; border: 0; padding: 6px 2px; background: transparent; font: 400 16px/1.45 var(--text); color: var(--ink); box-shadow: none; }
+.composer textarea:focus { outline: none; }
+.composer textarea::placeholder { color: var(--muted); }
+.sheet .composer textarea { min-height: 96px; border: 1.5px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; background: var(--paper); }
+.composer-bar { display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.composer-panel .composer-bar { margin-top: 4px; }
+.sheet .composer-bar { border-top: 0; padding-top: 12px; }
+.composer-bar .btn.go { margin-left: auto; min-width: 84px; }
+.composer-pick { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.composer-pick svg { width: 18px; height: 18px; }
+.composer .composer-pick input[type=file] { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.composer-pick:focus-within { outline: 3px solid var(--marker); outline-offset: 2px; }
+.composer-count { white-space: nowrap; }
+.composer-photo { position: relative; margin: 8px 0 2px; }
+.composer-photo img { display: block; width: 100%; max-height: 320px; object-fit: cover; border-radius: var(--r-md); border: 1px solid var(--line); }
+.composer-x { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgb(15 21 39 / .72); color: #fff; font: 400 24px/1 var(--text); cursor: pointer; }
+.composer-note { margin: 10px 0 0; }
+.feed-item.has-photo { flex-wrap: wrap; }
+.feed-body { margin: 6px 0 2px; white-space: pre-line; overflow-wrap: anywhere; line-height: 1.45; }
+.feed-item.is-post .feed-body { font-size: 16.5px; }
+.feed-photo { flex: 0 0 100%; display: block; padding: 0; margin: 2px 0 0; border: 0; background: var(--sunk); border-radius: var(--r-md); overflow: hidden; cursor: zoom-in; }
+.feed-photo img { display: block; width: 100%; height: auto; max-height: 520px; object-fit: cover; }
+.feed-meta .feed-add { margin-left: auto; padding: 0; font-size: 13px; }
+.feed-menu { margin-left: auto; display: inline-grid; place-items: center; width: 32px; height: 26px; padding: 0; border: 0; border-radius: var(--r-sm); background: none; color: var(--muted); cursor: pointer; }
+.feed-menu svg { width: 18px; height: 18px; }
+.feed-kind svg { width: 16px; height: 16px; }
+.sheet-actions { display: grid; gap: 10px; margin-top: 16px; }
+.photo-view { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px); background: rgb(8 11 20 / .94); animation: fade .2s var(--ease); }
+.photo-view img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--r-sm); }
+.photo-close { position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgb(255 255 255 / .14); color: #fff; font: 400 30px/1 var(--text); cursor: pointer; }
+/* ===== end feed posts ===== */
