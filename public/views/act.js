@@ -212,6 +212,8 @@ export async function render(el, arg) {
 
   $('#log', el).onclick = () => openLog(rerender);
   $$('[data-a]', el).forEach((b) => (b.onclick = () => openEvent(actions.find((a) => a.id === Number(b.dataset.a)), rerender)));
+  // Deep links open a sheet once; drop the arg so a reload doesn't reopen it.
+  if (arg) history.replaceState(null, '', '#/act');
   if (arg === 'log') openLog(rerender);
   else if (arg && /^\d+$/.test(arg)) {
     const a = actions.find((x) => x.id === Number(arg));
