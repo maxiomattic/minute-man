@@ -115,6 +115,8 @@ export function crewIds(db, uid) {
 }
 
 // ---------- next action ----------
+const longDate = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+
 function nextActions(db, user, ctx) {
   const out = [];
   const add = (a) => out.push(a);
@@ -132,7 +134,7 @@ function nextActions(db, user, ctx) {
       // nothing for this election; fall through to crew actions
     } else if (reg !== 'confirmed' && e.registration_deadline && day <= e.registration_deadline) {
       const left = daysBetween(day, e.registration_deadline);
-      add({ kind: 'register', title: left === 0 ? 'Registration closes today' : `Register in the next ${left} day${left === 1 ? '' : 's'}`, body: `Deadline for ${e.name} is ${e.registration_deadline}. Check your status in about 2 minutes.`, cta: 'Check registration', href: '#/register', xp: 50, urgent: left <= 7 });
+      add({ kind: 'register', title: left === 0 ? 'Registration closes today' : left === 1 ? 'Register by tomorrow' : `Register in the next ${left} days`, body: `Deadline for ${e.name} is ${longDate(e.registration_deadline)}. Check your status in about 2 minutes.`, cta: 'Check registration', href: '#/register', xp: 50, urgent: left <= 7 });
     } else if (open) {
       add({ kind: 'vote', title: d === 0 ? 'Election day. Go vote.' : 'Voting is open', body: `${e.name}. Your cheat sheet and polling place are ready.`, cta: 'Start voting', href: `#/vote/${e.id}`, xp: 100, urgent: d <= 3 });
     }

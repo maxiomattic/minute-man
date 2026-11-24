@@ -532,7 +532,7 @@ export function createApp(db, { adminToken, seed } = {}) {
   // ---------- groups ----------
   route('GET', '/api/groups', ({ user }) =>
     db.prepare(
-      `SELECT g.id, g.name, g.kind, g.leader_id AS leaderId, CASE WHEN g.owner_id=?1 THEN g.invite_code END AS inviteCode,
+      `SELECT g.id, g.name, g.kind, g.leader_id AS leaderId, g.invite_code AS inviteCode, g.owner_id=?1 AS owner,
          (SELECT COUNT(*) FROM group_members m WHERE m.group_id=g.id) AS members
        FROM groups g JOIN group_members gm ON gm.group_id=g.id AND gm.user_id=?1 ORDER BY g.name`,
     ).all(user.id));
@@ -578,6 +578,7 @@ export function createApp(db, { adminToken, seed } = {}) {
         userId: u.id, name: u.name,
         state: f.status === 'accepted' ? 'friends' : f.a === user.id ? 'requested' : 'incoming',
         status, electionId: next?.id,
+        remindedToday: !!(next && db.prepare(`SELECT 1 FROM nudges WHERE from_id=? AND to_id=? AND election_id=? AND at > datetime('now','-1 day')`).get(user.id, u.id, next.id)),
       };
     });
   });

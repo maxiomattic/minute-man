@@ -166,7 +166,9 @@ async function renderFriends(body) {
     } else {
       const s = STATUS[f.status];
       meta = s ? `<span class="tag ${s[0]}">${s[1]}</span>` : '<span class="sub">Keeps voting status private</span>';
-      if (f.status !== 'voted' && f.electionId)
+      if (f.status !== 'voted' && f.electionId && f.remindedToday)
+        actions = `<button class="btn sm quiet" disabled>${icon('check')}Reminded</button>`;
+      else if (f.status !== 'voted' && f.electionId)
         actions = `<button class="btn sm quiet" data-nudge="${f.userId}" data-e="${esc(f.electionId)}" data-name="${esc(first(f.name))}">Remind <span class="xp">+5</span></button>`;
     }
     return `<li><span class="avatar" aria-hidden="true">${esc(initials(f.name))}</span>
@@ -273,7 +275,7 @@ async function renderGroups(body) {
   $$('[data-leave]', body).forEach((b) => (b.onclick = () => {
     const g = byId(b.dataset.leave);
     const s = sheet(`<h2>Leave ${esc(g.name)}?</h2>
-      <p class="muted">You'll drop off its leaderboard and feed. ${g.inviteCode ? "You own this group; it stays open for its members." : 'You can rejoin with an invite code.'}</p>
+      <p class="muted">You'll drop off its leaderboard and feed. ${g.owner ? "You own this group; it stays open for its members." : 'You can rejoin with an invite code.'}</p>
       <div class="row" style="margin-top:18px"><button class="btn quiet grow" data-x>Stay</button><button class="btn danger grow" data-ok>Leave group</button></div>`);
     $('[data-x]', s.el).onclick = s.close;
     $('[data-ok]', s.el).onclick = guard(async () => {

@@ -125,7 +125,7 @@ export async function seed(db, { force = false } = {}) {
   db.prepare(`INSERT INTO friendships (a, b, status) VALUES (?,?,'pending')`).run(friends[3], demo);
 
   const g = Number(db.prepare(`INSERT INTO groups (name, kind, leader_id, invite_code, owner_id) VALUES ('Elm Street Block Team','neighborhood',?, 'ELMST001', ?)`).run(l1, org1).lastInsertRowid);
-  for (const u of [org1, demo, ...friends.slice(0, 3)]) db.prepare('INSERT INTO group_members (group_id, user_id) VALUES (?,?)').run(g, u);
+  for (const u of [demo, ...friends.slice(0, 3)]) db.prepare('INSERT INTO group_members (group_id, user_id) VALUES (?,?)').run(g, u);
 
   const action = (l, kind, title, loc, offset, hour, codeStr) =>
     Number(db.prepare(
