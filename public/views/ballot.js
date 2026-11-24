@@ -1,16 +1,28 @@
 // Ballot: the sample ballot (render) and the voting flow (renderVote).
-// Guardrail: picks and overrides live only in localStorage on this device. Nothing about how
-// anyone votes is sent to the server; the server only hears "planned" and "voted".
-import { $, $$, api, celebrate, daysTo, esc, fmtDate, guard, haptic, icon, more, refreshStats, state, store, toast, todayIso, xpFly } from '../core.js';
+// The picks are fixed: they come from the sources, in order, and can't be edited here. People vote however
+// they choose in the booth, and nothing about how anyone votes is ever sent to the server. The server only
+// hears "planned", "voted", and which races were reviewed (never a pick).
+import { $, $$, api, daysTo, esc, fmtDate, guard, haptic, icon, more, refreshStats, state, store, toast, todayIso, xpFly, celebrate } from '../core.js';
 import { openRemind } from './remind.js';
 
 const uid = () => state.me?.id;
 const kBallot = (eid) => `ballot:${uid()}:${eid}`;
-const kOvr = (eid) => `ovr:${uid()}:${eid}`;
-const kLog = () => `ovrlog:${uid()}`;
 const kPlan = (eid) => `plan:${uid()}:${eid}`;
 const kPlaces = () => `places:${uid()}`;
 const kElections = () => `elections:${uid()}`;
+const kMode = 'ballotMode';
+
+// Ballots used to be editable, with changes and a change log kept on the device. Clear any leftovers.
+function dropOldOverrides() {
+  try {
+    const old = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (/^ovr(log)?:/.test(k)) old.push(k);
+    }
+    old.forEach((k) => localStorage.removeItem(k));
+  } catch {}
+}
 
 const HOW = {
   early: { label: 'In person, early', sub: 'Skip the election-day line', icon: 'calendar' },
@@ -44,16 +56,22 @@ export async function loadBallot(eid) {
   }
 }
 
-const leaderName = (id) => state.leaders.find((l) => l.id === id)?.name || 'Endorsed';
-
-/** Current picks for a contest: your override if you made one, else the recommendation. */
-function picksFor(c, ov) {
-  const valid = new Set(c.choices.map((x) => x.id));
-  const mine = ov[c.id];
-  return (Array.isArray(mine) ? mine : c.recommendation.choiceIds).filter((id) => valid.has(id));
-}
+const SHORT = { 'America First Insight': 'AFI', 'Donald J. Trump': 'Trump' };
+const leaderName = (id) => state.leaders.find((l) => l.id === id)?.name || '';
 const labelOf = (c, id) => c.choices.find((x) => x.id === id)?.label || '';
-const sameSet = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+const partyOf = (c, id) => c.choices.find((x) => x.id === id)?.party || '';
+
+/** The recommended picks for a race and a short label for where they came from. */
+function recOf(c) {
+  const rec = c.recommendation;
+  const valid = new Set(c.choices.map((x) => x.id));
+  const ids = rec.choiceIds.filter((id) => valid.has(id));
+  if (!ids.length) return { ids, label: null };
+  if (rec.basis === 'party') return { ids, label: 'Only Republican', party: true };
+  const src = (c.sources || []).find((s) => s.leaderId === rec.sourceLeaderId);
+  const name = src?.name || leaderName(rec.sourceLeaderId);
+  return { ids, label: src?.short || SHORT[name] || name || 'Endorsed', src };
+}
 
 function daysLine(e) {
   const d = daysTo(e.date);
@@ -61,46 +79,69 @@ function daysLine(e) {
   return `${fmtDate(e.date)}. ${left}.`;
 }
 
-function cheatSheet(b, ov) {
+/** The compact list for the side panel on the voting page. */
+function cheatSheet(b) {
   return `<ol class="cheat">${b.contests.map((c) => {
-    const p = picksFor(c, ov);
-    return `<li><span class="ct">${esc(c.title)}</span><span class="cp">${p.length ? esc(p.map((id) => labelOf(c, id)).join(', ')) : '<span class="muted">Your call</span>'}</span></li>`;
+    const { ids } = recOf(c);
+    return `<li><span class="ct">${esc(c.title)}</span><span class="cp">${ids.length ? esc(ids.map((id) => labelOf(c, id)).join(', ')) : '<span class="muted">No pick</span>'}</span></li>`;
   }).join('')}</ol>`;
 }
 
-function contestHtml(c, ov, seen) {
-  const rec = c.recommendation;
-  const sel = picksFor(c, ov);
-  const isOv = Array.isArray(ov[c.id]) && !sameSet(ov[c.id], rec.choiceIds);
-  const party = rec.basis === 'party';
-  const src = rec.choiceIds.length ? (party ? 'Only Republican' : rec.sourceLeaderId ? leaderName(rec.sourceLeaderId) : 'Endorsed') : null;
-  const type = c.voteFor > 1 ? 'checkbox' : 'radio';
-  const notes = [];
-  for (const n of c.notes || []) notes.push(more(`Why ${esc(n.leaderName)} endorses`, `<p>${esc(n.note)}</p>`));
-  if (rec.conflicts?.length)
-    notes.push(`<p class="small muted">${rec.conflicts.map((x) => `${esc(x.leaderName)} picks ${esc(x.choiceIds.map((id) => labelOf(c, id)).join(' and ') || 'nobody')}.`).join(' ')}</p>`);
-  if (party) notes.push('<p class="small">No endorsement in this race.</p>');
-  else if (!rec.choiceIds.length) notes.push('<p>No endorsement in this race. It\'s your call.</p>');
-  if (isOv) notes.push(`<p class="row between wrap"><span>You changed this pick.</span><button class="link-btn noprint" data-undo>${rec.choiceIds.length ? 'Use their pick' : 'Clear my pick'}</button></p>`);
-  return `<section class="contest" data-c="${esc(c.id)}">
+/** View mode: one row per race, the pick and its source. Made to read in the booth. */
+function slateHtml(b) {
+  if (!b.contests.length) return '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>';
+  return `<ol class="slate">${b.contests.map((c) => {
+    const { ids, label, party } = recOf(c);
+    return `<li>
+      <span class="race">${esc(c.title)}${c.voteFor > 1 ? ` <span class="tiny muted">(vote for up to ${c.voteFor})</span>` : ''}</span>
+      ${ids.length
+        ? `<span class="row between" style="gap:10px;align-items:baseline"><b class="name">${esc(ids.map((id) => labelOf(c, id)).join(', '))}</b><span class="src${party ? ' party' : ''}">${esc(label)}</span></span>`
+        : '<span class="muted none">No recommendation</span>'}
+    </li>`;
+  }).join('')}</ol>`;
+}
+
+/** Examine mode: each race with the reasons behind its pick, and a way to mark it reviewed. */
+function examineHtml(c, seen) {
+  const { ids, label, party, src } = recOf(c);
+  const names = ids.map((id) => labelOf(c, id)).join(' and ');
+  const why = [];
+  if (party) {
+    why.push(`<p>Neither America First Insight nor President Trump endorsed in this race. ${esc(names)} is the only Republican running, so Minute Man filled that name in. It isn't an endorsement.</p>`);
+  } else if (!ids.length) {
+    why.push('<p>Neither America First Insight nor President Trump endorsed in this race, and there isn\'t a single Republican to fill in. It\'s your call.</p>');
+  } else {
+    const all = c.sources || [];
+    const agree = all.filter((s) => s.choiceIds.length && s.choiceIds.every((id) => ids.includes(id)));
+    const ordered = src ? [src, ...agree.filter((s) => s !== src && s.leaderId !== src.leaderId)] : agree;
+    for (const s of ordered) {
+      const lead = s === src || s.leaderId === src?.leaderId ? `Endorsed by ${esc(s.name)}.` : `Also endorsed by ${esc(s.name)}.`;
+      const note = s.note ? `<blockquote>${esc(s.note)}</blockquote>` : s.short === 'AFI' ? '<p class="small muted">America First Insight didn\'t publish a write-up for this pick.</p>' : '';
+      const link = s.url ? ` <a href="${esc(s.url)}" target="_blank" rel="noopener">${s.short === 'Trump' ? 'Source: Ballotpedia' : 'Source'}</a>` : '';
+      why.push(`<div class="why"><p><b>${lead}</b>${link}</p>${note}</div>`);
+    }
+    if (!ordered.length) why.push('<p class="small muted">No write-up for this pick.</p>');
+    for (const s of all.filter((x) => x.choiceIds.length && !x.choiceIds.every((id) => ids.includes(id))))
+      why.push(`<p class="small muted">${esc(s.name)} endorses ${esc(s.choiceIds.map((id) => labelOf(c, id)).join(' and '))} instead.</p>`);
+  }
+  const others = c.choices.filter((ch) => !ids.includes(ch.id));
+  return `<section class="contest exam" data-c="${esc(c.id)}">
     <header><h3>${esc(c.title)}</h3><span class="rule">${c.voteFor > 1 ? `Vote for up to ${c.voteFor}` : 'Vote for 1'}</span></header>
     ${c.description ? `<p class="desc">${esc(c.description)}</p>` : ''}
-    ${c.choices.map((ch) => {
-      const on = sel.includes(ch.id);
-      const recd = rec.choiceIds.includes(ch.id);
-      const tag = on && isOv ? '<span class="pick mine">Your pick</span>' : recd ? `<span class="pick${on ? '' : ' off'}">${esc(src)}${party || src === 'Endorsed' ? '' : ' picks'}</span>` : '';
-      return `<label class="choice"><input class="oval" type="${type}" name="${esc(c.id)}" value="${esc(ch.id)}" ${on ? 'checked' : ''}>
-        <span class="who">${esc(ch.label)}${ch.party ? ` <span class="muted small">${esc(ch.party)}</span>` : ''}</span>${tag}</label>`;
-    }).join('')}
-    ${notes.length ? `<div class="note">${notes.join('')}</div>` : ''}
+    <div class="pickline">${ids.length
+      ? `<div><b class="name">${esc(names)}</b>${ids.length === 1 && partyOf(c, ids[0]) ? ` <span class="muted small">${esc(partyOf(c, ids[0]))}</span>` : ''}</div><span class="src${party ? ' party' : ''}">${esc(label)}</span>`
+      : '<div class="muted">No recommendation</div>'}</div>
+    <div class="note">${why.join('')}
+      ${others.length ? `<p class="small muted">Also on the ballot: ${others.map((ch) => `${esc(ch.label)}${ch.party ? ` (${esc(ch.party)})` : ''}`).join(', ')}.</p>` : ''}</div>
     <footer class="review noprint">${seen
       ? `<span class="reviewed">${icon('check')}Reviewed</span>`
-      : '<span class="small muted">Happy with this pick?</span><button class="btn sm" data-review>Looks good</button>'}</footer>
+      : '<button class="btn sm" data-review>Got it</button>'}</footer>
   </section>`;
 }
 
 // ---------- sample ballot ----------
-export async function render(el, eid) {
+export async function render(el, eid, sub) {
+  dropOldOverrides();
   let els = [];
   if (!eid) {
     els = await loadElections();
@@ -116,6 +157,9 @@ export async function render(el, eid) {
     els = store.get(kElections()) || [];
     loadElections().catch(() => {});
   }
+  // #/ballot/<id>/examine (the quest link) opens the detailed view.
+  if (sub === 'examine' || sub === 'ballot') { store.set(kMode, sub); history.replaceState(null, '', `#/ballot/${encodeURIComponent(eid)}`); }
+  let mode = store.get(kMode, 'ballot') === 'examine' ? 'examine' : 'ballot';
   const { b, offline } = await loadBallot(eid);
   const names = (state.leaders || []).map((x) => x.name);
   const srcLine = names.length > 1 ? `${names[0]}'s endorsements first, then ${names.slice(1).join(', then ')} where ${names[0].split(' ').map((w) => w[0]).join('')} hasn't picked`
@@ -133,8 +177,8 @@ export async function render(el, eid) {
       <div class="row between"><strong>${n >= total ? `All ${total} races reviewed` : `Review all ${total} races`}</strong>
         <span class="small muted num">${n} of ${total}</span></div>
       <div class="bar" role="progressbar" aria-label="Races reviewed" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${n}"><div style="width:${(n / total) * 100}%"></div></div>
-      ${n >= total ? '<p class="small" style="margin:8px 0 0">Your ballot is ready. <a href="#/today">Claim your quest on Today</a>.</p>'
-        : `<p class="small muted" style="margin:8px 0 0">Check each race and tap Looks good. ${n ? '<button class="link-btn" id="nextRace">Go to the next race</button>' : ''}</p>`}
+      ${n >= total ? '<p class="small" style="margin:8px 0 0">You\'ve read the reasons behind every pick. <a href="#/today">Claim your quest on Today</a>.</p>'
+        : `<p class="small muted" style="margin:8px 0 0">Read why each pick was made and tap Got it. ${n ? '<button class="link-btn" id="nextRace">Go to the next race</button>' : ''}</p>`}
     </div>`;
   };
   const nextUnseen = () => b.contests.find((c) => !seen.has(c.id));
@@ -157,9 +201,8 @@ export async function render(el, eid) {
   };
 
   const draw = () => {
-    const ov = store.get(kOvr(eid), {});
-    const changed = b.contests.filter((c) => Array.isArray(ov[c.id]) && !sameSet(ov[c.id], c.recommendation.choiceIds)).length;
     const cta = `<a class="btn go block" href="#/vote/${esc(eid)}">Take it to the polls</a>`;
+    const exam = mode === 'examine';
     el.innerHTML = `<div class="vb page two">
       <div class="main">
         <div>
@@ -170,64 +213,45 @@ export async function render(el, eid) {
           ${offline ? '<p class="tag hot">Offline. Showing your saved ballot.</p>' : ''}
           <div class="narrow-only noprint" style="margin-top:14px">${cta}</div>
         </div>
+        <div class="seg noprint" role="tablist" aria-label="Ballot view">
+          <button role="tab" data-mode="ballot" aria-selected="${!exam}" class="${exam ? '' : 'on'}">Ballot</button>
+          <button role="tab" data-mode="examine" aria-selected="${exam}" class="${exam ? 'on' : ''}">See why</button>
+        </div>
+        ${exam ? reviewBar() : ''}
+        ${exam
+          ? `<div class="sheets">${b.contests.map((c) => examineHtml(c, seen.has(c.id))).join('') || '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>'}</div>`
+          : `<div class="panel slate-panel">${slateHtml(b)}
+              <p class="small noprint" style="margin:12px 0 0"><button class="link-btn" id="seeWhy">See why each pick was made</button></p></div>`}
         <div class="ballot-info">
-          ${changed ? `<button class="link-btn" id="reset">${changed > 1 ? `Undo all ${changed} changes` : 'Undo your change'}</button>` : ''}
-          ${more('Where these picks come from', `<p class="small">Filled in from ${esc(srcLine)}. Where nobody endorsed and only one Republican is running, that candidate is filled in. Tap an oval to change a pick.</p>`)}
+          ${more('Where these picks come from', `<p class="small">Filled in from ${esc(srcLine)}. Where neither endorsed and only one Republican is running, that candidate is filled in and marked Only Republican. That isn't an endorsement.</p>`)}
           ${state.me?.jurisdictionId && !state.me.jurisdictionId.includes('-') ? more('Some races are missing', `<p class="small">This shows statewide races only. Races for your congressional and legislative districts aren't loaded for your area yet. <a href="#/endorsements">See every endorsement in your state</a>.</p>`) : ''}
         </div>
-        ${reviewBar()}
-        <div class="sheets">${b.contests.map((c) => contestHtml(c, ov, seen.has(c.id))).join('') || '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>'}</div>
-        <p class="legal">Your picks stay on this device. Minute Man never sees how you vote.</p>
+        <p class="legal">You vote however you choose, and your ballot is secret. Minute Man never knows how you vote.</p>
       </div>
       <aside class="side">
         <div class="panel">
-          <div class="section-head"><h2>Cheat sheet</h2><button class="link-btn noprint" id="print">Print</button></div>
-          ${cheatSheet(b, ov)}
+          <div class="section-head"><h2>Election day</h2><button class="link-btn noprint" id="print">Print</button></div>
+          <p class="small">Paper notes are allowed in the booth in most places. Phones may not be.</p>
           <p class="small noprint" style="margin-top:12px"><a href="#/endorsements">See every endorsement in your state</a></p>
           <div class="wide-only noprint" style="margin-top:16px">${cta}</div>
         </div>
       </aside>
     </div>`;
     $('#print', el).onclick = () => print();
-    $('#reset', el)?.addEventListener('click', () => { store.del(kOvr(eid)); toast(changed > 1 ? 'Undid all changes' : 'Undid your change'); draw(); });
-    $$('.contest', el).forEach((sec) => {
-      const c = b.contests.find((x) => x.id === sec.dataset.c);
-      sec.addEventListener('change', (ev) => {
-        let picks = $$('input:checked', sec).map((i) => i.value);
-        if (picks.length > c.voteFor) { ev.target.checked = false; toast(`Pick up to ${c.voteFor}`); return; }
-        const o = store.get(kOvr(eid), {});
-        if (sameSet(picks, c.recommendation.choiceIds)) delete o[c.id]; else o[c.id] = picks;
-        store.set(kOvr(eid), o);
-        const log = store.get(kLog(), []);
-        log.unshift({ at: new Date().toISOString(), election: e.name, contest: c.title, picks: picks.map((id) => labelOf(c, id)) });
-        store.set(kLog(), log.slice(0, 200));
-        haptic();
-        redrawContest(c);
-        // Changing a pick counts as reviewing that race.
-        markReviewed(c).catch(() => {});
-      });
-    });
+    const setMode = (m) => {
+      mode = m;
+      store.set(kMode, m);
+      haptic();
+      draw();
+      window.scrollTo(0, 0);
+    };
+    $$('[data-mode]', el).forEach((btn) => (btn.onclick = () => btn.dataset.mode !== mode && setMode(btn.dataset.mode)));
+    $('#seeWhy', el)?.addEventListener('click', () => setMode('examine'));
     $$('[data-review]', el).forEach((btn) => (btn.onclick = guard(async () => {
       btn.disabled = true;
       try { await markReviewed(b.contests.find((x) => x.id === btn.closest('.contest').dataset.c), { advance: true }); haptic(); } finally { btn.disabled = false; }
     })));
     $('#nextRace', el)?.addEventListener('click', () => goTo(nextUnseen()));
-    const redrawContest = () => {
-      const scroll = window.scrollY;
-      draw();
-      window.scrollTo(0, scroll);
-    };
-    $$('[data-undo]', el).forEach((btn) => (btn.onclick = (ev) => {
-      ev.preventDefault();
-      const cid = btn.closest('.contest').dataset.c;
-      const o = store.get(kOvr(eid), {});
-      delete o[cid];
-      store.set(kOvr(eid), o);
-      toast('Using their pick');
-      const scroll = window.scrollY;
-      draw();
-      window.scrollTo(0, scroll);
-    }));
   };
   draw();
 }
@@ -275,7 +299,6 @@ export async function renderVote(el, eid) {
 
   const draw = () => {
     const plan = store.get(kPlan(eid));
-    const ov = store.get(kOvr(eid), {});
     const where = plan?.place;
     const steps = [
       `Check that you're registered. <a href="#/register">Check registration</a>${rules.statusLookupUrl ? ` or <a href="${esc(rules.statusLookupUrl)}" target="_blank" rel="noopener">look it up with the state</a>` : ''}.`,
@@ -337,8 +360,8 @@ export async function renderVote(el, eid) {
       </div>
       <aside class="side">
         <div class="panel">
-          <div class="section-head"><h2>Cheat sheet</h2><a href="#/ballot/${esc(eid)}" class="noprint">Edit picks</a></div>
-          ${cheatSheet(b, ov)}
+          <div class="section-head"><h2>Cheat sheet</h2><a href="#/ballot/${esc(eid)}" class="noprint">See ballot</a></div>
+          ${cheatSheet(b)}
           <p class="small noprint" style="margin-top:12px"><a href="#/endorsements">See every endorsement in your state</a></p>
           <p class="tiny muted" style="margin-top:12px">Paper notes are allowed in the booth in most places. Phones may not be. <button class="link-btn tiny noprint" id="print">Print it</button></p>
         </div>

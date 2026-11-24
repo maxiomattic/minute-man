@@ -133,7 +133,17 @@ test('sample ballot: AFI first, Trump as fallback, no invented picks', async () 
     assert.equal(rec('tx26-state-sen-2').basis, 'party');
     assert.equal(rec('tx26-state-sen-2').sourceLeaderId, null);
   } else assert.deepEqual(rec('tx26-state-sen-2').choiceIds, []);
-
+  // Explanations come only from what each source published: its pick, its write-up if any, and where.
+  assert.deepEqual(sen2.sources, []);
+  const sen = b.contests.find((c) => c.id === 'tx26-us-sen').sources;
+  const a = sen.find((x) => x.leaderId === afi);
+  assert.equal(a.short, 'AFI');
+  assert.match(a.url, /americafirstinsight\.com/);
+  assert.deepEqual(a.choiceIds, ['tx26-us-sen-0']);
+  const gov = b.contests.find((c) => c.id === 'tx26-gov').sources;
+  assert.deepEqual(gov.map((x) => x.short), ['Trump']);
+  assert.equal(gov[0].note, null);
+  assert.match(gov[0].url, /ballotpedia\.org/);
 });
 
 test('endorsements browser: attributed picks by state', async () => {
@@ -501,7 +511,7 @@ test('quests: opening the ballot or events page no longer completes anything', a
 test('quest: ballot needs every race reviewed', async () => {
   const { token, q } = await voterWithQuest('ballot');
   assert.ok(q.goal > 1 && q.have === 0 && /Review all \d+ races/.test(q.need));
-  assert.equal(q.href, '#/ballot/tx-2026-general');
+  assert.equal(q.href, '#/ballot/tx-2026-general/examine');
   const b = (await call('/elections/tx-2026-general/ballot', { token })).data;
   assert.equal(b.contests.length, q.goal);
   assert.deepEqual(b.reviewed, []);

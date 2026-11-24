@@ -246,6 +246,11 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
         id: c.id, title: c.title, kind: c.kind, voteFor: c.vote_for, description: c.description,
         choices, recommendation: agg,
         notes: recs.filter((r) => r.note).map((r) => ({ leaderName: r.leaderName, note: r.note })),
+        // Each source's own pick in this race, with its write-up (if any) and where it was published.
+        sources: recs.map((r) => {
+          const s = SOURCES.find((x) => x.name === r.leaderName);
+          return { leaderId: r.leaderId, name: r.leaderName, short: s?.short || r.leaderName, url: s?.url || null, choiceIds: r.choiceIds, note: r.note || null };
+        }),
       };
     });
     return out;

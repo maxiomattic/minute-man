@@ -1,5 +1,5 @@
 // You: profile, privacy, your data, and registration help.
-import { $, $$, api, confetti, esc, fmtDate, guard, icon, initials, more, refreshStats, sheet, state, store, toast, xpFly } from '../core.js';
+import { $, $$, api, confetti, esc, fmtDate, guard, icon, initials, more, refreshStats, sheet, state, toast, xpFly } from '../core.js';
 
 const REG_STATUS = { unknown: 'Not sure', not_registered: 'Not registered', submitted: 'Submitted, waiting', confirmed: 'Confirmed' };
 
@@ -60,15 +60,9 @@ export async function render(el, arg) {
       </ul></div>
     </div>
     <aside class="side">
-      <div class="panel">
-        <h3>Privacy</h3>
-        <label class="check"><input type="checkbox" id="lbs" ${me.onLeaderboards ? 'checked' : ''}>Show what I do on the feed and leaderboards</label>
-        <label class="check"><input type="checkbox" id="share" ${me.shareStatus ? 'checked' : ''}>Friends can see whether I voted, and others can see my rank</label>
-        <p class="tiny muted" style="margin:4px 0 0">Nobody ever sees how you voted. Minute Man doesn't know. People who aren't your friends see your first name, last initial and town.</p>
-      </div>
+      <p class="tiny muted" style="margin:0 0 8px">Others see your activity and rank, and friends see whether you voted. Strangers see your first name, last initial and town. Nobody sees how you vote.</p>
       <div class="panel flush"><ul class="list">
         <li><button class="rowbtn" id="export"><span class="grow"><span class="title">Download my data</span></span></button></li>
-        <li><button class="rowbtn" id="ovlog"><span class="grow"><span class="title">Ballot changes on this device</span></span></button></li>
         <li><button class="rowbtn" id="out"><span class="grow"><span class="title">Sign out</span></span></button></li>
         <li><button class="rowbtn danger-text" id="del"><span class="grow"><span class="title">Delete account</span></span></button></li>
       </ul></div>
@@ -81,30 +75,18 @@ export async function render(el, arg) {
     </aside>
   </div>`;
 
-  $('#share', el).onchange = guard(async (e) => { state.me = await api('/me', { method: 'PATCH', body: { shareStatus: e.target.checked } }); toast('Saved privacy setting'); });
-  $('#lbs', el).onchange = guard(async (e) => { state.me = await api('/me', { method: 'PATCH', body: { onLeaderboards: e.target.checked } }); toast('Saved privacy setting'); });
   $$('[data-open=profile]', el).forEach((b) => (b.onclick = () => profileSheet(jur)));
   // #/me/profile deep link (from "Add your address" buttons) opens the form directly.
   if (arg === 'profile') { history.replaceState(null, '', '#/me'); profileSheet(jur); }
   $('#export', el).onclick = guard(async () => {
     const data = await api('/me/export');
-    data.onThisDevice = { ballotChanges: store.get(`ovrlog:${me.id}`, []) };
     download('minute-man-my-data.json', data);
     toast('Downloaded your data');
   });
-  $('#ovlog', el).onclick = () => {
-    const log = store.get(`ovrlog:${me.id}`, []);
-    const { el: s, close } = sheet(`<div class="vb"><h2>Ballot changes</h2>
-      <p class="small muted">Stored only on this device. Minute Man never sees it.</p>
-      ${log.length ? `<ul class="list compact">${log.slice(0, 50).map((l) => `<li><span class="grow"><span class="title">${esc(l.contest)}: ${esc(l.picks.join(', ') || 'no pick')}</span><span class="sub">${esc(new Date(l.at).toLocaleString())}</span></span></li>`).join('')}</ul>` : '<p>No changes yet.</p>'}
-      <div class="row" style="margin-top:16px">${log.length ? '<button class="btn line sm" id="clr">Clear the log</button>' : ''}<button class="btn quiet sm" data-close>Close</button></div></div>`);
-    $('[data-close]', s).onclick = close;
-    $('#clr', s)?.addEventListener('click', () => { store.del(`ovrlog:${me.id}`); close(); toast('Cleared the log'); });
-  };
   $('#out', el).onclick = () => window.cvasSignOut();
   $('#del', el).onclick = () => {
     const { el: s, close } = sheet(`<div class="vb"><h2>Delete your account?</h2>
-      <p>This removes your account and everything Minute Man stores about you. It also clears your ballot picks and ID details from this device. It can't be undone.</p>
+      <p>This removes your account and everything Minute Man stores about you. It also clears your ID details and saved ballot from this device. It can't be undone.</p>
       <p class="small muted">Want a copy first? Use Download my data.</p>
       <div class="row wrap" style="margin-top:16px"><button class="btn danger" id="yes">Delete my account</button><button class="btn quiet" data-close>Keep it</button></div></div>`);
     $('[data-close]', s).onclick = close;

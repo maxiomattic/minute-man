@@ -2,11 +2,13 @@
 // America First Insight first; where it hasn't endorsed, Donald Trump's pick fills in.
 export const SOURCES = [
   {
-    key: 'afi', email: 'afi@sources.cvas.app', name: 'America First Insight', kind: 'organization', color: '#1c3f74',
+    key: 'afi', email: 'afi@sources.cvas.app', name: 'America First Insight', short: 'AFI', kind: 'organization', color: '#1c3f74',
+    url: 'https://americafirstinsight.com/america-first-endorsements/',
     blurb: "America First Insight's published endorsements, imported from americafirstinsight.com. Minute Man isn't affiliated with them.",
   },
   {
-    key: 'trump', email: 'trump@sources.cvas.app', name: 'Donald J. Trump', kind: 'individual', color: '#b22234',
+    key: 'trump', email: 'trump@sources.cvas.app', name: 'Donald J. Trump', short: 'Trump', kind: 'individual', color: '#b22234',
+    url: 'https://ballotpedia.org/Endorsements_by_Donald_Trump',
     blurb: "President Trump's endorsements, as tracked by Ballotpedia. Minute Man isn't affiliated with the President or his campaign.",
   },
 ];

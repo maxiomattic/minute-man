@@ -6,7 +6,7 @@ Minute Man is free, open-source software under the MIT License (see `LICENSE`). 
 
 - **Fixed sources**: America First Insight first, then Donald Trump's endorsements where AFI hasn't picked. Where neither has picked and exactly one Republican is running, that candidate fills in, labelled "Only Republican" and never shown as an endorsement.
 - **Endorsements browser**: every 2026 general-election endorsement from both sources, by state, with AFI's own write-ups and source links.
-- **Sample ballot** from those sources. Any change you make stays on your device, along with a log of the changes.
+- **Sample ballot** from those sources, in two views: **Ballot**, a plain list of each race's pick and its source (AFI, Trump, or Only Republican) to read in the booth, and **See why**, which shows each source's write-up and link. The picks can't be edited in the app; you vote however you choose, and Minute Man never knows how.
 - **Election-day guide**: a cheat sheet, step-by-step instructions and polling places. It works offline once loaded.
 - **Registration help**: eligibility checks, deadlines and a guided flow. ID details stay on your device (IndexedDB) and are never uploaded.
 - **Three tabs**:

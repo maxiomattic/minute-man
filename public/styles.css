@@ -465,6 +465,18 @@ label.check input { width: 22px; height: 22px; flex: none; accent-color: var(--b
 .vb .cheat li:first-child { border-top: 0; }
 .vb .cheat .ct { color: var(--muted); }
 .vb .cheat .cp { font-weight: 700; text-align: right; }
+.vb .slate-panel { padding-top: 6px; padding-bottom: 14px; }
+.vb .slate { list-style: none; margin: 0; padding: 0; }
+.vb .slate li { display: flex; flex-direction: column; gap: 2px; padding: 11px 0; border-top: 1px dashed var(--line); }
+.vb .slate li:first-child { border-top: 0; }
+.vb .slate .race { font-size: 13.5px; color: var(--muted); }
+.vb .slate .name, .vb .exam .name { font-size: 18px; font-weight: 800; color: var(--ink); overflow-wrap: anywhere; }
+.vb .slate .none { font-size: 15px; font-style: italic; }
+.vb .src { flex: none; font-size: 12px; font-weight: 700; letter-spacing: .02em; padding: 2px 8px; border-radius: 999px; background: var(--sunk); color: var(--brand-text); white-space: nowrap; }
+.vb .src.party { color: var(--muted); border: 1px dashed var(--line); background: none; }
+.vb .exam .pickline { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px; }
+.vb .exam .why { margin-bottom: 8px; }
+.vb .exam blockquote { margin: 6px 0 0; padding: 0 0 0 10px; border-left: 3px solid var(--line); font-size: 14.5px; }
 .vb .el-name { margin: 18px 0 10px; }
 .vb .publish-bar { position: sticky; bottom: calc(var(--tabbar) + env(safe-area-inset-bottom) + 12px); margin-top: 16px; z-index: 5; }
 @media (min-width: 960px) { .vb .publish-bar { bottom: 16px; } }
