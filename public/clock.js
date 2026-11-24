@@ -28,6 +28,8 @@ export function installClock({ date, zone } = {}) {
     shift = null;
     return;
   }
+  // No zone means the device's own zone, so the browser's local calendar shows the demo date.
+  zone ||= Intl.DateTimeFormat().resolvedOptions().timeZone;
   const [y, m, d] = date.split('-').map(Number);
   shift = () => {
     const now = Real.now();

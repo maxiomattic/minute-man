@@ -7,13 +7,13 @@
 @font-face { font-family: "Public Sans"; src: url("fonts/public-sans-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 
 :root {
-  --paper: #eef1ec;
+  --paper: #eef0f4;
   --surface: #ffffff;
-  --sunk: #e3e8e3;
-  --ink: #1c2a24;
-  --muted: #5b6962;
-  --line: #d3dad4;
-  --brand: #0e6b4e;          /* overridden by leader branding */
+  --sunk: #e2e6ee;
+  --ink: #18202e;
+  --muted: #5a6273;
+  --line: #d2d8e2;
+  --brand: #1c3f74;          /* overridden by leader branding */
   --on-brand: #ffffff;
   --brand-text: var(--brand);  /* brand color for text/icons; lightened in dark mode */
   --marker: #f6c445;         /* rewards, XP, the one loud color */
@@ -32,7 +32,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #111714; --surface: #1a221e; --sunk: #141b18; --ink: #e5ebe7; --muted: #9aa8a1; --line: #2b3631;
+    --paper: #10141c; --surface: #181e29; --sunk: #131823; --ink: #e4e8ef; --muted: #98a1b2; --line: #283041;
     --good: #4fbf86; --danger: #ef6b62; color-scheme: dark;
     --brand-text: color-mix(in srgb, var(--brand) 45%, #ffffff);
   }
@@ -549,3 +549,9 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand-text); 
 .vb section > .section-head { margin-top: 4px; }
 @media print { .vb .page.two, .vb.page.two { display: block; } .vb .contest { break-inside: avoid; margin-bottom: 10px; } }
 /* ===== end ballot + act + me ===== */
+
+/* endorsements browser */
+.endorse-list { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 10px; }
+.endorse-list li h3 { margin: 0; font-size: 17px; }
+.endorse-list li p { margin: 6px 0 0; }
+@media (min-width: 900px) { .endorse-list { grid-template-columns: 1fr 1fr; } }

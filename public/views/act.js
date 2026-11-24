@@ -1,4 +1,4 @@
-// Act: events from people you follow, check-ins, and self-logged civic work.
+// Act: local volunteer events, check-ins, and self-logged civic work.
 import { $, $$, ACTIVITY_ICON, ago, api, confetti, esc, fmtWhen, guard, haptic, icon, refreshStats, sheet, state, toast, xpFly } from '../core.js';
 
 const kindOf = (k) => state.meta?.activityKinds?.find((x) => x.kind === k) || { kind: k, label: k, self: 0, verified: 0 };
@@ -192,13 +192,13 @@ export async function render(el, arg) {
     <div class="main">
       <div>
         <h1>Act</h1>
-        <p class="muted">Meetings, doors and calls from people you follow. Check in with the host's code for full points.</p>
+        <p class="muted">Block walks, phone banks and meetups near you. Check in with the host's code for full points.</p>
         <button class="btn go block" id="log" style="margin-top:12px">${icon('plus')}Log something you did</button>
       </div>
       ${actions.length ? order.filter((g) => groups[g]).map((g) => `<section>
         <div class="section-head"><h2>${g}</h2><span class="muted small">${groups[g].length}</span></div>
         <div class="panel flush"><ul class="list">${groups[g].map(row).join('')}</ul></div></section>`).join('')
-        : `<div class="panel empty">${icon('calendar', 'empty-ico')}<h2>No events yet</h2><p>Follow local groups and people you trust. Their meetings and canvasses show up here.</p><a class="btn line" href="#/leaders">Find people to follow</a></div>`}
+        : `<div class="panel empty">${icon('calendar', 'empty-ico')}<h2>No events yet</h2><p>Join a local group with its invite code. Its block walks and meetups show up here.</p><a class="btn line" href="#/crew">Join a group</a></div>`}
     </div>
     <aside class="side">
       <section>

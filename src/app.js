@@ -169,7 +169,7 @@ export function createApp(db, { adminToken, seed } = {}) {
     return { ok: true };
   });
 
-  route('GET', '/api/clock', () => ({ ...clockConfig(), now: new Date().toISOString() }), { auth: false });
+  route('GET', '/api/clock', () => ({ ...clockConfig(), date: clockConfig().demoDate, now: new Date().toISOString() }), { auth: false });
 
   route('GET', '/api/meta', () => ({
     strategies: listStrategies(),

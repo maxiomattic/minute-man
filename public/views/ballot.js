@@ -77,7 +77,7 @@ function contestHtml(c, ov) {
   for (const n of c.notes || []) notes.push(`<p><b>${esc(n.leaderName)}:</b> ${esc(n.note)}</p>`);
   if (rec.conflicts?.length)
     notes.push(`<p class="warn">Your leaders disagree here. ${rec.conflicts.map((x) => `${esc(x.leaderName)} picks ${esc(x.choiceIds.map((id) => labelOf(c, id)).join(' and ') || 'nobody')}.`).join(' ')}</p>`);
-  if (!rec.choiceIds.length) notes.push('<p>No one you follow has a pick here. It\'s your call.</p>');
+  if (!rec.choiceIds.length) notes.push('<p>None of your sources endorsed in this race. It\'s your call.</p>');
   if (isOv) notes.push(`<p class="row between wrap"><span>You changed this pick.</span><button class="link-btn noprint" data-undo>${rec.choiceIds.length ? 'Use their pick' : 'Clear my pick'}</button></p>`);
   return `<section class="contest" data-c="${esc(c.id)}">
     <header><h3>${esc(c.title)}</h3><span class="rule">${c.voteFor > 1 ? `Vote for up to ${c.voteFor}` : 'Vote for 1'}</span></header>
@@ -110,7 +110,10 @@ export async function render(el, eid) {
     els = store.get(kElections()) || [];
     loadElections().catch(() => {});
   }
-  const { b, offline } = await loadBallot(eid);
+  const [{ b, offline }, binds] = await Promise.all([loadBallot(eid), api('/bindings').catch(() => [])]);
+  const names = binds.filter((x) => x.active).map((x) => x.name);
+  const srcLine = names.length > 1 ? `${names[0]}'s endorsements first, then ${names.slice(1).join(', then ')} where ${names[0].split(' ').map((w) => w[0]).join('')} hasn't picked`
+    : names.length ? `${names[0]}'s endorsements` : 'your sources';
   if (!offline) api('/events', { method: 'POST', body: { kind: `ballot_viewed:${eid}` } }).then(refreshStats).catch(() => {});
   const e = b.election;
   const others = els.filter((x) => x.id !== eid);
@@ -128,7 +131,7 @@ export async function render(el, eid) {
           ${offline ? '<p class="tag hot">Offline. Showing your saved ballot.</p>' : ''}
           <div class="narrow-only noprint" style="margin-top:14px">${cta}</div>
         </div>
-        <p class="small muted">Filled in from people you follow${b.strategy === 'consensus' ? ', weighted by priority' : ', top priority first'}. Tap an oval to change a pick.${changed ? ` <button class="link-btn" id="reset">${changed > 1 ? `Undo all ${changed} changes` : 'Undo your change'}</button>` : ''}</p>
+        <p class="small muted">${b.strategy === 'consensus' ? 'Filled in from your sources, weighted by priority' : `Filled in from ${esc(srcLine)}`}. Tap an oval to change a pick.${changed ? ` <button class="link-btn" id="reset">${changed > 1 ? `Undo all ${changed} changes` : 'Undo your change'}</button>` : ''}</p>
         <div class="sheets">${b.contests.map((c) => contestHtml(c, ov)).join('') || '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>'}</div>
         <p class="legal">Your picks stay on this device. CVAS never sees how you vote. Sample ballots are a guide only.</p>
       </div>
@@ -136,6 +139,7 @@ export async function render(el, eid) {
         <div class="panel">
           <div class="section-head"><h2>Cheat sheet</h2><button class="link-btn noprint" id="print">Print</button></div>
           ${cheatSheet(b, ov)}
+          <p class="small noprint" style="margin-top:12px"><a href="#/endorsements">See every endorsement in your state</a></p>
           <div class="wide-only noprint" style="margin-top:16px">${cta}</div>
         </div>
       </aside>
@@ -195,6 +199,8 @@ export async function renderVote(el, eid) {
     api('/polling').catch(() => null),
   ]);
   let places = placesLive || store.get(kPlaces(), []);
+  const lookup = b.rules?.pollingLookupUrl;
+  const noPlaces = `<p class="muted small">Your county posts early voting sites and election-day locations closer to the election.${lookup ? ` <a href="${esc(lookup)}" target="_blank" rel="noopener">Check your county's election page</a>.` : ' Check your county election office.'}</p>`;
   if (placesLive) store.set(kPlaces(), placesLive);
   const e = b.election;
   const rules = b.rules || {};
@@ -247,7 +253,7 @@ export async function renderVote(el, eid) {
           <div class="opts">${Object.entries(HOW).map(([k, h]) => `<label class="opt big"><input type="radio" name="how" value="${k}" ${how === k ? 'checked' : ''} required>
             ${icon(h.icon)}<span class="grow"><span class="title">${h.label}</span><span class="sub">${h.sub}</span></span></label>`).join('')}</div></div>
         <div class="panel"><div class="section-head"><h3>Where?</h3>${shown.length ? '<button type="button" class="link-btn" id="near">Sort by distance</button>' : ''}</div>
-          <div class="opts" id="places">${shown.length ? shown.map((p) => placeRow(p, where ? String(where.id ?? where.name) : '')).join('') : '<p class="muted small">No locations on file for your area yet. Check your county election office.</p>'}</div></div>
+          <div class="opts" id="places">${shown.length ? shown.map((p) => placeRow(p, where ? String(where.id ?? where.name) : '')).join('') : noPlaces}</div></div>
         <button class="btn go block" type="submit">Save my plan <span class="xp">+10</span></button>
         ${planned ? '<button type="button" class="btn quiet block" id="cancelEdit">Keep my old plan</button>' : open ? '<p class="center"><button type="button" class="link-btn" id="already">Already voted? Tell us</button></p>' : ''}
       </form>`;
@@ -282,6 +288,7 @@ export async function renderVote(el, eid) {
         <div class="panel">
           <div class="section-head"><h2>Cheat sheet</h2><a href="#/ballot/${esc(eid)}" class="noprint">Edit picks</a></div>
           ${cheatSheet(b, ov)}
+          <p class="small noprint" style="margin-top:12px"><a href="#/endorsements">See every endorsement in your state</a></p>
           <p class="tiny muted" style="margin-top:12px">Paper notes are allowed in the booth in most places. Phones may not be. <button class="link-btn tiny noprint" id="print">Print it</button></p>
         </div>
       </aside>
@@ -296,7 +303,7 @@ export async function renderVote(el, eid) {
       // Changing "how" narrows the place list; keep the form's other state.
       $$('input[name=how]', form).forEach((r) => (r.onchange = () => {
         const chosen = $('input[name=place]:checked', form)?.value || '';
-        $('#places', el).innerHTML = placesFor(r.value).map((p) => placeRow(p, chosen)).join('') || '<p class="muted small">No locations on file for your area yet.</p>';
+        $('#places', el).innerHTML = placesFor(r.value).map((p) => placeRow(p, chosen)).join('') || noPlaces;
         haptic();
       }));
       $('#near', el)?.addEventListener('click', () => {
@@ -351,4 +358,32 @@ export async function renderVote(el, eid) {
     };
   };
   draw();
+}
+
+// ---------- endorsements browser ----------
+const STATES = 'AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ');
+
+const lastName = (n = '') => n.trim().split(/\s+/).pop().toLowerCase();
+
+export async function renderEndorsements(el, st) {
+  const d = await api(`/endorsements${st ? `?state=${encodeURIComponent(st)}` : ''}`);
+  const sourceBlurb = (state.leaders || []).filter((l) => d.sources.includes(l.name));
+  el.innerHTML = `<div class="vb page">
+    <p class="noprint"><a href="#/ballot" class="link-btn">Back to your ballot</a></p>
+    <div class="row between wrap" style="gap:12px;align-items:end">
+      <div><h1>Endorsements</h1>
+      <p class="muted">2026 general election. ${esc(d.sources.join(' first, then '))} where the first hasn't picked.</p></div>
+      <label class="field" style="min-width:120px">State
+        <select id="st">${STATES.map((x) => `<option ${x === d.state ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+    </div>
+    ${d.races.length ? `<ol class="endorse-list">${d.races.map((r) => `<li class="panel">
+      <div class="row between wrap"><h3>${esc(r.label)}</h3>${r.pick ? `<span class="tag">${esc(r.pick.sourceName)}</span>` : ''}</div>
+      ${r.pick ? `<p><b>${esc(r.pick.candidate)}</b>${r.pick.party ? ` (${esc(r.pick.party)})` : ''}${r.pick.note ? `<br><span class="small muted">${esc(r.pick.note)}</span>` : ''}</p>` : ''}
+      ${r.picks.filter((p) => p.source !== r.pick?.source).map((p) => `<p class="small muted">${lastName(p.candidate) === lastName(r.pick?.candidate) ? `Also endorsed by ${esc(p.sourceName)}.` : `${esc(p.sourceName)} endorses ${esc(p.candidate)} instead.`}</p>`).join('')}
+      ${r.pick?.url ? `<p class="tiny"><a href="${esc(r.pick.url)}" target="_blank" rel="noopener">Source</a></p>` : ''}
+    </li>`).join('')}</ol>`
+    : `<div class="panel empty"><h2>No endorsements in ${esc(d.state)} yet</h2><p>Neither source has endorsed in a ${esc(d.state)} race for November 2026. Pick another state to look around.</p></div>`}
+    <p class="legal">${sourceBlurb.map((l) => esc(l.blurb || l.description || '')).filter(Boolean).join(' ')} Endorsements are shown as each source published them.</p>
+  </div>`;
+  $('#st', el).onchange = (e) => { location.hash = `#/endorsements/${e.target.value}`; };
 }

@@ -19,7 +19,7 @@
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
         <!-- Android 12+ system splash -->
-        <item name="windowSplashScreenBackground">#0e6b4e</item>
+        <item name="windowSplashScreenBackground">#1c3f74</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>

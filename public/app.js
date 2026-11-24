@@ -1,5 +1,6 @@
 // App shell + router. Views live in ./views/*.js and export render functions:
 //   export async function render(el, arg, sub) { ... }   (el = the <main> content node)
+import { installClock } from './clock.js';
 import { $, $$, api, esc, guard, icon, initials, isNative, refreshStats, state, store, toast } from './core.js';
 
 const TABS = [
@@ -13,6 +14,7 @@ const ROUTES = {
   today: ['today', 'today'],
   ballot: ['ballot', 'ballot'],
   vote: ['ballot', 'ballot'],      // module exports renderVote
+  endorsements: ['ballot', 'ballot'], // renderEndorsements
   act: ['act', 'act'],
   crew: ['crew', 'crew'],
   me: ['me', null],
@@ -20,15 +22,15 @@ const ROUTES = {
   register: ['me', null],          // renderRegister
   lead: ['me', null],              // renderLead
 };
-const RENDER = { vote: 'renderVote', leaders: 'renderLeaders', register: 'renderRegister', lead: 'renderLead' };
+const RENDER = { endorsements: 'renderEndorsements', vote: 'renderVote', leaders: 'renderLeaders', register: 'renderRegister', lead: 'renderLead' };
 
 const root = document.getElementById('app');
 
 function applyTheme() {
   let color = null;
   if (state.me?.theme?.startsWith('leader:')) color = state.leaders.find((l) => l.id === Number(state.me.theme.slice(7)))?.brandColor;
-  document.documentElement.style.setProperty('--brand', color || '#0e6b4e');
-  $('meta[name=theme-color]').content = color || '#0e6b4e';
+  document.documentElement.style.setProperty('--brand', color || '#1c3f74');
+  $('meta[name=theme-color]').content = color || '#1c3f74';
 }
 
 function shell(active) {
@@ -87,8 +89,8 @@ function renderWelcome() {
   root.className = 'welcome';
   root.innerHTML = `<main class="content">
     <div class="wordmark"><span class="oval"></span>CVAS</div>
-    <h1>Show up.<br>Every time.</h1>
-    <p class="muted lede">Your ballot, filled in by people you trust. Plus the meetings, doors and calls that move your town.</p>
+    <h1>Vote America First.<br>Every race.</h1>
+    <p class="muted lede">Your sample ballot, filled in from America First Insight's endorsements, with President Trump's as the fallback where they haven't picked. Plus the doors, calls and rides that win Texas.</p>
     <div class="seg" role="tablist" style="margin-bottom:12px"><button class="on" data-m="signup" role="tab">Create account</button><button data-m="login" role="tab">Sign in</button></div>
     <form id="auth">
       <div id="nameRow"><label class="field" for="n">Name</label><input id="n" name="name" autocomplete="name" required></div>
@@ -153,7 +155,12 @@ async function route() {
   }
 }
 
-addEventListener('hashchange', route);
-route();
+// Match the server's clock (the showcase runs as if today were Oct 1, 2026).
+async function boot() {
+  try { installClock({ date: (await api('/clock')).date }); } catch { installClock({ date: '2026-10-01' }); }
+  addEventListener('hashchange', route);
+  route();
+}
+boot();
 if ('serviceWorker' in navigator && !isNative) navigator.serviceWorker.register('/sw.js').catch(() => {});
 export { route, toast };
