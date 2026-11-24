@@ -1,18 +1,23 @@
 # CVAS status
 
+Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLite). Demo login: demo@example.org / demo-password.
+
 ## Done
-- [x] Schema: users, leaders, bindings, recommendations, elections, contests, choices, registration, participation, activism, groups, friends, nudges, endorsements, results
-- [x] Recommendation engine: priority and consensus rules, disagreement detection
-- [x] Recognition: turnout, activism, endorsement and slate-win points; ranks (rename per leader); 15 badges
-- [x] API: auth, profile, data export and delete, ballots, polling places, leaders, bindings, registration and eligibility, participation, events and check-in, self-logging, leaderboards, groups, friends and nudges, notifications, admin ingestion and results
-- [x] Mobile web app: home, ballot (changes stored on device), election-day guide, Act, Social, Me, registration help (ID stays on device), leader console
-- [x] Offline service worker
-- [x] 17 tests pass
-- [x] Checked visually at phone width (Pixel 7)
+- [x] Schema, recommendation engine (priority/consensus), recognition (points, 7 ranks, 15 badges)
+- [x] API: auth, profile, export/delete, ballots, polling places, leaders, bindings, registration and eligibility, participation, events and check-in, self-logging, leaderboards (weekly and all-time), groups, friends and nudges, notifications, admin ingestion and results
+- [x] Engagement engine: next-action ladder, 3 daily quests + bonus chest, weekly streaks, weekly crew standing, crew feed with cheers, lucky bonus on verified check-ins (never on voting)
+- [x] Redesign ("civic print"): Today, Ballot + vote flow, Act, Crew, You, Leaders, Register, leader console; one primary action per screen; phone and desktop layouts
+- [x] Deployed to Cloudflare (web + API); demo data reseeds with `POST /api/admin/reseed`
+- [x] Local calendar days (America/Denver): deadlines, quests and streaks roll over at local midnight
+- [x] Closed-primary rule for unaffiliated voters
+- [x] Capacitor Android + iOS projects, icons, splash, NixOS Android toolchain (`scripts/android.sh`)
+- [x] 19 tests pass; screens checked at Pixel 7 and 1280x800
+- [ ] Android app installed and verified on the Pixel 6
 
 ## Left / ideas
+- [ ] iOS build needs a Mac with Xcode (or a CI runner): `npx cap open ios`
 - [ ] Real election data source (state voter files or a civic-data API)
-- [ ] Push notifications (Web Push) instead of in-app only
+- [ ] Push notifications (native local notifications are installed but not wired up)
+- [ ] Per-jurisdiction time zones (one zone for the whole deployment today)
 - [ ] Turnout check against public voter-history files
-- [ ] Hosting: a public deploy with HTTPS (now runs on the Surface at port 8799)
 - [ ] Election lawyer review before public launch (see README "Legal design")
