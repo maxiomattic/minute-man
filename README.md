@@ -50,7 +50,7 @@ Live: https://cvas.careride.workers.dev
 
 ```
 npm start                 # local dev server, http://127.0.0.1:8787, demo data seeded on first run
-npm test                  # 24 tests
+npm test                  # 34 tests
 npx wrangler deploy       # deploy web + API to Cloudflare
 scripts/android.sh        # build the Android app, install it on the connected phone and launch it
 ```
