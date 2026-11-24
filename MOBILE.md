@@ -18,9 +18,19 @@ The script enters `shell.nix` (JDK 21 and Android SDK 36 from nixpkgs, with noth
 
 To install on the Pixel over Tailscale, first turn on Wireless debugging on the phone. Then run `adb connect <tailscale-ip>:<port>`, using the port shown on that screen. If the machine isn't paired yet, run `adb pair <ip>:<pair-port> <code>` first.
 
+The Surface is already paired with the Pixel 6 (Tailscale IP `100.121.188.48`). The connect port changes whenever Wireless debugging is turned off and on, so check that screen if `adb connect` fails. Rebuild and reinstall with:
+
+```sh
+scripts/android.sh 100.121.188.48:<port>
+```
+
+Tested on the Pixel 6 (Android, 1080x2400, dark mode): sign-in, live data from the Workers API, header clear of the status bar, tab bar above the gesture bar, and haptics. Status bar icons follow the device theme (`style: "DEFAULT"`).
+
 NixOS note: AGP downloads an `aapt2` binary from Maven, and that binary won't run on NixOS. The script passes `-Pandroid.aapt2FromMavenOverride` so the build uses the SDK's patched `aapt2` instead.
 
 ## iOS (needs a Mac with Xcode)
+
+`npx cap sync ios` also runs on Linux and updates `ios/App/CapApp-SPM/Package.swift` and the copied web assets, but building, signing and running need a Mac.
 
 ```sh
 npm ci
