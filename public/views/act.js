@@ -1,7 +1,7 @@
 // Act: local volunteer events, check-ins, and self-logged civic work.
 import { $, $$, ACTIVITY_ICON, ago, api, confetti, esc, fmtWhen, guard, haptic, icon, more, refreshStats, sheet, state, toast, xpFly } from '../core.js';
 import { openRemind } from './remind.js';
-import { offerFeedNote } from './compose.js';
+import { editorHtml, offerFeedNote, wireEditor } from './compose.js';
 
 const kindOf = (k) => state.meta?.activityKinds?.find((x) => x.kind === k) || { kind: k, label: k, self: 0, verified: 0 };
 const localDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -137,18 +137,39 @@ function openEvent(a, rerender) {
 /**
  * Share a ready-made post from your own account. The phone's share sheet sends it; finishing the share
  * (or copying it) is what records the post. Cancelling records nothing. Minute Man never posts for you.
+ * Your own take (words and/or a photo) goes out first, above the post's words, and shows with it on the feed.
  */
-async function sendPost(text, url) {
+async function photoFile(photo) {
+  const blob = await (await fetch(photo.url)).blob();
+  return new File([blob], `minute-man.${blob.type === 'image/webp' ? 'webp' : 'jpg'}`, { type: blob.type });
+}
+
+async function sendPost(text, url, photo = null) {
   const NativeShare = window.Capacitor?.Plugins?.Share;
+  const Fs = window.Capacitor?.Plugins?.Filesystem;
   try {
-    if (NativeShare) { await NativeShare.share({ title: 'Minute Man', text, url, dialogTitle: 'Share this post' }); return true; }
-    if (navigator.share) { await navigator.share({ text, url }); return true; }
+    if (NativeShare) {
+      let files;
+      if (photo && Fs) {
+        // The share sheet needs a file: write the shrunk, metadata-free copy to the app's cache.
+        const f = await Fs.writeFile({ path: `share-${Date.now()}.${photo.data.startsWith('UklG') ? 'webp' : 'jpg'}`, data: photo.data, directory: 'CACHE' });
+        files = [f.uri];
+      }
+      await NativeShare.share({ title: 'Minute Man', text, url, files, dialogTitle: 'Share this post' });
+      return true;
+    }
+    if (navigator.share) {
+      const file = photo ? await photoFile(photo).catch(() => null) : null;
+      const data = file && navigator.canShare?.({ files: [file] }) ? { text: `${text}\n${url}`, files: [file] } : { text, url };
+      await navigator.share(data);
+      return true;
+    }
   } catch (e) {
     if (e?.name === 'AbortError' || /cancel/i.test(e?.message || '')) return false;
   }
   try {
     await navigator.clipboard.writeText(`${text} ${url}`);
-    return 'copied';
+    return photo ? 'copied-photo' : 'copied';
   } catch {
     toast("Couldn't open sharing on this device.");
     return false;
@@ -163,14 +184,18 @@ export async function openShare(rerender, actionId = null) {
     <div class="row between" style="margin-bottom:4px"><h2 style="margin:0">Share a post</h2>
       <button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
     <p class="muted small" id="pts"></p>
+    ${editorHtml({ id: 'take', placeholder: 'Add your own take (optional)', submit: null, rows: 2, cls: 'take' })}
     <figure class="post-card"><p class="post-text" id="ptext"></p><figcaption class="post-link" id="plink"></figcaption></figure>
     <div class="row between" style="margin:6px 0 14px"><span class="tiny muted" id="pcount"></span>
       <button type="button" class="link-btn" id="pnext">Show another</button></div>
     <button class="btn go block" id="psend">Share this post</button>
-    <p class="tiny muted center" style="margin-top:10px">Posts go out from your own account, only when you send them.</p>
+    <button class="btn quiet block" id="pfeed" style="margin-top:8px">Post on the Minute Man feed only</button>
+    <p class="tiny muted center" style="margin-top:10px">Posts go out from your own account, only when you send them. Shares show on your feed with your take.</p>
   </div>`);
   $('[data-close]', el).onclick = close;
   const btn = $('#psend', el);
+  const feedBtn = $('#pfeed', el);
+  const take = wireEditor($('#take', el), { onSubmit: () => false, allowEmpty: true });
   const paint = () => {
     const p = d.posts[i];
     $('#ptext', el).textContent = p.text;
@@ -184,24 +209,46 @@ export async function openShare(rerender, actionId = null) {
   };
   paint();
   $('#pnext', el).onclick = () => { i = (i + 1) % d.posts.length; haptic(); paint(); };
+  const ready = () => {
+    if (take.busy()) { toast('One moment, the photo is still getting ready.'); return false; }
+    return true;
+  };
   btn.onclick = guard(async () => {
+    if (!ready()) return;
     const p = d.posts[i];
+    const mine = take.value();
     btn.disabled = true;
     try {
-      const how = await sendPost(p.text, d.url);
+      const how = await sendPost(mine.body ? `${mine.body}\n\n${p.text}` : p.text, d.url, take.photo());
       if (!how) return;
-      const r = await api('/posts/share', { method: 'POST', body: { postId: p.id, actionId: actionId || undefined } });
+      const r = await api('/posts/share', { method: 'POST', body: { postId: p.id, actionId: actionId || undefined, body: mine.body, image: mine.image } });
       d.pointsLeftToday = Math.max(0, d.pointsLeftToday - r.points);
       haptic('success');
       const xp = r.points ? ` +${r.points} XP` : '';
-      toast(how === 'copied' ? `Copied. Paste it into any app.${xp}` : r.points ? `Shared.${xp}` : 'Shared. Thanks for spreading the word.');
+      toast(r.takeError ? `Shared, but your take didn't save: ${r.takeError}.`
+        : how === 'copied-photo' ? `Copied the words. Add your photo in the app you paste into.${xp}`
+        : how === 'copied' ? `Copied. Paste it into any app.${xp}` : r.points ? `Shared.${xp}` : 'Shared. Thanks for spreading the word.');
       if (r.points) xpFly(r.points, btn);
+      take.clear();
       refreshStats();
       // Offer the next post so sharing a few in a row is easy.
       if (d.posts.length > 1) i = (i + 1) % d.posts.length;
       paint();
       rerender?.();
     } finally { btn.disabled = false; }
+  });
+  feedBtn.onclick = guard(async () => {
+    if (!ready()) return;
+    const mine = take.value();
+    feedBtn.disabled = true;
+    try {
+      await api('/posts/feed', { method: 'POST', body: { postId: d.posts[i].id, body: mine.body, image: mine.image } });
+      haptic('success');
+      toast('Posted on the feed');
+      take.clear();
+      close();
+      rerender?.();
+    } finally { feedBtn.disabled = false; }
   });
 }
 

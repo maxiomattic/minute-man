@@ -63,10 +63,11 @@ export async function prepImage(file) {
 }
 
 // ---------- the editor (text + one photo), used by the composer and the note sheet ----------
-export function editorHtml({ id, body = '', image = null, placeholder = 'Share an update…', submit = 'Post', extra = '' }) {
-  return `<form class="composer" id="${id}" novalidate>
+// submit: null leaves out the button (the share sheet sends the words with its own buttons).
+export function editorHtml({ id, body = '', image = null, placeholder = 'Share an update…', submit = 'Post', extra = '', rows = 2, cls = '' }) {
+  return `<form class="composer${cls ? ` ${cls}` : ''}" id="${id}" novalidate>
     <label class="sr-only" for="${id}-body">${esc(placeholder)}</label>
-    <textarea id="${id}-body" name="body" rows="2" maxlength="${POST_MAX}" placeholder="${esc(placeholder)}">${esc(body)}</textarea>
+    <textarea id="${id}-body" name="body" rows="${rows}" maxlength="${POST_MAX}" placeholder="${esc(placeholder)}">${esc(body)}</textarea>
     <div class="composer-photo" ${image ? '' : 'hidden'}>
       <img alt="Photo to post" src="${esc(mediaUrl(image) || '')}">
       <button type="button" class="composer-x" aria-label="Remove photo">&times;</button>
@@ -76,25 +77,39 @@ export function editorHtml({ id, body = '', image = null, placeholder = 'Share a
         <input type="file" accept="image/*" class="sr-only" tabindex="-1"></label>
       <span class="tiny muted composer-count" aria-live="polite"></span>
       ${extra}
-      <button class="btn sm go" type="submit">${esc(submit)}</button>
+      ${submit ? `<button class="btn sm go" type="submit">${esc(submit)}</button>` : ''}
     </div>
   </form>`;
 }
 
-/** Wire an editor. onSubmit({ body, image, removeImage }) does the saving; return false to keep the text. */
+/**
+ * Wire an editor. onSubmit({ body, image, removeImage }) does the saving; return false to keep the text.
+ * Returns { value(), photoBlob(), busy(), clear() } for forms without a submit button.
+ */
 export function wireEditor(form, { onSubmit, hadImage = false, allowEmpty = false }) {
   const ta = $('textarea', form);
   const box = $('.composer-photo', form);
   const img = $('img', box);
   const count = $('.composer-count', form);
-  const btn = $('button[type=submit]', form);
+  // No submit button: a stand-in so the rest works the same.
+  const btn = $('button[type=submit]', form) || { disabled: false };
   const file = $('input[type=file]', form);
   let photo = null;
   let removed = false;
+  let preparing = false;
   const update = () => {
     const left = POST_MAX - ta.value.length;
     count.textContent = left <= 80 ? `${left} left` : '';
     btn.disabled = !allowEmpty && !ta.value.trim() && !photo && (removed || !hadImage);
+  };
+  const clear = () => {
+    ta.value = '';
+    ta.style.height = '';
+    if (photo) URL.revokeObjectURL(photo.url);
+    photo = null;
+    box.hidden = true;
+    img.removeAttribute('src');
+    update();
   };
   ta.addEventListener('input', () => {
     ta.style.height = 'auto';
@@ -106,13 +121,14 @@ export function wireEditor(form, { onSubmit, hadImage = false, allowEmpty = fals
     file.value = '';
     if (!f) return;
     btn.disabled = true;
+    preparing = true;
     count.textContent = 'Getting the photo ready';
     try {
       photo = await prepImage(f);
       img.src = photo.url;
       box.hidden = false;
       removed = false;
-    } finally { update(); }
+    } finally { preparing = false; update(); }
   });
   $('.composer-x', form).onclick = () => {
     if (photo) URL.revokeObjectURL(photo.url);
@@ -132,16 +148,16 @@ export function wireEditor(form, { onSubmit, hadImage = false, allowEmpty = fals
         image: photo && { data: photo.data, w: photo.w, h: photo.h },
         removeImage: removed && !photo,
       });
-      if (ok !== false) {
-        ta.value = '';
-        ta.style.height = '';
-        if (photo) URL.revokeObjectURL(photo.url);
-        photo = null;
-        box.hidden = true;
-      }
+      if (ok !== false) clear();
     } finally { update(); }
   });
   update();
+  return {
+    value: () => ({ body: ta.value.trim(), image: photo && { data: photo.data, w: photo.w, h: photo.h } }),
+    photo: () => photo,
+    busy: () => preparing,
+    clear,
+  };
 }
 
 // ---------- a note or photo on something you did ----------

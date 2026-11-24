@@ -860,3 +860,36 @@ h1 + #together:empty { display: none; }
 .photo-view img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--r-sm); }
 .photo-close { position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgb(255 255 255 / .14); color: #fff; font: 400 30px/1 var(--text); cursor: pointer; }
 /* ===== end feed posts ===== */
+
+/* ===== Replies and shared posts on feed items (views/crew.js, views/act.js) ===== */
+.feed-quote { margin: 8px 0 4px; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--brand-text); border-radius: var(--r-sm); background: var(--surface); white-space: pre-line; overflow-wrap: anywhere; font-size: 14.5px; line-height: 1.45; }
+.feed-acts { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
+.feed-acts .feed-menu, .feed-meta .feed-acts .feed-add { margin-left: 0; }
+.feed-reply { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 6px; border: 0; border-radius: var(--r-sm); background: none; color: var(--muted); font: 600 13px var(--text); cursor: pointer; }
+.feed-reply svg { width: 16px; height: 16px; }
+.feed-reply:hover { color: var(--ink); }
+.feed-item.has-thread { flex-wrap: wrap; }
+.feed-thread { flex: 0 0 100%; display: grid; gap: 10px; padding: 4px 0 0 52px; }
+.feed-thread .thread-more { justify-self: start; padding: 0; font-size: 13.5px; }
+.feed-thread .reply { cursor: pointer; }
+.feed-mini .feed-thread { display: none; }
+.reply { display: flex; gap: 8px; align-items: flex-start; }
+.reply .avatar { width: 28px; height: 28px; font-size: 11px; }
+.reply .grow { min-width: 0; }
+.reply-bubble { display: inline-block; max-width: 100%; padding: 7px 11px 8px; border-radius: 4px var(--r-md) var(--r-md) var(--r-md); background: var(--sunk); }
+.reply-head { font-size: 14px; line-height: 1.35; }
+.reply-body { margin: 2px 0 0; font-size: 14.5px; line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; }
+.reply-photo { display: block; margin-top: 6px; padding: 0; border: 0; border-radius: var(--r-md); overflow: hidden; background: var(--sunk); cursor: zoom-in; max-width: 240px; }
+.reply-photo img { display: block; width: 100%; height: auto; max-height: 240px; object-fit: cover; }
+.reply-meta { gap: 6px; margin-top: 3px; padding-left: 4px; align-items: center; }
+.reply-meta .feed-menu { width: 28px; height: 22px; }
+.thread-about { margin: 0 0 12px; overflow-wrap: anywhere; }
+.thread-list { display: grid; gap: 14px; max-height: 52vh; overflow-y: auto; padding: 4px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.thread-list .skeleton { height: 60px; }
+.thread-empty { margin: 4px 0; }
+.sheet .reply-composer textarea { min-height: 56px; }
+.sheet .composer.take { margin: 10px 0 0; }
+.sheet .composer.take textarea { min-height: 64px; }
+.sheet .composer.take .composer-photo img { max-height: 150px; }
+.sheet .composer.take .composer-bar { padding-top: 8px; }
+/* ===== end replies ===== */

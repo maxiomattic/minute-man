@@ -3,13 +3,16 @@
 // for friends who chose to share their status (the API filters this). Points are honorific.
 import { $, $$, api, esc, guard, haptic, icon, insignia, ACTIVITY_ICON, ago, initials, plural, refreshStats, sheet, state, store, toast } from '../core.js';
 import { openRemind } from './remind.js';
-import { PEN, mediaUrl, noteSheet, openImage } from './compose.js';
+import { PEN, editorHtml, mediaUrl, noteSheet, openImage, wireEditor } from './compose.js';
 
 const first = (name) => String(name || '').split(' ')[0];
 
 // ---------- feed items (shared with Today) ----------
 // Items on screen by key, so a note, photo or delete can redraw one in place.
 const ITEMS = new Map();
+// onCheer callback for each item on screen, so an item redrawn later (a new reply) keeps it.
+const ON_CHEER = new Map();
+const BUBBLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a7.5 7.5 0 0 1-11.2 6.5L4 20l1.5-4.4A7.5 7.5 0 1 1 20 12z"/></svg>';
 const DOTS = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
 
 /** The words and photo someone added to an item (escaped; the photo opens full size on tap). */
@@ -19,6 +22,39 @@ function postParts(it) {
     photo: it.image ? `<button type="button" class="feed-photo" data-full="${esc(it.image)}" aria-label="View photo full size">
       <img src="${esc(mediaUrl(it.image))}" alt="Photo from ${esc(first(it.name))}" loading="lazy" decoding="async"${it.imageW && it.imageH ? ` width="${Number(it.imageW)}" height="${Number(it.imageH)}"` : ''}></button>` : '',
   };
+}
+
+/** A ready-made post someone shared: its words, under their own take. */
+// The invite link isn't kept, so a closing "Get yours:" line is dropped.
+const quoteHtml = (it) => (it.quote ? `<blockquote class="feed-quote">${esc(it.quote.replace(/\n[^\n]*:\s*$/, ''))}</blockquote>` : '');
+
+const rankChip = (rank) => (rank ? ` <span class="feed-rank">${insignia(rank)}${esc(rank)}</span>` : '');
+
+/** One reply. In the thread sheet (full) it gets a menu: delete yours, report others'. */
+function replyHtml(r, full = false) {
+  return `<div class="reply" data-reply="${r.id}">
+    <span class="avatar" aria-hidden="true">${esc(initials(r.name))}</span>
+    <div class="grow">
+      <div class="reply-bubble">
+        <div class="reply-head"><strong>${esc(r.name)}</strong>${rankChip(r.rank)}</div>
+        ${r.body ? `<p class="reply-body">${esc(r.body)}</p>` : ''}
+      </div>
+      ${r.image ? `<button type="button" class="reply-photo" data-full="${esc(r.image)}" aria-label="View photo full size">
+        <img src="${esc(mediaUrl(r.image))}" alt="Photo from ${esc(first(r.name))}" loading="lazy" decoding="async"${r.imageW && r.imageH ? ` width="${Number(r.imageW)}" height="${Number(r.imageH)}"` : ''}></button>` : ''}
+      <div class="row tiny muted reply-meta"><span>${esc(ago(r.at))} ago${r.place && !r.mine ? `, ${esc(r.place.replace(/, [A-Z]{2}$/, ''))}` : ''}</span>
+        ${full ? `<button type="button" class="feed-menu" data-rmenu="${r.id}" aria-label="${r.mine ? 'Delete reply' : 'Report reply'}">${DOTS}</button>` : ''}</div>
+    </div>
+  </div>`;
+}
+
+/** Under a feed item: the latest replies, and "View all" when there are more. */
+function threadHtml(it) {
+  const n = it.replyCount || 0;
+  if (!n) return '';
+  return `<div class="feed-thread">
+    ${n > (it.replies?.length || 0) ? `<button type="button" class="link-btn thread-more" data-thread="${esc(it.key)}">View all ${n} replies</button>` : ''}
+    ${(it.replies || []).map((r) => replyHtml(r)).join('')}
+  </div>`;
 }
 
 /** Your own activity: add a note or photo. Items with someone's words or photo: a menu (yours: edit/delete; others': report). */
@@ -31,26 +67,28 @@ export function feedItemHtml(it) {
   const mine = it.userId === state.me?.id;
   ITEMS.set(it.key, it);
   const { body, photo } = postParts(it);
-  return `<div class="feed-item${it.post ? ' is-post' : ''}${photo ? ' has-photo' : ''}" data-key="${esc(it.key)}">
+  return `<div class="feed-item${it.post ? ' is-post' : ''}${photo ? ' has-photo' : ''}${it.replyCount ? ' has-thread' : ''}" data-key="${esc(it.key)}">
     <span class="avatar" aria-hidden="true">${esc(initials(it.name))}</span>
     <div class="grow">
       <div><strong>${esc(it.name)}</strong>${it.rank && it.icon !== 'rank' ? ` <span class="feed-rank">${insignia(it.rank)}${esc(it.rank)}</span>` : ''} ${esc(it.text)}</div>
       ${body}
+      ${quoteHtml(it)}
       <div class="row tiny muted feed-meta">
         <span class="feed-kind">${it.icon === 'post' ? PEN : icon(ACTIVITY_ICON[it.icon] || 'star')}</span>
         <span>${esc(ago(it.at))} ago${it.place && !mine ? `, ${esc(it.place.replace(/, [A-Z]{2}$/, ''))}` : ''}</span>
         ${it.verified ? '<span class="tag good">Verified</span>' : ''}
-        ${postActions(it, mine)}
+        <span class="feed-acts"><button type="button" class="feed-reply" data-thread="${esc(it.key)}" aria-label="${it.replyCount ? `${it.replyCount} ${it.replyCount === 1 ? 'reply' : 'replies'}. Reply` : 'Reply'}">${BUBBLE}<span>${it.replyCount ? it.replyCount : 'Reply'}</span></button>${postActions(it, mine)}</span>
       </div>
     </div>
     ${mine ? (it.cheers ? `<span class="tiny muted">${plural(it.cheers, 'cheer')}</span>` : '')
       : `<button class="cheer ${it.cheered ? 'on' : ''} ${it.cheers ? '' : 'zero'}" data-item="${esc(it.key)}" data-owner="${it.userId}" aria-pressed="${it.cheered}" aria-label="Cheer ${esc(first(it.name))}">${icon('clap')}<span>${it.cheers || 'Cheer'}</span></button>`}
     ${photo}
+    ${threadHtml(it)}
   </div>`;
 }
 
 /** Redraw one item in place (after a note, photo or edit), keeping its handlers. */
-function redraw(el, it, onCheer) {
+function redraw(el, it, onCheer = ON_CHEER.get(it.key)) {
   const box = document.createElement('div');
   box.innerHTML = feedItemHtml(it);
   bindCheers(box, onCheer);
@@ -59,7 +97,10 @@ function redraw(el, it, onCheer) {
 
 /** Photos open full size; your items get "Add a note or photo" and edit/delete; others' get Report. */
 function bindPostActions(root, onCheer) {
-  $$('.feed-photo[data-full]', root).forEach((b) => (b.onclick = () => openImage(b.dataset.full, $('img', b)?.alt || '')));
+  $$('.feed-photo[data-full], .reply-photo[data-full]', root).forEach((b) => (b.onclick = (e) => { e.stopPropagation(); openImage(b.dataset.full, $('img', b)?.alt || ''); }));
+  $$('[data-thread]', root).forEach((b) => (b.onclick = () => openThread(b.dataset.thread)));
+  // Tapping a reply under an item opens the whole conversation.
+  $$('.feed-thread .reply', root).forEach((r) => (r.onclick = () => openThread(r.closest('.feed-item')?.dataset.key)));
   const itemOf = (b) => [b.closest('.feed-item'), ITEMS.get(b.dataset.note || b.dataset.menu)];
   const edit = (el, it) => noteSheet({
     activityId: it.activityId,
@@ -107,6 +148,7 @@ function bindPostActions(root, onCheer) {
 
 /** Wire cheer toggles inside root. onCheer runs after a successful cheer (e.g. refresh quests). */
 export function bindCheers(root, onCheer) {
+  if (onCheer) $$('.feed-item[data-key]', root).forEach((x) => ON_CHEER.set(x.dataset.key, onCheer));
   bindPostActions(root, onCheer);
   $$('.cheer[data-item]', root).forEach((b) => {
     b.onclick = async () => {
@@ -137,6 +179,72 @@ export function bindCheers(root, onCheer) {
       }
     };
   });
+}
+
+// ---------- replies ----------
+/** The whole conversation on one feed item, with a box to reply (words and one photo). */
+export function openThread(key) {
+  if (!key) return;
+  const it = ITEMS.get(key);
+  let replies = [];
+  const about = it && (it.post || !it.text ? (it.body || it.quote || 'posted a photo').slice(0, 120) : it.text);
+  const s = sheet(`<div class="vb"><div class="row between" style="margin-bottom:6px"><h2 style="margin:0">Replies</h2>
+      <button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
+    ${it ? `<p class="muted small thread-about"><strong>${esc(it.name)}</strong> ${esc(about)}</p>` : ''}
+    <div class="thread-list" aria-live="polite"><div class="skeleton"></div></div>
+    ${editorHtml({ id: 'replyForm', placeholder: it ? `Reply to ${first(it.name)}…` : 'Write a reply…', submit: 'Reply', cls: 'reply-composer' })}
+    <p class="tiny muted composer-note">Everyone who can see this post can see your reply. No points for replies.</p></div>`);
+  $('[data-close]', s.el).onclick = s.close;
+  const list = $('.thread-list', s.el);
+  // Keep the item on the feed in step: count and the latest two.
+  const sync = () => {
+    const el = document.querySelector(`.feed-item[data-key="${CSS.escape(key)}"]`);
+    const cur = ITEMS.get(key);
+    if (el && cur) redraw(el, { ...cur, replyCount: replies.length, replies: replies.slice(-2) });
+  };
+  const paint = () => {
+    list.innerHTML = replies.length ? replies.map((r) => replyHtml(r, true)).join('')
+      : '<p class="muted small thread-empty">No replies yet. Start the conversation.</p>';
+    $$('.reply-photo[data-full]', list).forEach((b) => (b.onclick = () => openImage(b.dataset.full, $('img', b)?.alt || '')));
+    $$('[data-rmenu]', list).forEach((b) => (b.onclick = () => {
+      const r = replies.find((x) => x.id === Number(b.dataset.rmenu));
+      if (!r) return;
+      const m = sheet(r.mine
+        ? `<h2>Delete your reply?</h2><div class="sheet-actions">
+            <button class="btn danger block" data-do="go">Delete reply</button>
+            <button class="btn quiet block" data-do="close">Cancel</button></div>`
+        : `<h2>Report this reply?</h2>
+          <p class="muted">It disappears for you, and we'll take a look. ${esc(first(r.name))} isn't told who reported it.</p>
+          <div class="sheet-actions"><button class="btn danger block" data-do="go">Report and hide</button>
+            <button class="btn quiet block" data-do="close">Cancel</button></div>`);
+      $('[data-do="close"]', m.el).onclick = m.close;
+      $('[data-do="go"]', m.el).onclick = guard(async () => {
+        if (r.mine) await api(`/feed/replies/${r.id}`, { method: 'DELETE' });
+        else await api('/feed/report', { method: 'POST', body: { item: r.key } });
+        m.close();
+        toast(r.mine ? 'Reply deleted' : "Reported. You won't see it again.");
+        replies = replies.filter((x) => x.id !== r.id);
+        paint();
+        sync();
+      });
+    }));
+  };
+  api(`/feed/replies?item=${encodeURIComponent(key)}`).then((d) => {
+    replies = d.replies;
+    paint();
+    list.lastElementChild?.scrollIntoView({ block: 'nearest' });
+  }).catch((e) => { list.innerHTML = `<p class="muted small">${esc(e.message)}</p>`; });
+  wireEditor($('#replyForm', s.el), {
+    onSubmit: async (v) => {
+      const r = await api('/feed/replies', { method: 'POST', body: { item: key, body: v.body, image: v.image } });
+      replies.push(r.reply);
+      paint();
+      sync();
+      haptic('success');
+      list.lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    },
+  });
+  return s;
 }
 
 // ---------- friends ----------
