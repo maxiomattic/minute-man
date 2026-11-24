@@ -1,7 +1,7 @@
 // People: feed items and cheers (used by the Feed tab), friends and groups (under Leaderboard).
 // Guardrails: never show how anyone voted; "Not yet" appears only in your own friend list and only
 // for friends who chose to share their status (the API filters this). Points are honorific.
-import { $, $$, api, esc, guard, haptic, icon, insignia, ACTIVITY_ICON, ago, initials, plural, refreshStats, sheet, state, store, toast, xpFly } from '../core.js';
+import { $, $$, api, esc, guard, haptic, icon, insignia, ACTIVITY_ICON, ago, initials, plural, refreshStats, sheet, state, store, toast } from '../core.js';
 import { openRemind } from './remind.js';
 import { PEN, mediaUrl, noteSheet, openImage } from './compose.js';
 
@@ -158,7 +158,7 @@ export async function renderFriends(body) {
     } else {
       // Friends are on Minute Man, so the app reminds them itself. Show their rank and, if they share it, whether they voted.
       const s = STATUS[f.status];
-      meta = `<span class="row friend-meta">${f.rank ? `<span class="feed-rank">${esc(f.rank)}</span>` : ''}${s ? `<span class="tag ${s[0]}">${s[1]}</span>` : '<span class="sub">Keeps voting status private</span>'}</span>`;
+      meta = `<span class="row friend-meta">${f.rank ? `<span class="feed-rank">${insignia(f.rank)}${esc(f.rank)}</span>` : ''}${s ? `<span class="tag ${s[0]}">${s[1]}</span>` : '<span class="sub">Keeps voting status private</span>'}</span>`;
     }
     return `<li><span class="avatar" aria-hidden="true">${esc(initials(f.name))}</span>
       <div class="grow"><div class="title">${esc(f.name)}</div>${meta}</div>

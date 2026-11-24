@@ -19,16 +19,6 @@ const idDb = () => new Promise((res, rej) => {
   r.onsuccess = () => res(r.result);
   r.onerror = () => rej(r.error);
 });
-async function idGet() {
-  try {
-    const db = await idDb();
-    return await new Promise((res) => { const q = db.transaction('kv').objectStore('kv').get(`id:${state.me.id}`); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); });
-  } catch { return null; }
-}
-async function idPut(v) {
-  const db = await idDb();
-  return new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, `id:${state.me.id}`); t.oncomplete = res; t.onerror = () => rej(t.error); });
-}
 async function idDel() {
   try {
     const db = await idDb();
@@ -109,9 +99,9 @@ export async function render(el, arg) {
     </aside>
   </div>`;
 
-  $$('[data-open=profile]', el).forEach((b) => (b.onclick = () => profileSheet(jur)));
+  $$('[data-open=profile]', el).forEach((b) => (b.onclick = () => profileSheet()));
   // #/me/profile deep link (from "Add your address" buttons) opens the form directly.
-  if (arg === 'profile') { history.replaceState(null, '', '#/me'); profileSheet(jur); }
+  if (arg === 'profile') { history.replaceState(null, '', '#/me'); profileSheet(); }
   $('#export', el).onclick = guard(async () => {
     const data = await api('/me/export');
     download('minute-man-my-data.json', data);
@@ -136,7 +126,7 @@ export async function render(el, arg) {
   };
 }
 
-function profileSheet(jur) {
+function profileSheet() {
   const me = state.me;
   const { el, close } = sheet(`<div class="vb"><div class="row between"><h2 style="margin:0">Profile</h2><button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
     <form id="prof">

@@ -42,7 +42,6 @@ export async function render(el, arg, fromAct = false, sub = null) {
   state.today = t;
   window.dispatchEvent(new CustomEvent('cvas:stats'));
 
-  const actions = [t.next, ...(t.upNext || [])].filter(Boolean);
   const n = t.next;
   const e = t.election;
   const q = t.quests;

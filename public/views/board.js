@@ -118,7 +118,7 @@ export async function render(el, sub) {
     const row = (r) => `<li class="${r.me ? 'me' : ''} ${r.place <= 3 ? `top${r.place}` : ''}">
         <span class="place num">${r.place}</span>
         <span class="avatar" aria-hidden="true">${esc(initials(r.name))}</span>
-        <div class="grow"><div class="title">${esc(r.name)}${r.me ? ' <span class="tiny muted">(you)</span>' : ''}</div><div class="sub">${esc([r.rank, r.where?.replace(/, [A-Z]{2}$/, '')].filter(Boolean).join(', '))}</div></div>
+        <div class="grow"><div class="title">${esc(r.name)}${r.me ? ' <span class="tiny muted">(you)</span>' : ''}</div><div class="sub">${r.rank ? `<span class="feed-rank">${insignia(r.rank)}${esc(r.rank)}</span> ` : ''}${esc(r.where?.replace(/, [A-Z]{2}$/, '') || '')}</div></div>
         <div class="board-pts"><span class="pts num">${n(r.points)}</span><span class="tiny muted">pts</span></div>
       </li>`;
     const meOutside = me && !rows.some((r) => r.me);
