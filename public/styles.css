@@ -787,3 +787,8 @@ h1 + #together:empty { display: none; }
 .post-card { margin: 12px 0 0; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--brand-text); border-radius: var(--r-sm); padding: 14px 16px; }
 .post-text { margin: 0; white-space: pre-line; line-height: 1.45; }
 .post-link { margin-top: 8px; font-size: 13px; color: var(--brand-text); word-break: break-all; }
+
+/* Rank insignia (core.js insignia()): chevrons, lozenges, star, laurel */
+.feed-rank .insignia { width: 12px; height: 12px; margin-right: 3px; vertical-align: -1.5px; }
+.commission .insignia { width: 20px; height: 20px; color: var(--brand-text); }
+.skt-rduty { flex-basis: 100%; font-size: 13px; color: var(--muted); }

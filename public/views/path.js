@@ -80,7 +80,7 @@ function treeHtml(L, T) {
       const r = L.rungs[s.level - 1];
       const tag = r.level <= L.level ? `<span class="skt-rtag got">${icon('check', 'inline-ic')}Reached</span>`
         : r.level === L.level + 1 ? '<span class="skt-rtag next">Next rank</span>' : '';
-      html += `<div class="skt-rank"><span class="skt-rnum num">Rank ${r.level}</span><span class="skt-rname">${esc(r.name)}</span>${tag}</div>`;
+      html += `<div class="skt-rank"><span class="skt-rnum num">Rank ${r.level}</span><span class="skt-rname">${esc(r.name)}</span>${tag}${r.duty ? `<span class="skt-rduty">${esc(r.duty)}</span>` : ''}</div>`;
     }
     html += node(s);
   }
@@ -216,7 +216,7 @@ export async function render(el, arg, sub) {
         <div class="rung-mark num" aria-hidden="true">${state === 'done' ? icon('check') : r.level}</div>
         <div class="grow">
           <div class="rung-head"><h3>${esc(r.name)}</h3>${r.bonus ? `<span class="tiny muted">+${r.bonus} XP</span>` : ''}</div>
-          <p class="small muted">${esc(r.blurb)}${state === 'done' && r.level === L.level ? ' <strong class="you">You are here</strong>' : ''}</p>
+          <p class="small muted">${esc(r.duty ? r.duty + '.' : r.blurb)}${state === 'done' && r.level === L.level ? ' <strong class="you">You are here</strong>' : ''}</p>
           ${state === 'done' && r.level !== L.level ? '' : state === 'later' && steps ? more('See steps', steps) : steps}
         </div></li>`;
   };
@@ -230,7 +230,7 @@ export async function render(el, arg, sub) {
         <button class="btn go block" id="share">Share my invite link</button>
         ${more('How the bonuses work', `<ul class="bonus-list small">
           <li><span>They join</span><b class="num">+${RECRUIT_BONUS[0]}</b></li>
-          <li><span>They reach Registered Voter</span><b class="num">+${RECRUIT_BONUS[1]}</b></li>
+          <li><span>They reach Corporal</span><b class="num">+${RECRUIT_BONUS[1]}</b></li>
           <li><span>They vote</span><b class="num">+${RECRUIT_BONUS[2]}</b></li>
           <li><span>Each rank after that</span><b class="num">+${Math.min(...RECRUIT_BONUS.slice(3))} to +${Math.max(...RECRUIT_BONUS.slice(3))}</b></li>
         </ul>
@@ -248,7 +248,7 @@ export async function render(el, arg, sub) {
       <div class="main">
         <a class="back" href="#/today">${icon('chevron')}Today</a>
         <h1>Your path</h1>
-        <p class="muted">Level ${L.level} of ${L.rungs.length}: <strong>${esc(L.name)}</strong>. Finish every step to move up.</p>
+        <p class="muted">Level ${L.level} of ${L.rungs.length}: <strong>${esc(L.name)}</strong>.${L.duty ? ` ${esc(L.duty)}.` : ''} Finish every step to move up.</p>
         ${coach}
         <section>
           <nav class="seg" aria-label="Path view" style="margin-bottom:14px"><button data-view="tree" class="${view === 'tree' ? 'on' : ''}">Skill tree</button><button data-view="ranks" class="${view === 'ranks' ? 'on' : ''}">Ranks</button></nav>
@@ -292,6 +292,7 @@ export function pathCard(rank) {
   const pct = rank.progress ? (rank.progress.done / rank.progress.of) * 100 : 100;
   return `<a class="panel path-card" href="#/path">
       <div class="row between"><strong>Level ${rank.level} of ${rank.of}: ${esc(rank.name)}</strong>${icon('chevron', 'chev')}</div>
+      ${rank.duty ? `<p class="small muted" style="margin:2px 0 0">${esc(rank.duty)}.</p>` : ''}
       ${c ? `<div class="meter" role="progressbar" aria-label="Progress to ${esc(rank.nextName)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><div style="width:${Math.max(4, pct)}%"></div></div>
         <p class="small" style="margin:8px 0 0">Next: <strong>${esc(c.step.label)}</strong>${c.step.opensLabel ? ` <span class="muted">(${esc(c.step.opensLabel.toLowerCase())})</span>` : ''}</p>
         ${c.meanwhile ? `<p class="small muted" style="margin:2px 0 0">Meanwhile: ${esc(c.meanwhile.step.label.toLowerCase())}</p>` : ''}` : '<p class="small muted" style="margin:6px 0 0">Top rank.</p>'}

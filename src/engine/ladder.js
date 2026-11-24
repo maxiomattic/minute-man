@@ -1,6 +1,9 @@
 // The Ladder: ranks you earn by doing each step of political engagement in order, from
-// registering to running for precinct chair. Points still drive leaderboards; rank comes
-// only from the ladder, so you can't skip the basics by grinding one activity.
+// registering to running for precinct chair. The ranks are Continental Army ranks, Private
+// to Colonel; each has a `duty` that says what it stands for. Rank names are never stored:
+// the DB keeps the level number (users.rung, bonuses 'rung:N'), so renaming is safe.
+// Points still drive leaderboards; rank comes only from the ladder, so you can't skip the
+// basics by grinding one activity.
 //
 // Recruiting: everyone has an invite link. People who join through it are your recruits,
 // and you earn a bonus each time one of them climbs a rung. Recruits also count toward
@@ -118,9 +121,9 @@ const lesson = (id, label, needs) => ({
 // Each step: label, how (one or two sentences of coaching), href or action, and a check that
 // returns a number (progress) against `goal` (default 1).
 export const LADDER = [
-  { name: 'Newcomer', blurb: 'You joined. Welcome.', steps: [] },
+  { name: 'Private', duty: 'You\'ve joined up', blurb: 'You joined. Welcome.', steps: [] },
   {
-    name: 'Registered Voter', blurb: 'Get ready to vote.',
+    name: 'Corporal', duty: 'You\'re registered, with a plan to vote', blurb: 'Get ready to vote.',
     steps: [
       { id: 'address', needs: [], cta: 'Add your address', label: 'Add your home address', how: 'It finds your exact ballot and districts. We keep the city, not the street.', href: '#/me/profile', check: (f) => +f.address },
       { id: 'registered', needs: ['address'], xp: '+50', cta: 'Check registration', label: 'Confirm you\'re registered', how: 'The state lookup takes about 2 minutes. If you aren\'t registered, we walk you through it.', href: '#/register', check: (f) => +f.registered },
@@ -128,7 +131,7 @@ export const LADDER = [
     ],
   },
   {
-    name: 'Active Voter', blurb: 'Cast your ballot.',
+    name: 'Sergeant', duty: 'You\'ve voted', blurb: 'Cast your ballot.',
     steps: [
       { id: 'vote', needs: ['plan'], xp: '+100', cta: 'Vote', label: 'Vote, early if you can', how: 'Early voting means no election-day lines, and it frees you up to drive friends on election day. Voting early earns 25 extra XP.',
         href: (f) => (f.election ? `#/vote/${f.election.id}` : '#/ballot'), check: (f) => +f.voted,
@@ -136,7 +139,7 @@ export const LADDER = [
     ],
   },
   {
-    name: 'Messenger', blurb: 'Spread the word.',
+    name: 'Ensign', duty: 'You carry the colors and spread the word', blurb: 'Spread the word.',
     steps: [
       { id: 'posts', needs: ['registered'], xp: '+3 per share', cta: 'Share a post', label: 'Share 5 posts', how: 'Pick a ready-made post about your ballot or a deadline and share it from your own account. Each share counts.', href: '#/act/share', goal: 5, check: (f) => f.posts },
       { id: 'remind', needs: ['plan'], xp: '+5 per friend', cta: 'Remind friends', label: 'Remind 3 friends to vote', how: 'A personal reminder works better than any ad.', href: '#/board/friends', goal: 3, check: (f) => f.reminded },
@@ -144,7 +147,7 @@ export const LADDER = [
     ],
   },
   {
-    name: 'Regular', blurb: 'Show up in person.',
+    name: 'Lieutenant', duty: 'You show up at local meetings', blurb: 'Show up in person.',
     steps: [
       lesson('learn_local', 'Learn how local government works', ['plan']),
       lesson('learn_party', 'Learn how your county party works', ['learn_local']),
@@ -153,16 +156,16 @@ export const LADDER = [
     ],
   },
   {
-    name: 'Volunteer', blurb: 'Work for a campaign.',
+    name: 'Captain', duty: 'You work for campaigns', blurb: 'Work for a campaign.',
     steps: [
       lesson('learn_canvass', 'Learn how a block walk works', ['group']),
       { id: 'doors', needs: ['learn_canvass'], log: 'canvass', xp: '+1 per door', cta: 'Find a block walk', label: 'Knock 100 doors', how: 'Block walks are the most effective thing a volunteer can do. Most campaigns will pair you with someone your first time.', href: '#/act', goal: 100, check: (f) => f.doors },
       { id: 'shift', needs: ['group'], log: 'volunteer', xp: '+40', cta: 'Find a shift', label: 'Work a campaign or GOTV shift', how: 'Phone banks, sign waving, office help, or rides to the polls.', href: '#/act', check: (f) => f.shifts },
-      { id: 'recruit3', needs: ['recruit1'], xp: '+50 each', cta: 'See your recruits', label: '3 recruits reach Registered Voter', how: 'Help the people you brought in check their registration and make a plan.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsRegistered },
+      { id: 'recruit3', needs: ['recruit1'], xp: '+50 each', cta: 'See your recruits', label: '3 recruits reach Corporal', how: 'Help the people you brought in check their registration and make a plan.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsRegistered },
     ],
   },
   {
-    name: 'Block Captain', blurb: 'Organize your neighborhood.',
+    name: 'Major', duty: 'You organize your neighborhood', blurb: 'Organize your neighborhood.',
     steps: [
       { id: 'doors500', needs: ['doors'], log: 'canvass', xp: '+1 per door', cta: 'Find a block walk', label: 'Knock 500 doors', how: 'Own your block: know who lives there and who still needs to vote.', href: '#/act', goal: 500, check: (f) => f.doors },
       { id: 'lead', needs: ['group'], cta: 'Start a group', label: 'Start a group with 5 members', how: 'Create a group for your block or church and share its invite code.', href: '#/board/groups', goal: 5, check: (f) => f.ledGroup },
@@ -171,12 +174,12 @@ export const LADDER = [
     ],
   },
   {
-    name: 'Precinct Chair', blurb: 'Represent your precinct in the party.',
+    name: 'Colonel', duty: 'You lead your precinct in the party', blurb: 'Represent your precinct in the party.',
     steps: [
       lesson('learn_chair', 'Learn what a precinct chair does', ['lead']),
       { id: 'chair', needs: ['learn_chair'], xp: '+100', label: 'Become precinct chair', how: 'Precinct chairs sit on the county party\'s executive committee. You run in the March primary (no filing fee), or the county party can appoint you to an empty seat. Many precincts have none. Call your county chair.',
         action: 'claim:precinct_chair', actionLabel: 'I filed or was appointed', link: 'https://www.sos.texas.gov/elections/candidates/guide/2026/precinct-chair.shtml', check: (f) => +f.precinctChair },
-      { id: 'team', needs: ['recruit3'], cta: 'See your recruits', label: '3 recruits reach Messenger', how: 'A precinct chair builds a team. Coach your recruits up the ladder.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsActive },
+      { id: 'team', needs: ['recruit3'], cta: 'See your recruits', label: '3 recruits reach Ensign', how: 'A precinct chair builds a team. Coach your recruits up the ladder.', href: '#/path/invite', goal: 3, check: (f) => f.recruitsActive },
     ],
   },
 ];
@@ -199,7 +202,7 @@ export function ladderFor(db, user, names) {
         opensLabel: have < goal && opens && day < opens ? `Opens ${fmtDay(opens)}` : null,
       };
     });
-    return { level: i + 1, name: (names && names[i]) || r.name, blurb: r.blurb, bonus: RUNG_BONUS[i], steps, complete: steps.every((s) => s.done) };
+    return { level: i + 1, name: (names && names[i]) || r.name, duty: r.duty, blurb: r.blurb, bonus: RUNG_BONUS[i], steps, complete: steps.every((s) => s.done) };
   });
   // A step is locked until every step it needs is done.
   const byId = new Map(rungs.flatMap((r) => r.steps.map((s) => [s.id, s])));
@@ -228,7 +231,7 @@ export function ladderFor(db, user, names) {
   }
   const doneSteps = next ? next.steps.filter((s) => s.done).length : 0;
   return {
-    level, name: current.name, nextName: next?.name || null, nextAt: null,
+    level, name: current.name, duty: current.duty, nextName: next?.name || null, nextAt: null,
     progress: next ? { done: doneSteps, of: next.steps.length } : null,
     coach, rungs,
   };

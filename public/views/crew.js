@@ -1,7 +1,7 @@
 // People: feed items and cheers (used by the Feed tab), friends and groups (under Leaderboard).
 // Guardrails: never show how anyone voted; "Not yet" appears only in your own friend list and only
 // for friends who chose to share their status (the API filters this). Points are honorific.
-import { $, $$, api, esc, guard, haptic, icon, ACTIVITY_ICON, ago, initials, plural, refreshStats, sheet, state, store, toast, xpFly } from '../core.js';
+import { $, $$, api, esc, guard, haptic, icon, insignia, ACTIVITY_ICON, ago, initials, plural, refreshStats, sheet, state, store, toast, xpFly } from '../core.js';
 
 const first = (name) => String(name || '').split(' ')[0];
 
@@ -11,7 +11,7 @@ export function feedItemHtml(it) {
   return `<div class="feed-item">
     <span class="avatar" aria-hidden="true">${esc(initials(it.name))}</span>
     <div class="grow">
-      <div><strong>${esc(it.name)}</strong>${it.rank && it.icon !== 'rank' ? ` <span class="feed-rank">${esc(it.rank)}</span>` : ''} ${esc(it.text)}</div>
+      <div><strong>${esc(it.name)}</strong>${it.rank && it.icon !== 'rank' ? ` <span class="feed-rank">${insignia(it.rank)}${esc(it.rank)}</span>` : ''} ${esc(it.text)}</div>
       <div class="row tiny muted feed-meta">
         <span class="feed-kind">${icon(ACTIVITY_ICON[it.icon] || 'star')}</span>
         <span>${esc(ago(it.at))} ago${it.place && !mine ? `, ${esc(it.place.replace(/, [A-Z]{2}$/, ''))}` : ''}</span>

@@ -1,6 +1,6 @@
 // Leaderboard: where you stand, the people near you, your numbers and your honors.
 // Only people who chose to appear are listed. Points are honorific and can't be traded for anything.
-import { $, $$, api, esc, guard, icon, initials, plural, state, store } from '../core.js';
+import { $, $$, api, esc, guard, icon, insignia, initials, plural, state, store } from '../core.js';
 import { renderFriends, renderGroups } from './crew.js';
 
 // Every badge the server can award (see scorecard() in src/engine/recognition.js).
@@ -51,7 +51,7 @@ export async function render(el, sub) {
         <div class="standing-top">
           <div><span class="standing-place num">${best ? ord(best.place) : '—'}</span>
             <span class="standing-of">${best ? `of ${n(best.of)} in ${esc(best.label.replace(/^Your /, 'your '))}, last 30 days` : 'Your place appears once you earn points'}</span></div>
-          ${rank ? `<a class="commission" href="#/path"><span class="commission-lvl">Level ${rank.level}</span><b>${esc(rank.name)}</b></a>` : ''}
+          ${rank ? `<a class="commission" href="#/path">${insignia(rank.level)}<span class="commission-lvl">Level ${rank.level}</span><b>${esc(rank.name)}</b></a>` : ''}
         </div>
         <ul class="places">${st.places.map((p) => `<li><button data-scope="${esc(p.scope)}"><span>${esc(p.label)}</span><b class="num">${p.place ? ord(p.place) : '—'}</b></button></li>`).join('')}</ul>
       </section>

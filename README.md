@@ -13,7 +13,7 @@ Minute Man is free, open-source software under the GNU AGPL (see `LICENSE`). It 
   - **Today**: your next step, your path, tasks, daily quests, events near you, streak. Group members can host events with a check-in code.
   - **Feed**: an endless feed of what people are getting done, ranked by impact and how close it is to you (see below), with a county "muster" total at the top and cheers.
   - **Leaderboard**: your place in your precinct, districts, county, state and nationwide, plus friends and groups; filters for this week, 30 days and all time; your numbers, an 8-week chart and honors (14 badges).
-- **The Ladder**: 8 ranks earned by doing each step of political engagement in order, with a skill tree and short trainings before the in-person steps.
+- **The Ladder**: 8 ranks earned by doing each step of political engagement in order, with a skill tree and short trainings before the in-person steps. The ranks are Continental Army ranks: Private (joined), Corporal (registered, with a plan), Sergeant (voted), Ensign (spreads the word), Lieutenant (goes to local meetings), Captain (works for campaigns), Major (organizes a neighborhood) and Colonel (leads a precinct). The DB stores only the level number, so rank names can change without a migration.
 - **Invites**: everyone has an invite link and earns a bonus each time a recruit reaches a new rank.
 
 ### Feed ranking

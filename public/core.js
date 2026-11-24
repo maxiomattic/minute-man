@@ -92,6 +92,25 @@ const P = {
 };
 export const icon = (name, cls = '') =>
   `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.star}</svg>`;
+/** The Ladder's ranks in order (mirrors src/engine/ladder.js), for the insignia below. */
+export const RANKS = ['Private', 'Corporal', 'Sergeant', 'Ensign', 'Lieutenant', 'Captain', 'Major', 'Colonel'];
+const chev = (y) => `M5 ${y + 4.5}l7-4.5 7 4.5`;
+const lozenge = (x, y, r) => `<path d="M${x} ${y - r}l${r} ${r}-${r} ${r}-${r}-${r}z" fill="currentColor" stroke-width="1.2"/>`;
+const INSIGNIA = [
+  `<path d="${chev(9.5)}"/>`,
+  `<path d="${chev(6.5)}${chev(12.5)}"/>`,
+  `<path d="${chev(4)}${chev(9.5)}${chev(15)}"/>`,
+  lozenge(12, 12, 6.5),
+  lozenge(6.5, 12, 5) + lozenge(17.5, 12, 5),
+  lozenge(12, 6.5, 4.6) + lozenge(6.5, 16.5, 4.6) + lozenge(17.5, 16.5, 4.6),
+  P.star,
+  P.laurel,
+];
+/** Rank insignia: chevrons for enlisted ranks, lozenges for company officers, a star and laurel for field officers. */
+export const insignia = (rank, cls = 'insignia') => {
+  const i = typeof rank === 'number' ? rank - 1 : RANKS.indexOf(rank);
+  return INSIGNIA[i] ? `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${INSIGNIA[i]}</svg>` : '';
+};
 export const ACTIVITY_ICON = { council_meeting: 'hall', party_meeting: 'hand', volunteer: 'hand', gotv: 'megaphone', canvass: 'door', phonebank: 'phone', social: 'chat', election_work: 'check', voted: 'ballot', planned: 'calendar', registered: 'check', rank: 'laurel', learn: 'book' };
 
 // ---------- feedback ----------
@@ -187,7 +206,7 @@ export async function checkLevelUp(rank) {
   const last = store.get(key);
   store.set(key, rank.level);
   if (last != null && rank.level > last) {
-    await celebrate({ big: `Level ${rank.level}`, title: `You're ${/^[aeiou]/i.test(rank.name) ? 'an' : 'a'} ${rank.name} now`, body: rank.nextName ? `Next up: ${rank.nextName}.` : 'Top rank. Thank you.' });
+    await celebrate({ big: `Level ${rank.level}`, title: `You're ${/^[aeiou]/i.test(rank.name) ? 'an' : 'a'} ${rank.name} now`, body: `${rank.duty ? `${rank.duty}. ` : ''}${rank.nextName ? `Next up: ${rank.nextName}.` : 'Top rank. Thank you.'}` });
   }
 }
 

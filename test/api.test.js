@@ -325,8 +325,11 @@ test('feed: ranked, paged, opted-in only, never shows strangers voting', async (
   const peggy = (await call('/leaderboard?scope=area:tx-ellis&period=all', { token: t })).data;
   assert.ok(!peggy.rows.some((x) => /Peggy/.test(x.name)));
   // Ladder rank beside the name: group-mates and opted-in strangers who share their status.
-  assert.ok(all.some((i) => i.name === 'Ray Delgado' && i.rank === 'Volunteer'));
-  assert.ok(all.some((i) => i.name === 'Earl P.' && i.rank === 'Precinct Chair'));
+  assert.ok(all.some((i) => i.name === 'Ray Delgado' && i.rank === 'Captain'));
+  assert.ok(all.some((i) => i.name === 'Earl P.' && i.rank === 'Colonel'));
+  // Rank-ups read with the military rank names (rendered from the stored level, not stored text).
+  assert.ok(all.some((i) => i.icon === 'rank' && /^became an? (Corporal|Sergeant|Ensign|Lieutenant|Captain|Major|Colonel)$/.test(i.text)));
+  assert.ok(!all.some((i) => /Volunteer|Newcomer|Messenger|Block Captain|Precinct Chair|Registered Voter|Active Voter/.test(i.text)));
   // A stranger who stops sharing their status keeps their activity in the feed but loses the rank.
   const travis = await login('neighbor7@example.org');
   await call('/me', { method: 'PATCH', body: { shareStatus: false }, token: travis });
@@ -334,7 +337,7 @@ test('feed: ranked, paged, opted-in only, never shows strangers voting', async (
   const hidden = (await feedAll()).filter((i) => i.name === 'Travis Y.');
   assert.ok(hidden.length && hidden.every((i) => !i.rank && i.icon !== 'rank'));
   await call('/me', { method: 'PATCH', body: { shareStatus: true }, token: travis });
-  assert.ok((await feedAll()).some((i) => i.name === 'Travis Y.' && i.rank === 'Regular'));
+  assert.ok((await feedAll()).some((i) => i.name === 'Travis Y.' && i.rank === 'Lieutenant'));
 });
 
 test('leaderboards: friends, groups and every area level, by week, month or all time', async () => {
@@ -367,7 +370,7 @@ test('ladder: ranks follow the steps in order and coach the next one', async () 
   const t = su.data.token;
   let l = (await call('/ladder', { token: t })).data;
   assert.equal(l.level, 1);
-  assert.equal(l.name, 'Newcomer');
+  assert.equal(l.name, 'Private');
   assert.equal(l.coach.step.id, 'address');
   // Doing a later rung's step first doesn't skip the basics.
   for (let i = 0; i < 5; i++) await call('/posts/share', { method: 'POST', token: t, body: { postId: 'join' } });
@@ -377,16 +380,17 @@ test('ladder: ranks follow the steps in order and coach the next one', async () 
   await call('/participation', { method: 'POST', token: t, body: { electionId: 'tx-2026-general', kind: 'planned' } });
   l = (await call('/ladder', { token: t })).data;
   assert.equal(l.level, 2);
-  assert.equal(l.name, 'Registered Voter');
+  assert.equal(l.name, 'Corporal');
+  assert.equal(l.duty, 'You\'re registered, with a plan to vote');
   // Voting isn't open on Oct 1, so the coach waits on it and suggests the next rung meanwhile.
   assert.equal(l.coach.step.id, 'vote');
   assert.match(l.coach.step.opensLabel, /Opens Oct 19/);
-  assert.equal(l.coach.meanwhile.rung, 'Messenger');
+  assert.equal(l.coach.meanwhile.rung, 'Ensign');
   assert.ok(l.rungs[3].steps.find((s) => s.id === 'posts').done);
   const rec = (await call('/recognition', { token: t })).data;
-  assert.equal(rec.rank.name, 'Registered Voter');
+  assert.equal(rec.rank.name, 'Corporal');
   assert.ok(rec.breakdown.bonus >= 50);
-  assert.equal((await call('/today', { token: t })).data.rank.name, 'Registered Voter');
+  assert.equal((await call('/today', { token: t })).data.rank.name, 'Corporal');
 });
 
 test('invites: recruiter earns a bonus as recruits climb, sees rank only if shared', async () => {
@@ -411,7 +415,7 @@ test('invites: recruiter earns a bonus as recruits climb, sees rank only if shar
   await call('/participation', { method: 'POST', token: r, body: { electionId: 'tx-2026-general', kind: 'planned' } });
   await call('/me', { method: 'PATCH', token: r, body: { shareStatus: true } });
   d = (await call('/ladder', { token: demo })).data;
-  assert.equal(d.recruits[0].rank, 'Registered Voter');
+  assert.equal(d.recruits[0].rank, 'Corporal');
   assert.equal(d.recruits[0].earned, 75);
   assert.equal((await call('/recognition', { token: demo })).data.points - before >= 75, true);
   assert.ok(d.rungs[3].steps.find((s) => s.id === 'recruit1').done);
