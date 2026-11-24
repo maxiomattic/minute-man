@@ -356,6 +356,8 @@ label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
 .feed-mini .feed-item { padding: 12px 14px; }
 .feed-mini .feed-item .avatar { width: 34px; height: 34px; font-size: 13px; }
 .feed-mini .cheer { padding: 0 10px; }
+.feed-mini .cheer.zero span { display: none; }
+.election-line .grow { text-wrap: balance; }
 .today .badges { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 10px; }
 .today .badge .seal { width: 48px; height: 48px; }
 .today .badge .seal svg { width: 22px; height: 22px; }

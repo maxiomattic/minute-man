@@ -26,6 +26,9 @@ function kickerFor(n, t) {
   return `<div class="kicker">${urgent ? `<span class="urgent">${esc(urgent)}</span>` : ''}<span>${esc(label)}</span></div>`;
 }
 
+// Smooth a couple of server phrasings ("in the next 1 day") without changing meaning.
+const heroTitle = (n) => n.title.replace(/^Register in the next 1 day$/, 'Register by tomorrow');
+
 const actionAttrs = (a, i) => (a.action ? `data-act="${i}"` : `href="${esc(a.href || '#/today')}"`);
 
 export async function render(el) {
@@ -48,8 +51,8 @@ export async function render(el) {
 
   const hero = n ? `<section class="hero" aria-labelledby="heroTitle">
       ${kickerFor(n, t)}
-      <h1 id="heroTitle">${esc(n.title)}</h1>
-      <p>${esc(n.body)}</p>
+      <h1 id="heroTitle">${esc(heroTitle(n))}</h1>
+      <p>${esc(String(n.body || '').replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (d) => fmtDate(d)))}</p>
       ${n.action ? `<button class="btn go" data-act="0">${esc(n.cta)}${n.xp > 0 ? ` <span class="xp">+${n.xp} XP</span>` : ''}</button>`
         : `<a class="btn go" href="${esc(n.href)}">${esc(n.cta)}${n.xp > 0 ? ` <span class="xp">+${n.xp} XP</span>` : ''}</a>`}
     </section>` : '';

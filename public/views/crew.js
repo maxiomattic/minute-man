@@ -20,7 +20,7 @@ export function feedItemHtml(it) {
       </div>
     </div>
     ${mine ? (it.cheers ? `<span class="tiny muted">${plural(it.cheers, 'cheer')}</span>` : '')
-      : `<button class="cheer ${it.cheered ? 'on' : ''}" data-item="${esc(it.key)}" data-owner="${it.userId}" aria-pressed="${it.cheered}" aria-label="Cheer ${esc(first(it.name))}">${icon('clap')}<span>${it.cheers || 'Cheer'}</span></button>`}
+      : `<button class="cheer ${it.cheered ? 'on' : ''} ${it.cheers ? '' : 'zero'}" data-item="${esc(it.key)}" data-owner="${it.userId}" aria-pressed="${it.cheered}" aria-label="Cheer ${esc(first(it.name))}">${icon('clap')}<span>${it.cheers || 'Cheer'}</span></button>`}
   </div>`;
 }
 
@@ -37,15 +37,18 @@ export function bindCheers(root, onCheer) {
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', on);
       label.textContent = n > 0 ? n : 'Cheer';
+      b.classList.toggle('zero', n <= 0);
       haptic(on ? 'success' : 'light');
       try {
         const r = await api('/cheers', { method: 'POST', body: { item: b.dataset.item, ownerId: Number(b.dataset.owner), remove: !on } });
         label.textContent = r.cheers > 0 ? r.cheers : 'Cheer';
+        b.classList.toggle('zero', r.cheers <= 0);
         onCheer?.(on);
       } catch (e) {
         b.classList.toggle('on', !on);
         b.setAttribute('aria-pressed', !on);
         label.textContent = before;
+        b.classList.toggle('zero', !(Number(before) > 0));
         toast(e.message);
       } finally {
         delete b.dataset.busy;
@@ -109,14 +112,13 @@ async function renderBoard(body) {
     const rows = lb.rows;
     const meIdx = rows.findIndex((r) => r.me);
     const me = rows[meIdx];
-    const unit = period === 'week' ? 'this week' : 'all time';
     let nudge = '';
     if (rows.length > 1 && me) {
       if (meIdx > 0) {
         const above = rows[meIdx - 1];
         const gap = above.points - me.points;
         nudge = gap === 0 ? `You're tied with ${esc(first(above.name))}. One more action puts you ahead.`
-          : `You're ${plural(gap, 'point')} behind ${esc(first(above.name))} ${unit}.`;
+          : `You're ${plural(gap, 'point')} behind ${esc(first(above.name))}${period === 'week' ? ' this week' : ''}.`;
       } else {
         const next = rows[1];
         const lead = me.points - next.points;
@@ -242,7 +244,7 @@ async function renderGroups(body) {
         <p class="small muted">Ask an organizer for the invite code.</p>
         <div class="row inline-form">
           <label class="sr-only" for="gCode">Invite code</label>
-          <input id="gCode" name="code" placeholder="ELMST001" autocapitalize="characters" autocomplete="off" required>
+          <input id="gCode" name="code" placeholder="8-letter code" autocapitalize="characters" autocomplete="off" required>
           <button class="btn ${groups.length ? '' : 'go'}" type="submit">Join group</button>
         </div>
       </form>
