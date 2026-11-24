@@ -644,25 +644,65 @@ label.check input { width: 22px; height: 22px; flex: none; accent-color: var(--b
 .back svg { transform: rotate(180deg); width: 18px; height: 18px; }
 @media (prefers-reduced-motion: reduce) { .more > summary::after { transition: none; } }
 
-/* Skill tree: tiers top to bottom, a spine between them, nodes wrap within a tier. */
-.tree { list-style: none; margin: 0; padding: 0; }
-.tier { position: relative; padding: 0 0 22px; }
-.tier:last-child { padding-bottom: 0; }
-.tier:not(:last-child)::after { content: ''; position: absolute; left: 50%; bottom: 2px; width: 2px; height: 18px; background: var(--line); transform: translateX(-1px); }
-.tier-nodes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.node { flex: 1 1 150px; max-width: 260px; display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 10px; border-radius: var(--r-md); border: 2px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
-.node-mark { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 2px solid currentColor; }
-.node-mark svg { width: 16px; height: 16px; }
-.node-text { display: flex; flex-direction: column; min-width: 0; }
-.node-label { font-weight: 600; font-size: 14.5px; line-height: 1.25; }
-.node-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-.node.open { border-color: var(--marker); box-shadow: 0 2px 0 var(--marker); }
-.node.open .node-mark { border-color: var(--marker); background: color-mix(in srgb, var(--marker) 25%, transparent); color: var(--ink); }
-.node.done .node-mark { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
-.node.done .node-label { color: var(--muted); }
-.node.locked { border-style: dashed; color: var(--muted); background: transparent; }
-.node.locked .node-mark { border-color: var(--line); }
-.node:focus-visible { outline: 2px solid var(--brand-text); outline-offset: 2px; }
+/* ---------- Skill tree (path.js): one row per step, grouped by rank; lines in the left gutter run
+   from each step down to what it unlocks. Done = filled check, ready = brass ring, locked = dashed lock. ---------- */
+.skt { --lw: 22px; --dot: 20px; --skt-done: var(--brand-text); --skt-on-done: var(--surface); --skt-wait: var(--muted); }
+.skt-key { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 14px; padding: 0; color: var(--muted); }
+.skt-key li { display: inline-flex; align-items: center; gap: 6px; }
+.skt-key .skt-dot { position: static; }
+.skt-body { position: relative; --gut: calc(var(--lanes) * var(--lw) + 8px); }
+.skt-lines { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.skt-lines path { fill: none; stroke-width: 2; stroke-linecap: round; transition: stroke .15s, opacity .15s; }
+.skt-lines path.tie { stroke: var(--line); stroke-width: 1.5; }
+.skt-lines path.go { stroke: var(--skt-done); }
+.skt-lines path.wait { stroke: var(--skt-wait); stroke-dasharray: 3 5; opacity: .7; }
+.skt-lines path.hi { stroke: var(--marker); stroke-width: 3.5; stroke-dasharray: none; opacity: 1; }
+.skt-body.focus .skt-lines path:not(.hi) { opacity: .25; }
+.skt-rank { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin: 18px 0 8px var(--gut); padding-top: 10px; border-top: 1px solid var(--line); }
+.skt-rank:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+.skt-rnum { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.skt-rname { font-family: var(--display); font-size: 20px; line-height: 1.1; }
+.skt-rtag { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 8px; display: inline-flex; align-items: center; gap: 3px; }
+.skt-rtag.got { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.skt-rtag.next { color: var(--on-marker); background: var(--marker); }
+.skt-rtag .inline-ic { width: 13px; height: 13px; }
+.skt-node { position: relative; display: block; width: 100%; padding: 0 0 0 var(--gut); margin: 0 0 8px; border: 0; background: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; transition: opacity .15s; }
+.skt-node:focus-visible { outline: none; }
+.skt-node:focus-visible .skt-card { outline: 3px solid var(--marker); outline-offset: 2px; }
+.skt-dot { position: absolute; z-index: 1; top: 10px; left: calc(var(--lane) * var(--lw) + (var(--lw) - var(--dot)) / 2); width: var(--dot); height: var(--dot); border-radius: 50%; display: inline-grid; place-items: center; flex: none; background: var(--surface); }
+.skt-dot svg { width: 12px; height: 12px; stroke-width: 3; }
+.skt-dot.done { background: var(--skt-done); color: var(--skt-on-done); }
+.skt-dot.open { border: 3px solid var(--marker); box-shadow: inset 0 0 0 3px var(--surface); background: var(--marker); }
+.skt-dot.locked { border: 2px dashed var(--skt-wait); color: var(--skt-wait); }
+.skt-dot.locked svg { width: 10px; height: 10px; stroke-width: 2.5; }
+.skt-card { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-radius: var(--r-md); border: 1.5px solid var(--line); background: var(--surface); }
+.skt-label { font-weight: 600; font-size: 15px; line-height: 1.3; }
+.skt-kind { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; vertical-align: 1px; background: var(--sunk); color: var(--muted); }
+.skt-sub { font-size: 13px; line-height: 1.35; color: var(--muted); }
+.skt-sub .inline-ic { width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; }
+.skt-node.done .skt-label { color: var(--muted); font-weight: 500; }
+.skt-node.done .skt-card { background: transparent; }
+.skt-node.open .skt-card { border: 2px solid var(--marker); box-shadow: 0 2px 0 var(--marker); }
+.skt-node.open .skt-sub { color: var(--ink); font-weight: 600; }
+.skt-node.locked .skt-card { border-style: dashed; background: transparent; }
+.skt-node.locked .skt-label { color: var(--muted); }
+.skt-rel { display: none; align-self: flex-start; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border-radius: 3px; padding: 0 6px; margin-bottom: 2px; }
+.skt-node[data-rel="pre"] .skt-rel, .skt-node[data-rel="post"] .skt-rel, .skt-node[data-rel="sel"] .skt-rel { display: inline-block; }
+.skt-node[data-rel="pre"] .skt-rel { background: var(--marker); color: var(--on-marker); }
+.skt-node[data-rel="post"] .skt-rel { background: var(--red); color: #fff; }
+.skt-node[data-rel="sel"] .skt-rel { background: var(--ink); color: var(--surface); }
+.skt-node[data-rel="sel"] .skt-card { outline: 3px solid var(--marker); outline-offset: 1px; }
+.skt-body.focus .skt-node[data-rel=""] { opacity: .38; }
+.skt-links { display: grid; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--r-md); background: var(--sunk); }
+.skt-links p, .skt-links ul { margin: 2px 0 0; }
+.skt-links ul { padding: 0; list-style: none; }
+.skt-links li { display: flex; align-items: baseline; gap: 6px; }
+.skt-links .inline-ic { width: 13px; height: 13px; flex: none; align-self: center; }
+.skt-state { font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0 !important; }
+.skt-state.done { color: var(--good); }
+.skt-state.open { color: var(--ink); }
+.skt-state.open::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--marker); }
+.skt-state.locked { color: var(--muted); }
 .lesson { margin: 0 0 14px; padding-left: 20px; }
 .lesson li { margin: 8px 0; line-height: 1.45; }
 .inline-ic { width: 14px; height: 14px; vertical-align: -2px; }

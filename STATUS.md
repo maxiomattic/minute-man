@@ -31,6 +31,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] 19 fictional neighbors seeded across Ellis County, Texas and 3 other states
 - [x] Streak: a week counts only with 50+ points
 - [x] Skill tree on Your path: 22 actions, each unlocks after the ones it needs; 5 short trainings (local government, county party, block walking, poll watching, precinct chair) linked to Texas GOP / Secretary of State sources, +15 each on the honor system
+- [x] Skill tree redrawn as a graph: one row per step grouped by rank, lines (drawn from each step's `needs`) run down to what it unlocks; done/ready/locked differ by shape, not just colour; locked steps say "Needs: …"; tapping a step traces what it needs and unlocks and opens a sheet with needs, unlocks, points and the action
 - [x] No catch-all logging: Today's "Your tasks" lists your open skill-tree actions, and each one logs only its own kind of work (posts, doors, calls, shifts)
 - [x] Invite links: recruits join your crew; you earn a bonus each time a recruit reaches a new rank
 - [x] Share a post: the app writes the post (endorsed races on your ballot, each attributed to AFI or Trump; deadlines; Election Day countdown) with your invite link. "Share this post" opens the phone's share sheet (or copies); a finished share records the post (+3, 15/day cap). No logging or counting posts by hand
