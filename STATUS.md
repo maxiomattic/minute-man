@@ -28,7 +28,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] Leaderboard: precinct, districts, county, state, nationwide, friends and groups; week / 30 days / all time; your numbers, 8-week chart, 14 honors
 - [x] Sources fixed (AFI, then Trump, then only Republican); leader swapping, custom leaders, themes and leader console removed
 - [x] Group members can host events with a check-in code
-- [x] FOSS under AGPL-3.0 (`LICENSE`); "not affiliated" notice on welcome and profile
+- [x] FOSS under the MIT License (`LICENSE`); "not affiliated" notice on welcome and profile
 - [x] 19 fictional neighbors seeded across Ellis County, Texas and 3 other states
 - [x] Streak: a week counts only with 50+ points
 - [x] Skill tree on Your path: 22 actions, each unlocks after the ones it needs; 5 short trainings (local government, county party, block walking, poll watching, precinct chair) linked to Texas GOP / Secretary of State sources, +15 each on the honor system

@@ -2,7 +2,7 @@
 
 Ready at a minute's notice. A web app and Android/iOS app (shared code, installable, works offline) that helps people vote and stay involved in civic life all year, with an America First focus.
 
-Minute Man is free, open-source software under the GNU AGPL (see `LICENSE`). It isn't run by or affiliated with any party, campaign or candidate. Its picks always come from the same fixed sources, so users can't swap them; anyone who wants different sources can fork it.
+Minute Man is free, open-source software under the MIT License (see `LICENSE`). It isn't run by or affiliated with any party, campaign or candidate. Its picks always come from the same fixed sources, so users can't swap them; anyone who wants different sources can fork it.
 
 - **Fixed sources**: America First Insight first, then Donald Trump's endorsements where AFI hasn't picked. Where neither has picked and exactly one Republican is running, that candidate fills in, labelled "Only Republican" and never shown as an endorsement.
 - **Endorsements browser**: every 2026 general-election endorsement from both sources, by state, with AFI's own write-ups and source links.

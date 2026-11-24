@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Minute Man: guided voting and gamified grassroots activism",
-  "license": "AGPL-3.0-or-later",
+  "license": "MIT",
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test test/*.test.js"

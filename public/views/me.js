@@ -74,7 +74,7 @@ export async function render(el, arg) {
       </ul></div>
       <div class="panel about">
         <h3>About Minute Man</h3>
-        <p class="small">Free, open-source software under the GNU AGPL. Anyone can read the code, change it and run their own copy.</p>
+        <p class="small">Free, open-source software under the MIT License. Anyone can use, change and share the code.</p>
         <p class="small muted">Picks come from America First Insight, then President Trump. Minute Man isn't run by or affiliated with them, or with any party, campaign or candidate.</p>
       </div>
       <p class="legal">Points, ranks and honors are for recognition only. They have no cash value and can't be traded for anything.</p>
