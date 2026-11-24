@@ -76,11 +76,11 @@ function openEvent(a, rerender) {
     ${a.done ? '<p class="tag good" style="margin-top:12px">Checked in</p>' : `
     <form id="ci" class="stack" style="margin-top:14px">
       <div><label class="field" for="code">Check-in code</label>
-        <input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="From the host, like COUNCIL1" style="text-transform:uppercase"></div>
+        <input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="From the host, like COUNCIL1" class="code-input"></div>
       ${k.perUnit ? `<div><label class="field">How many ${esc(k.unit)}s?</label>${stepper('quantity', k.unit)}</div>` : ''}
       <button class="btn go block" type="submit">Check in <span class="xp">${k.perUnit ? `+${k.verifiedBonus || 0} bonus` : `+${k.verified}`}</span></button>
       <p class="center small"><button type="button" class="link-btn" id="nocode">Check in without a code</button>
-        <span class="muted">${half != null ? `+${half} XP, half points` : 'No code bonus'}</span></p>
+        <span class="muted">${half != null ? `+${half} XP, half points` : `+${k.perUnit} per ${esc(k.unit)}, no bonus`}</span></p>
     </form>`}
   </div>`);
   $('[data-close]', el).onclick = close;
@@ -114,7 +114,7 @@ function openLog(rerender) {
   const { el, close } = sheet(`<div class="vb">
     <div class="row between" style="margin-bottom:8px"><h2 style="margin:0">Log something you did</h2>
       <button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
-    <p class="muted small">Logged on your own, it earns half points. Events with a check-in code earn full points.</p>
+    <p class="muted small">Logging on your own earns fewer points than checking in at an event with the host's code.</p>
     <form id="lg">
       <div class="tiles" role="radiogroup" aria-label="What did you do?">${kinds.map((k) => `<label class="tile">
         <input type="radio" name="kind" value="${esc(k.kind)}">${icon(ACTIVITY_ICON[k.kind] || 'star')}
@@ -181,7 +181,8 @@ export async function render(el, arg) {
 
   const rec = activity.slice(0, 8).map((x) => {
     const k = kindOf(x.kind);
-    const what = x.title || (k.perUnit ? `${k.label}: ${x.quantity} ${k.unit}${x.quantity === 1 ? '' : 's'}` : k.label);
+    const qty = k.perUnit ? `${x.quantity} ${k.unit}${x.quantity === 1 ? '' : 's'}` : '';
+    const what = x.title ? (qty ? `${x.title}: ${qty}` : x.title) : (qty ? `${k.label}: ${qty}` : k.label);
     return `<li><span class="ico sm">${icon(ACTIVITY_ICON[x.kind] || 'star')}</span>
       <span class="grow"><span class="title">${esc(what)}</span><span class="sub">${esc(ago(x.at))} ago${x.verified ? ', checked in' : ''}</span></span>
       <span class="num pts">+${x.points}</span></li>`;
