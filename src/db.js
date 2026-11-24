@@ -3,7 +3,7 @@
 //   db.prepare(sql).get(...args) / .all(...args) / .run(...args) -> { lastInsertRowid, changes }
 //   db.exec(sql)      run one or more statements
 //   db.tx(fn)         run fn atomically and return its result
-import { SCHEMA } from './schema.js';
+import { MIGRATIONS, SCHEMA } from './schema.js';
 
 // SQLite's 'now' is the real clock. Swap it for the app clock (which may be a demo date)
 // so SQL and JS agree on what time it is.
@@ -18,6 +18,7 @@ export async function openNodeDb(path = ':memory:') {
   const raw = new DatabaseSync(path);
   raw.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   raw.exec(SCHEMA);
+  for (const m of MIGRATIONS) try { raw.exec(m); } catch {}
   return {
     prepare: (q) => {
       // Statements that mention 'now' are re-prepared per call so the time stays current.
@@ -69,5 +70,6 @@ export function durableDb(storage) {
     tx: (fn) => storage.transactionSync(fn),
   };
   db.exec(SCHEMA);
+  for (const m of MIGRATIONS) try { db.exec(m); } catch {}
   return db;
 }

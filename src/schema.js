@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   pw_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'voter',          -- voter | leader
   jurisdiction_id TEXT,
+  home_label TEXT,                             -- like "Waxahachie, TX" (never the street address)
   precinct TEXT,
   birth_date TEXT,
   share_status INTEGER NOT NULL DEFAULT 0,     -- opt-in: friends can see participation
@@ -217,3 +218,6 @@ CREATE TABLE IF NOT EXISTS cheers (
   PRIMARY KEY (user_id, item)
 );
 `;
+
+// Columns added after launch. Each runs once; 'duplicate column' errors are ignored.
+export const MIGRATIONS = ['ALTER TABLE users ADD COLUMN home_label TEXT'];

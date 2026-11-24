@@ -12,6 +12,7 @@ class HttpError extends Error {
 const bad = (msg) => new HttpError(400, msg);
 import { clockConfig, localDay } from './time.js';
 import { SOURCES, bindDefaults } from './sources.js';
+import { censusGeocode, matchJurisdiction } from './geocode.js';
 import ENDORSEMENTS from './data/endorsements.json' with { type: 'json' };
 const today = () => localDay();
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -47,7 +48,7 @@ const CORS = {
   'access-control-max-age': '86400',
 };
 
-export function createApp(db, { adminToken, seed } = {}) {
+export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}) {
   const routes = [];
   const route = (method, pattern, handler, opts = {}) => {
     const keys = [];
@@ -59,7 +60,7 @@ export function createApp(db, { adminToken, seed } = {}) {
 
   const userPublic = (u) => ({
     id: u.id, email: u.email, name: u.name, role: u.role,
-    jurisdictionId: u.jurisdiction_id, precinct: u.precinct, birthDate: u.birth_date,
+    jurisdictionId: u.jurisdiction_id, homeLabel: u.home_label, precinct: u.precinct, birthDate: u.birth_date,
     shareStatus: !!u.share_status, onLeaderboards: !!u.on_leaderboards,
     theme: u.theme, strategy: u.strategy,
   });
@@ -131,6 +132,21 @@ export function createApp(db, { adminToken, seed } = {}) {
 
   // ---------- profile ----------
   route('GET', '/api/me', ({ user }) => userPublic(user));
+
+  // Home address -> home area. The street address is only passed to the Census geocoder, never stored.
+  route('POST', '/api/me/address', async ({ user, body }) => {
+    const address = String(body.address || '').trim();
+    if (address.length < 5) throw bad('Enter your street address, city and state');
+    let geo;
+    try { geo = await geocode(address); } catch { throw new HttpError(502, "Couldn't reach the address lookup. Try again in a minute."); }
+    if (!geo) throw bad("We couldn't find that address. Check the spelling and include the city and state.");
+    const jid = matchJurisdiction(db, geo);
+    if (!jid) throw bad("We don't cover that area yet.");
+    const label = [geo.place, geo.state].filter(Boolean).join(', ');
+    db.prepare('UPDATE users SET jurisdiction_id=?, home_label=?, precinct=NULL WHERE id=?').run(jid, label, user.id);
+    return { ...userPublic(db.prepare('SELECT * FROM users WHERE id=?').get(user.id)),
+      districts: { congress: geo.cd, stateSenate: geo.sldu, stateHouse: geo.sldl, county: geo.county } };
+  });
 
   route('PATCH', '/api/me', ({ user, body }) => {
     const map = {

@@ -123,7 +123,7 @@ function nextActions(db, user, ctx) {
   const out = [];
   const add = (a) => out.push(a);
   const day = todayStr();
-  if (!user.jurisdiction_id) add({ kind: 'profile', title: 'Set your home area', body: 'We use it to find your elections and polling places.', cta: 'Set home area', href: '#/me/profile', xp: 0 });
+  if (!user.jurisdiction_id) add({ kind: 'profile', title: 'Add your home address', body: 'We use it to find your ballot and districts.', cta: 'Add your address', href: '#/me/profile', xp: 0 });
   if (!ctx.bindings) add({ kind: 'follow', title: 'Pick who you trust', body: 'Follow people or groups. Their picks fill in your sample ballot.', cta: 'Find leaders', href: '#/leaders', xp: 20 });
   const e = ctx.election;
   if (e) {

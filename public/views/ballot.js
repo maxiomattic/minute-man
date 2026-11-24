@@ -101,8 +101,8 @@ export async function render(el, eid) {
     if (!els.length) {
       el.innerHTML = `<div class="vb"><h1>Ballot</h1><div class="panel empty">
         ${icon('ballot', 'empty-ico')}<h2>No elections coming up</h2>
-        <p>${state.me?.jurisdictionId ? 'Nothing is scheduled where you live yet. Follow people you trust now, so your ballot is ready when one is.' : 'Set your home area so we can find your elections.'}</p>
-        <a class="btn go" href="${state.me?.jurisdictionId ? '#/leaders' : '#/me/profile'}">${state.me?.jurisdictionId ? 'Find people to follow' : 'Set home area'}</a></div></div>`;
+        <p>${state.me?.jurisdictionId ? 'We don\'t have a ballot for where you live yet. You can still browse every endorsement in your state.' : 'Add your home address so we can find your ballot.'}</p>
+        <a class="btn go" href="${state.me?.jurisdictionId ? '#/endorsements' : '#/me/profile'}">${state.me?.jurisdictionId ? 'See endorsements' : 'Add your address'}</a></div></div>`;
       return;
     }
     eid = els[0].id;
@@ -132,6 +132,7 @@ export async function render(el, eid) {
           <div class="narrow-only noprint" style="margin-top:14px">${cta}</div>
         </div>
         <p class="small muted">${b.strategy === 'consensus' ? 'Filled in from your sources, weighted by priority' : `Filled in from ${esc(srcLine)}`}. Tap an oval to change a pick.${changed ? ` <button class="link-btn" id="reset">${changed > 1 ? `Undo all ${changed} changes` : 'Undo your change'}</button>` : ''}</p>
+        ${state.me?.jurisdictionId && !state.me.jurisdictionId.includes('-') ? `<p class="small panel" style="padding:12px 16px">This shows statewide races only. Races for your congressional and legislative districts aren't loaded for your area yet. <a href="#/endorsements">See every endorsement in your state</a>.</p>` : ''}
         <div class="sheets">${b.contests.map((c) => contestHtml(c, ov)).join('') || '<div class="panel empty"><p>No contests on your ballot for this election.</p></div>'}</div>
         <p class="legal">Your picks stay on this device. CVAS never sees how you vote. Sample ballots are a guide only.</p>
       </div>

@@ -9,6 +9,11 @@ import { activityPoints, rankFor } from '../src/engine/recognition.js';
 import { eligibility, ageOn } from '../src/rules.js';
 
 let handle;
+const GEO = {
+  '401 S Rogers St, Waxahachie, TX': { state: 'TX', county: 'Ellis County', place: 'Waxahachie', cd: '6', sldu: '2', sldl: '10' },
+  '901 Bagby St, Houston, TX': { state: 'TX', county: 'Harris County', place: 'Houston', cd: '18', sldu: '15', sldl: '147' },
+  '1 Main St, Atlanta, GA': { state: 'GA', county: 'Fulton County', place: 'Atlanta', cd: '5', sldu: '39', sldl: '58' },
+};
 const base = 'http://t/api';
 const ADMIN = 'test-admin';
 
@@ -16,7 +21,7 @@ before(async () => {
   configureClock({ zone: 'America/Chicago', demoDate: '2026-10-01' });
   const db = await openNodeDb(':memory:');
   await seed(db);
-  handle = createApp(db, { adminToken: ADMIN });
+  handle = createApp(db, { adminToken: ADMIN, geocode: async (a) => GEO[a] || null });
 });
 
 async function call(path, { method = 'GET', body, token } = {}) {
@@ -245,6 +250,22 @@ test('admin ingestion requires token and upserts', async () => {
   assert.equal(r.data.contests, 1);
   const t = await login('demo@example.org');
   assert.ok((await call('/elections', { token: t })).data.some((e) => e.id === 'el-new'));
+});
+
+test('home address sets the most specific area, never stores the street', async () => {
+  const s = (await call('/signup', { method: 'POST', body: { email: 'addr@x.org', name: 'A', password: 'longenough' } })).data;
+  const set = (address) => call('/me/address', { method: 'POST', body: { address }, token: s.token });
+  const w = await set('401 S Rogers St, Waxahachie, TX');
+  assert.equal(w.data.jurisdictionId, 'tx-ellis-wax');
+  assert.equal(w.data.homeLabel, 'Waxahachie, TX');
+  assert.ok(!JSON.stringify((await call('/me/export', { token: s.token })).data).includes('Rogers'));
+  const b = (await call('/elections/tx-2026-general/ballot', { token: s.token })).data;
+  assert.ok(b.contests.some((c) => c.id === 'tx26-state-house-10'));
+  assert.equal((await set('901 Bagby St, Houston, TX')).data.jurisdictionId, 'tx');
+  const b2 = (await call('/elections/tx-2026-general/ballot', { token: s.token })).data;
+  assert.ok(b2.contests.some((c) => c.id === 'tx26-gov') && !b2.contests.some((c) => c.id === 'tx26-state-house-10'));
+  assert.equal((await set('1 Main St, Atlanta, GA')).data.jurisdictionId, 'ga');
+  assert.equal((await set('nowhere at all')).status, 400);
 });
 
 test('account deletion removes user', async () => {

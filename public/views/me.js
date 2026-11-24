@@ -74,7 +74,7 @@ export async function render(el, arg) {
   const home = jur.find((j) => j.id === me.jurisdictionId);
 
   // One next step for this screen, most basic first.
-  const next = !me.jurisdictionId ? ['Set your home area', null, 'profile']
+  const next = !me.jurisdictionId ? ['Add your home address', null, 'profile']
     : !binds.length ? ['Find people to follow', '#/leaders']
       : reg.status !== 'confirmed' ? ['Check your registration', '#/register']
         : null;
@@ -101,7 +101,7 @@ export async function render(el, arg) {
       <div class="panel flush"><ul class="list">
         <li><a class="rowbtn" href="#/leaders"><span class="ico">${icon('crew')}</span><span class="grow"><span class="title">Who you follow</span><span class="sub">${binds.length ? `${binds.length} filling your ballot` : 'No one yet'}</span></span>${chev()}</a></li>
         <li><a class="rowbtn" href="#/register"><span class="ico">${icon('check')}</span><span class="grow"><span class="title">Registration</span><span class="sub">${esc(REG_STATUS[reg.status] || 'Not sure')}</span></span>${chev()}</a></li>
-        <li><button class="rowbtn" data-open="profile"><span class="ico">${icon('settings')}</span><span class="grow"><span class="title">Profile</span><span class="sub">${esc(home?.name || 'Home area not set')}</span></span>${chev()}</button></li>
+        <li><button class="rowbtn" data-open="profile"><span class="ico">${icon('settings')}</span><span class="grow"><span class="title">Profile</span><span class="sub">${esc(me.homeLabel || home?.name || 'Add your address')}</span></span>${chev()}</button></li>
       </ul></div>
       <div class="panel">
         <h3>Privacy</h3>
@@ -143,7 +143,7 @@ export async function render(el, arg) {
     toast('Saved ballot rule');
   })));
   $$('[data-open=profile]', el).forEach((b) => (b.onclick = () => profileSheet(jur, binds)));
-  // #/me/profile deep link (from "Set home area" buttons) opens the form directly.
+  // #/me/profile deep link (from "Add your address" buttons) opens the form directly.
   if (arg === 'profile') { history.replaceState(null, '', '#/me'); profileSheet(jur, binds); }
   $('[data-open=newLeader]', el).onclick = newLeaderSheet;
   $('#export', el).onclick = guard(async () => {
@@ -184,13 +184,12 @@ function profileSheet(jur, binds) {
   const { el, close } = sheet(`<div class="vb"><div class="row between"><h2 style="margin:0">Profile</h2><button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>
     <form id="prof">
       <label class="field" for="pn">Name</label><input id="pn" name="name" value="${esc(me.name)}" autocomplete="name" required>
-      <label class="field" for="pj">Home area</label><select id="pj" name="jurisdictionId"><option value="">Choose where you live</option>${jur.map((j) => `<option value="${esc(j.id)}" ${me.jurisdictionId === j.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('')}</select>
-      <div class="grid2">
-        <div><label class="field" for="pp">Precinct</label><input id="pp" name="precinct" value="${esc(me.precinct || '')}" inputmode="numeric"></div>
-        <div><label class="field" for="pb">Birth date</label><input id="pb" name="birthDate" type="date" value="${esc(me.birthDate || '')}"></div>
-      </div>
-      <label class="field" for="pt">Look</label><select id="pt" name="theme"><option value="neutral">CVAS green</option>${binds.map((b) => `<option value="leader:${b.leaderId}" ${me.theme === `leader:${b.leaderId}` ? 'selected' : ''}>${esc(b.name)} colors</option>`).join('')}</select>
-      <p class="tiny muted" style="margin-top:6px">Your precinct and birth date help us find your polling place and check eligibility.</p>
+      <label class="field" for="pa">Home address</label>
+      <input id="pa" name="address" autocomplete="street-address" placeholder="123 Main St, Waxahachie, TX" ${me.jurisdictionId ? '' : 'required'}>
+      <p class="tiny muted" style="margin-top:6px">${me.homeLabel ? `Now set to ${esc(me.homeLabel)}. Enter a new address only if you moved. ` : ''}We look up your districts from it once and keep only your city.</p>
+      <label class="field" for="pb">Birth date</label><input id="pb" name="birthDate" type="date" value="${esc(me.birthDate || '')}">
+      <p class="tiny muted" style="margin-top:6px">Your birth date lets us check you're old enough to register.</p>
+      <label class="field" for="pt">Look</label><select id="pt" name="theme"><option value="neutral">CVAS navy</option>${binds.map((b) => `<option value="leader:${b.leaderId}" ${me.theme === `leader:${b.leaderId}` ? 'selected' : ''}>${esc(b.name)} colors</option>`).join('')}</select>
       <button class="btn go block" style="margin-top:16px">Save profile</button>
     </form></div>`);
   $('[data-close]', el).onclick = close;
@@ -198,11 +197,12 @@ function profileSheet(jur, binds) {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target));
     const themeChanged = fd.theme !== (me.theme || 'neutral');
-    const body = { ...fd, jurisdictionId: fd.jurisdictionId || null, birthDate: fd.birthDate || null, precinct: fd.precinct || null };
-    state.me = await api('/me', { method: 'PATCH', body });
-    toast('Saved profile');
+    const { address, ...rest } = fd;
+    const moved = address.trim() ? await api('/me/address', { method: 'POST', body: { address } }) : null;
+    state.me = await api('/me', { method: 'PATCH', body: { ...rest, birthDate: rest.birthDate || null } });
+    toast(moved ? `Home set to ${moved.homeLabel}` : 'Saved profile');
     close();
-    if (themeChanged || fd.jurisdictionId !== (me.jurisdictionId || '')) location.reload();
+    if (themeChanged || moved) location.reload();
     else window.dispatchEvent(new HashChangeEvent('hashchange'));
   });
 }
@@ -453,7 +453,7 @@ export async function renderLead(el, lid) {
           <header><h3>${esc(c.title)}</h3><span class="rule">${c.voteFor > 1 ? `Up to ${c.voteFor}` : 'Pick 1'}</span></header>
           ${c.choices.map((ch) => `<label class="choice"><input class="oval" type="checkbox" value="${esc(ch.id)}" ${recMap[c.id]?.choiceIds.includes(ch.id) ? 'checked' : ''}><span class="who">${esc(ch.label)}</span></label>`).join('')}
           <div class="note"><input name="note" placeholder="Why, in a sentence (optional)" value="${esc(recMap[c.id]?.note || '')}" aria-label="Note for ${esc(c.title)}"></div>
-        </section>`).join('')}</div>`).join('') || '<div class="panel empty"><p>No upcoming elections in your home area.</p></div>'}
+        </section>`).join('')}</div>`).join('') || '<div class="panel empty"><p>No upcoming elections where you live.</p></div>'}
         ${ballots.some(Boolean) ? '<div class="publish-bar"><button class="btn go block" id="pub">Publish picks</button></div>' : ''}
       </section>
     </div>

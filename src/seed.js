@@ -36,8 +36,8 @@ export function demoData() {
       ...Object.entries(STATE_NAMES).map(([code, name]) => ({
         id: code.toLowerCase(), name, rules: code === 'TX' ? TX_RULES : {},
       })),
-      { id: 'tx-ellis', name: 'Ellis County, Texas', parentId: 'tx', rules: {} },
-      { id: 'tx-ellis-wax', name: 'Waxahachie, Ellis County (TX-6, SD-2, HD-10)', parentId: 'tx-ellis', rules: {} },
+      { id: 'tx-ellis', name: 'Ellis County, Texas', parentId: 'tx', rules: { match: { state: 'TX', county: 'Ellis County' } } },
+      { id: 'tx-ellis-wax', name: 'Texas: Congress 6, Senate 2, House 10', parentId: 'tx-ellis', rules: { match: { state: 'TX', cd: '6', sldu: '2', sldl: '10' } } },
     ],
     elections: [
       {
@@ -121,8 +121,8 @@ export async function seed(db, { force = false } = {}) {
   const hashed = await hashPw('demo-password');
   const user = (email, name, extra = {}) =>
     Number(db.prepare(
-      `INSERT INTO users (email, name, pw_hash, role, jurisdiction_id, precinct, birth_date, share_status, on_leaderboards)
-       VALUES (?,?,?,?,?,?,?,1,1)`,
+      `INSERT INTO users (email, name, pw_hash, role, jurisdiction_id, home_label, precinct, birth_date, share_status, on_leaderboards)
+       VALUES (?,?,?,?,?,'Waxahachie, TX',?,?,1,1)`,
     ).run(email, name, hashed, extra.role || 'voter', 'tx-ellis-wax', extra.precinct || '101', extra.birth || '1988-06-14').lastInsertRowid);
   const org = user('org1@example.org', 'Dale Whitmore', { role: 'leader' });
   const demo = user('demo@example.org', 'Demo Voter');

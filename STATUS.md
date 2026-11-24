@@ -14,7 +14,8 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] America First Insight as the default source, Trump's endorsements as the fallback (real data, attributed)
 - [x] Real Texas Nov 3, 2026 ballot for Waxahachie; endorsements browser for all states
 - [x] Demo clock pinned to Oct 1, 2026 (server + client)
-- [x] 21 tests pass; screens checked at Pixel 7 and 1280x800
+- [x] Home address lookup (Census geocoder) sets the voter's districts; no precinct or area picker
+- [x] 22 tests pass; screens checked at Pixel 7 and 1280x800
 - [x] Android app installed and verified on the Pixel 6 (rebuild: `scripts/android.sh <phone-ip:port>`)
 
 ## Left / ideas
