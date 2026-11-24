@@ -196,6 +196,8 @@ export function createApp(db, { adminToken, seed, geocode = censusGeocode } = {}
     };
   });
   route('DELETE', '/api/me', ({ user }) => {
+    // Bonuses your recruiter earned from you go too, so throwaway accounts can't farm points.
+    db.prepare('DELETE FROM bonuses WHERE source LIKE ?').run(`recruit:${user.id}:%`);
     db.prepare('DELETE FROM users WHERE id=?').run(user.id);
     return { ok: true };
   });

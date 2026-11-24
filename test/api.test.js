@@ -357,6 +357,10 @@ test('invites: recruiter earns a bonus as recruits climb, sees rank only if shar
   assert.equal(d.recruits[0].earned, 75);
   assert.equal((await call('/recognition', { token: demo })).data.points - before >= 75, true);
   assert.ok(d.rungs[3].steps.find((s) => s.id === 'recruit1').done);
+  // Deleting the recruit takes back the bonuses it earned.
+  const pts = (await call('/recognition', { token: demo })).data.points;
+  await call('/me', { method: 'DELETE', token: r });
+  assert.equal((await call('/recognition', { token: demo })).data.points, pts - 75);
 });
 
 test('precinct chair is a self-reported claim that can be undone', async () => {
