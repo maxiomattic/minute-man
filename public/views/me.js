@@ -87,7 +87,7 @@ export async function render(el) {
           <p class="muted" style="margin:0">Level ${r.level}: ${esc(r.name)}. <span class="num">${rec.points}</span> XP.</p></div>
       </div>
       <div class="panel">
-        <div class="row between"><b>${r.nextAt ? `${r.nextAt - rec.points} XP to ${esc(r.nextName)}` : 'Top rank. Thank you.'}</b><span class="muted small">${esc(r.name)}</span></div>
+        <div class="row between"><b>${r.nextAt ? `${r.nextAt - rec.points} XP to ${esc(r.nextName)}` : 'Top rank. Thank you.'}</b>${r.nextAt ? `<span class="muted small num">${rec.points} of ${r.nextAt} XP</span>` : ''}</div>
         <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div style="width:${Math.max(3, pct)}%"></div></div>
         ${next ? (next[1] ? `<a class="btn go block" style="margin-top:14px" href="${next[1]}">${next[0]}</a>` : `<button class="btn go block" style="margin-top:14px" data-open="profile">${next[0]}</button>`) : ''}
       </div>
@@ -134,13 +134,13 @@ export async function render(el) {
     const got = rec.badges.find((x) => x.id === id);
     toast(got ? `${label}: ${got.desc}` : `To earn ${label}: ${how.toLowerCase()}`);
   }));
-  $('#share', el).onchange = guard(async (e) => { state.me = await api('/me', { method: 'PATCH', body: { shareStatus: e.target.checked } }); toast('Saved'); });
-  $('#lbs', el).onchange = guard(async (e) => { state.me = await api('/me', { method: 'PATCH', body: { onLeaderboards: e.target.checked } }); toast('Saved'); });
+  $('#share', el).onchange = guard(async (e) => { state.me = await api('/me', { method: 'PATCH', body: { shareStatus: e.target.checked } }); toast('Saved privacy setting'); });
+  $('#lbs', el).onchange = guard(async (e) => { state.me = await api('/me', { method: 'PATCH', body: { onLeaderboards: e.target.checked } }); toast('Saved privacy setting'); });
   $$('[data-strategy]', el).forEach((b) => (b.onclick = guard(async () => {
     state.me = await api('/me', { method: 'PATCH', body: { strategy: b.dataset.strategy } });
     $$('[data-strategy]', el).forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
     $('#stratDesc', el).textContent = STRATEGY[b.dataset.strategy]?.[1] || '';
-    toast('Ballot rule saved');
+    toast('Saved ballot rule');
   })));
   $$('[data-open=profile]', el).forEach((b) => (b.onclick = () => profileSheet(jur, binds)));
   $('[data-open=newLeader]', el).onclick = newLeaderSheet;
@@ -189,7 +189,7 @@ function profileSheet(jur, binds) {
       </div>
       <label class="field" for="pt">Look</label><select id="pt" name="theme"><option value="neutral">CVAS green</option>${binds.map((b) => `<option value="leader:${b.leaderId}" ${me.theme === `leader:${b.leaderId}` ? 'selected' : ''}>${esc(b.name)} colors</option>`).join('')}</select>
       <p class="tiny muted" style="margin-top:6px">Your precinct and birth date help us find your polling place and check eligibility.</p>
-      <button class="btn block" style="margin-top:16px">Save profile</button>
+      <button class="btn go block" style="margin-top:16px">Save profile</button>
     </form></div>`);
   $('[data-close]', el).onclick = close;
   $('#prof', el).onsubmit = guard(async (e) => {
@@ -213,7 +213,7 @@ function newLeaderSheet() {
       <label class="field" for="lk">Type</label><select id="lk" name="kind"><option value="organization">Organization</option><option value="individual">Person</option><option value="list">Curated list</option></select>
       <label class="field" for="lb">One-line description</label><input id="lb" name="blurb" maxlength="160">
       <label class="field" for="lc">Brand color</label><input id="lc" name="brandColor" type="color" value="#2f6f4f" class="color">
-      <button class="btn block" style="margin-top:16px">Create</button>
+      <button class="btn go block" style="margin-top:16px">Create leadership source</button>
     </form></div>`);
   $('[data-close]', el).onclick = close;
   $('#nl', el).onsubmit = guard(async (e) => {
@@ -221,7 +221,7 @@ function newLeaderSheet() {
     const l = await api('/leaders', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) });
     state.leaders = await api('/leaders');
     close();
-    toast('Created');
+    toast('Created leadership source');
     location.hash = `#/lead/${l.id}`;
   });
 }
