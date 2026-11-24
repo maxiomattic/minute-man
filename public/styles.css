@@ -73,7 +73,7 @@ p { margin: 0 0 8px; }
   position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px;
   padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
   background: var(--coat); color: var(--on-coat);
-  border-bottom: 3px solid var(--marker);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--coat) 70%, #000), 0 2px 10px rgb(10 14 30 / .14);
 }
 .wordmark { display: flex; align-items: center; gap: 9px; font-family: var(--display); font-weight: 400; font-size: 25px; color: inherit; text-decoration: none; margin-right: auto; letter-spacing: .01em; }
 .wordmark .mark { width: 40px; height: 40px; margin: -3px 0; color: var(--marker); }
@@ -100,7 +100,7 @@ p { margin: 0 0 8px; }
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex;
   padding-bottom: env(safe-area-inset-bottom);
-  background: var(--coat); border-top: 3px solid var(--marker);
+  background: var(--coat); box-shadow: 0 -1px 0 color-mix(in srgb, var(--coat) 70%, #000), 0 -2px 10px rgb(10 14 30 / .14);
 }
 .tabbar a {
   flex: 1; height: var(--tabbar); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -127,7 +127,7 @@ p { margin: 0 0 8px; }
   .topbar { justify-content: flex-end; padding: 16px 32px; }
   .sidebar {
     display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100dvh;
-    padding: 20px 16px; border-right: 3px solid var(--marker); background: var(--coat); color: var(--on-coat);
+    padding: 20px 16px; border-right: 1px solid color-mix(in srgb, var(--coat) 70%, #000); background: var(--coat); color: var(--on-coat);
   }
   .sidebar .wordmark { margin: 4px 8px 20px; }
   .sidebar nav a {
@@ -170,7 +170,6 @@ p { margin: 0 0 8px; }
   position: relative; overflow: hidden; border-radius: var(--r-lg); padding: 22px 20px 20px;
   background: var(--brand); color: var(--on-brand);
 }
-.hero { border-top: 4px solid var(--marker); }
 .hero::after { /* the ring of thirteen stars, faint, in the corner */
   content: ""; position: absolute; right: -54px; top: -54px; width: 200px; height: 200px; pointer-events: none; opacity: .13;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-100 -100 200 200'%3E%3Cg fill='%23f4ecd6'%3E%3Cpath id='s' d='M0-88l5.3 16.3h17.1l-13.8 10 5.3 16.3L0-55.5l-13.9 10.1 5.3-16.3-13.8-10h17.1z'/%3E%3Cuse href='%23s' transform='rotate(27.7)'/%3E%3Cuse href='%23s' transform='rotate(55.4)'/%3E%3Cuse href='%23s' transform='rotate(83.1)'/%3E%3Cuse href='%23s' transform='rotate(110.8)'/%3E%3Cuse href='%23s' transform='rotate(138.5)'/%3E%3Cuse href='%23s' transform='rotate(166.2)'/%3E%3Cuse href='%23s' transform='rotate(193.8)'/%3E%3Cuse href='%23s' transform='rotate(221.5)'/%3E%3Cuse href='%23s' transform='rotate(249.2)'/%3E%3Cuse href='%23s' transform='rotate(276.9)'/%3E%3Cuse href='%23s' transform='rotate(304.6)'/%3E%3Cuse href='%23s' transform='rotate(332.3)'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
@@ -681,7 +680,6 @@ h1 + #together:empty { display: none; }
 /* The muster: what the county did together, set like a broadside notice. */
 .muster {
   background: var(--brand); color: var(--on-brand); border-radius: var(--r-lg); padding: 16px 18px 14px;
-  border-top: 4px solid var(--marker);
 }
 .muster-head { font-family: var(--display); font-size: 22px; margin: 0 0 10px; }
 .muster-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px 14px; }

@@ -35,6 +35,7 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [x] Invite links: recruits join your crew; you earn a bonus each time a recruit reaches a new rank
 - [x] 24 tests pass; screens checked at Pixel 7 and 1280x800
 - [x] New logo: a front-view tricorn (crown behind two cocked flaps, cockade) in brass, for the header mark, web icon, Android launcher (adaptive, safe zone) and splash; `scripts/icons.sh` now uses coat navy
+- [x] Quieter chrome: no brass rules on the top bar, tab bar, sidebar, Today hero or Feed muster; bars sit on a 1px darker-navy edge and a soft shadow. Brass stays on the active tab, figures and buttons
 - [x] Android app installed and verified on the Pixel 6 (rebuild: `scripts/android.sh <phone-ip:port>`)
 
 ## Left / ideas
