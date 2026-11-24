@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
   birth_date TEXT,
   share_status INTEGER NOT NULL DEFAULT 0,     -- opt-in: friends can see participation
   theme TEXT NOT NULL DEFAULT 'neutral',       -- neutral | leader:<id>
+  strategy TEXT NOT NULL DEFAULT 'priority',   -- recommendation aggregation strategy
+  on_leaderboards INTEGER NOT NULL DEFAULT 0,  -- opt-in
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -79,7 +81,8 @@ CREATE TABLE IF NOT EXISTS leaders (
   kind TEXT NOT NULL DEFAULT 'organization',    -- individual | organization | list
   blurb TEXT,
   brand_color TEXT,
-  public INTEGER NOT NULL DEFAULT 1
+  public INTEGER NOT NULL DEFAULT 1,
+  rank_names TEXT                               -- JSON array of custom rank titles (branding)
 );
 
 CREATE TABLE IF NOT EXISTS bindings (
@@ -106,6 +109,64 @@ CREATE TABLE IF NOT EXISTS registrations (
   party TEXT,
   desired_party TEXT,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS results (
+  contest_id TEXT PRIMARY KEY REFERENCES contests(id) ON DELETE CASCADE,
+  winner_ids TEXT NOT NULL                      -- JSON array, from official results
+);
+
+-- Grassroots activism: events published by leaders or groups.
+CREATE TABLE IF NOT EXISTS actions (
+  id INTEGER PRIMARY KEY,
+  leader_id INTEGER REFERENCES leaders(id) ON DELETE CASCADE,
+  group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+  jurisdiction_id TEXT REFERENCES jurisdictions(id),
+  kind TEXT NOT NULL,      -- council_meeting | party_meeting | volunteer | canvass | phonebank | gotv | social
+  title TEXT NOT NULL,
+  description TEXT,
+  location TEXT,
+  starts_at TEXT NOT NULL,
+  ends_at TEXT,
+  checkin_code TEXT NOT NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS activity (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action_id INTEGER REFERENCES actions(id) ON DELETE SET NULL,
+  kind TEXT NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 1,          -- doors, calls, posts
+  verified INTEGER NOT NULL DEFAULT 0,          -- 1 = checked in with event code
+  note TEXT,
+  points INTEGER NOT NULL,
+  day TEXT NOT NULL DEFAULT (date('now')),
+  at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS activity_once_per_event ON activity(user_id, action_id) WHERE action_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS groups (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'team',            -- team | neighborhood | chapter
+  leader_id INTEGER REFERENCES leaders(id) ON DELETE SET NULL,
+  invite_code TEXT UNIQUE NOT NULL,
+  owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS group_members (
+  group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (group_id, user_id)
+);
+
+-- Public statement of support (like a yard sign). Never tied to a ballot.
+CREATE TABLE IF NOT EXISTS endorsements (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  leader_id INTEGER NOT NULL REFERENCES leaders(id) ON DELETE CASCADE,
+  at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, leader_id)
 );
 
 -- Turnout-only events. Never stores how anyone voted.

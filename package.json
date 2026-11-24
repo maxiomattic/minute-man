@@ -1,0 +1,12 @@
+{
+  "name": "cvas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Coordinated Voting Assistance System: guided voting, delegation to chosen leaders, and gamified grassroots activism",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=22.5" }
+}
