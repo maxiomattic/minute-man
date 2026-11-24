@@ -3,7 +3,7 @@
   "short_name": "CVAS",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f6f5f1",
-  "theme_color": "#1f5f8b",
+  "background_color": "#eef1ec",
+  "theme_color": "#0e6b4e",
   "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }

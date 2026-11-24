@@ -1,8 +1,8 @@
 // Offline support: API GETs are network-first with cached fallback,
 // so the sample ballot, steps and polling places still open in a dead zone on election day.
-const SHELL = 'cvas-shell-v1';
+const SHELL = 'cvas-shell-v2';
 const API = 'cvas-api-v1';
-const FILES = ['/', '/index.html', '/app.js', '/styles.css', '/manifest.webmanifest', '/icon.svg'];
+const FILES = ['/', '/index.html', '/app.js', '/core.js', '/styles.css', '/manifest.webmanifest', '/icon.svg', '/fonts/big-shoulders-display-latin-wght-normal.woff2', '/fonts/public-sans-latin-wght-normal.woff2', '/views/today.js', '/views/ballot.js', '/views/act.js', '/views/crew.js', '/views/me.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
