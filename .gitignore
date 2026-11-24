@@ -18,3 +18,10 @@ ios/App/build/
 ios/App/App/public/
 ios/DerivedData/
 *.apk
+
+# Secrets and signing keys
+.env
+.env.*
+*.jks
+*.keystore
+keystore.properties

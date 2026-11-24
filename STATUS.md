@@ -59,5 +59,5 @@ Live: https://cvas.careride.workers.dev (Cloudflare Worker + Durable Object SQLi
 - [ ] Turnout check against public voter-history files
 - [ ] Trainings are honor-system; swap in county party videos if one gives us a link
 - [ ] Precinct-chair claim is self-reported; could verify against county party rosters
-- [ ] Publish the source publicly (no remote yet)
+- [x] Source published at https://github.com/maxiomattic/minute-man (public, MIT)
 - [ ] Election lawyer review before public launch (see README "Legal design")
